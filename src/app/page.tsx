@@ -242,7 +242,12 @@ export default function Home() {
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-16 sm:py-24">
       <section className="flex flex-col gap-10">
-        <Wordmark />
+        <div className="flex flex-col gap-2">
+          <Wordmark />
+          <p className="text-[11px] leading-none text-muted-foreground">
+            a plugin for Claude Code and Codex
+          </p>
+        </div>
 
         <h1 className="max-w-2xl text-base font-medium leading-tight tracking-tight sm:text-xl">
           Powerful, repeatable work patterns for coding agents.
