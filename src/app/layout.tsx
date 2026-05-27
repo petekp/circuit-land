@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
+import { AgentationDev } from "@/components/agentation-dev";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -23,7 +24,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-mono">{children}</body>
+      <body className="min-h-full flex flex-col font-mono">
+        {children}
+        {process.env.NODE_ENV === "development" && <AgentationDev />}
+      </body>
     </html>
   );
 }
