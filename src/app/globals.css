@@ -245,45 +245,48 @@
   }
 }
 
+@property --circuit-wordmark-phase {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
 .circuit-wordmark {
+  --circuit-wordmark-phase: 0%;
   width: fit-content;
   color: transparent;
-  background-image: radial-gradient(
-    circle at -18% 46%,
-    var(--wordmark-a) 0%,
-    var(--wordmark-b) 18%,
-    var(--wordmark-c) 36%,
-    var(--wordmark-d) 58%,
-    var(--wordmark-e) 78%,
-    var(--wordmark-a) 100%
+  background-image: repeating-radial-gradient(
+    circle at 52% 136%,
+    var(--wordmark-a) calc(var(--circuit-wordmark-phase) + 0%),
+    var(--wordmark-b) calc(var(--circuit-wordmark-phase) + 16%),
+    var(--wordmark-c) calc(var(--circuit-wordmark-phase) + 32%),
+    var(--wordmark-d) calc(var(--circuit-wordmark-phase) + 48%),
+    var(--wordmark-e) calc(var(--circuit-wordmark-phase) + 64%),
+    var(--wordmark-a) calc(var(--circuit-wordmark-phase) + 80%),
+    var(--wordmark-b) calc(var(--circuit-wordmark-phase) + 96%)
   );
-  background-position: -24% 50%;
-  background-size: 110% 110%;
+  background-position: center;
+  background-size: 100% 100%;
   background-clip: text;
   -webkit-background-clip: text;
   animation:
-    circuit-wordmark-bloom 4.8s ease-in-out infinite alternate,
-    circuit-wordmark-hue 11s linear infinite;
-  filter: saturate(1.35);
+    circuit-wordmark-bloom 4.8s linear infinite,
+    circuit-wordmark-hue 9s linear infinite;
+  filter: saturate(1.25) brightness(1.05);
 }
 
 @keyframes circuit-wordmark-bloom {
-  from {
-    background-position: -34% 50%;
-    background-size: 92% 92%;
-  }
   to {
-    background-position: -6% 50%;
-    background-size: 245% 245%;
+    --circuit-wordmark-phase: 96%;
   }
 }
 
 @keyframes circuit-wordmark-hue {
   from {
-    filter: hue-rotate(0deg) saturate(1.35);
+    filter: hue-rotate(0deg) saturate(1.25) brightness(1.05);
   }
   to {
-    filter: hue-rotate(360deg) saturate(1.35);
+    filter: hue-rotate(360deg) saturate(1.25) brightness(1.05);
   }
 }
 
