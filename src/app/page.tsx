@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import { CopyInstallInstructions } from "@/components/copy-install-instructions";
 import { FlowComposer } from "@/components/flow-composer";
 import { Wordmark } from "@/components/wordmark";
@@ -23,17 +24,33 @@ const alphaLabel = `Plugin alpha, ${currentAlpha}`;
 const codexInstallCommand =
   "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.6";
 
+const installTargets = [
+  {
+    name: "Claude Code",
+    detail: "Install from the plugin marketplace, then reload plugins.",
+    commands: [
+      "/plugin marketplace add petekp/circuit",
+      "/plugin install circuit@circuit",
+      "/reload-plugins",
+    ],
+  },
+  {
+    name: "Codex",
+    detail: "Add the Circuit marketplace ref for this workspace.",
+    commands: [codexInstallCommand],
+  },
+];
+
 const runSurface: SurfaceLine[] = [
   { text: "CIRCUIT", emphasis: true },
   { text: "⎿ Chose build." },
   { text: "⎿ Framing the work..." },
   { text: "⎿ Planning the work..." },
-  { text: "⎿ Making the change..." },
   { text: "⎿ Asking the specialist to make the change..." },
   { text: "⎿ Finished the specialist pass." },
   { text: "⎿ Checking the work..." },
   {
-    text: "⎿ Build complete. Change implemented, verification passed, review accepted.",
+    text: "⎿ Build complete. Verification passed, review accepted.",
     emphasis: true,
   },
 ];
@@ -45,11 +62,11 @@ const runBeats: RunBeat[] = [
   },
   {
     label: "Circuit selects the flow",
-    note: "It chose Build — the process that fits this kind of task — and recorded the choice. You did not have to pick one.",
+    note: "Build is the right process for this kind of task. No manual flow choice required.",
   },
   {
     label: "It works the process",
-    note: "Plan, make the change, then a separate pass checks and reviews the result.",
+    note: "Plan → change → check → review.",
   },
   {
     label: "A short outcome",
@@ -59,18 +76,58 @@ const runBeats: RunBeat[] = [
 
 const comparison = [
   {
-    name: "Skills",
-    detail: "One move. A skill teaches a single capable thing to do.",
+    name: "Prompting with skills",
+    approach:
+      "Skills give the agent stronger moves: read a trace, write a test, inspect a browser, review a diff. You still decide which move to call, when to call it, and when enough proof exists.",
+    circuit:
+      "Circuit uses those moves inside a flow. It routes the task, chooses the next block, carries context forward, and asks for your judgment only when the result depends on it.",
   },
   {
-    name: "Dynamic workflows (Claude Code)",
-    detail:
-      "Orchestrate many agents for large one-off jobs: a codebase-wide audit, a big migration, deep research.",
+    name: "Dynamic workflows",
+    approach:
+      "Workflows orchestrate many agents from a script. They are great for large one-off jobs: codebase audits, migrations, deep research, or hand-rolled fanout.",
+    circuit:
+      "Circuit is the repeatable front door for everyday work. It picks Build, Fix, Review, Explore, Prototype, or Pursue, then runs the same proven process without making you design the orchestration.",
   },
   {
-    name: "Circuit",
-    detail:
-      "A repeatable, evidence-backed process for everyday work, behind one front door.",
+    name: "Project rules and playbooks",
+    approach:
+      "Rules, docs, and saved prompts tell the agent what good work should look like. They are useful context, but they mostly sit still until you remember to apply them.",
+    circuit:
+      "Circuit turns the playbook into motion. Each block has an input, output, and done condition, so the process actively produces evidence instead of relying on memory and vibes.",
+  },
+];
+
+const artisanFrames = [
+  {
+    name: "Woodworker",
+    src: "/artisan-frames/woodworker.png",
+    alt: "Artisan measuring aligned wood components at a workbench.",
+  },
+  {
+    name: "Ceramicist",
+    src: "/artisan-frames/ceramicist.png",
+    alt: "Artisan shaping a vessel with guide rings and measuring tools.",
+  },
+  {
+    name: "Weaver",
+    src: "/artisan-frames/weaver.png",
+    alt: "Artisan weaving a structured textile pattern on a compact loom.",
+  },
+  {
+    name: "Machinist",
+    src: "/artisan-frames/machinist.png",
+    alt: "Artisan checking a machined component with precision gauges.",
+  },
+  {
+    name: "Chef",
+    src: "/artisan-frames/chef.png",
+    alt: "Artisan assembling a dish from ordered preparation stations.",
+  },
+  {
+    name: "Process designer",
+    src: "/artisan-frames/process-designer.png",
+    alt: "Artisan arranging process blocks and routing paths on a tabletop.",
   },
 ];
 
@@ -176,11 +233,30 @@ function Label({
   );
 }
 
-function CodeBlock({ children }: { children: ReactNode }) {
+function InstallProviderIcons() {
   return (
-    <pre className="soft-code-block whitespace-pre-wrap break-words px-5 py-4 text-[13px] leading-7 text-foreground">
-      <code>{children}</code>
-    </pre>
+    <span className="install-provider-icons" aria-hidden="true">
+      <span className="install-provider-icon install-provider-icon-claude">
+        <svg viewBox="0 0 16 16" focusable="false">
+          <path
+            fill="currentColor"
+            d="M8 1.25 9.55 5.5 14 4.5 11.1 8 14 11.5l-4.45-1L8 14.75 6.45 10.5l-4.45 1L4.9 8 2 4.5l4.45 1L8 1.25Z"
+          />
+        </svg>
+      </span>
+      <span className="install-provider-icon install-provider-icon-codex">
+        <svg viewBox="0 0 16 16" focusable="false">
+          <path
+            d="m4.25 5.25 2.6 2.75-2.6 2.75M7.9 10.85h3.85"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.8"
+          />
+        </svg>
+      </span>
+    </span>
   );
 }
 
@@ -228,6 +304,30 @@ function RunTerminalBody({ echo = false }: { echo?: boolean }) {
   );
 }
 
+function ProcessArtwork() {
+  return (
+    <figure className="section-artwork process-artwork relative overflow-hidden bg-muted/40 p-2.5 sm:p-3">
+      <div className="process-artwork-grid" aria-hidden="true" />
+      <div className="relative grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {artisanFrames.map((frame) => (
+          <div
+            key={frame.name}
+            className="process-artisan-frame relative aspect-square overflow-hidden"
+          >
+            <Image
+              src={frame.src}
+              alt={frame.alt}
+              fill
+              sizes="(max-width: 640px) 42vw, (max-width: 1024px) 28vw, 15vw"
+              className="object-contain p-2.5 sm:p-3"
+            />
+          </div>
+        ))}
+      </div>
+    </figure>
+  );
+}
+
 export default function Home() {
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-16">
@@ -265,15 +365,17 @@ export default function Home() {
         <div className="flex flex-wrap items-center gap-3">
           <a
             href="#see-one-run"
-            className="soft-cta-primary inline-flex min-h-11 items-center px-5 py-2 text-[13px] font-medium transition-opacity hover:opacity-90"
+            className="soft-cta-secondary inline-flex min-h-11 items-center px-5 py-2 text-[13px] font-medium text-foreground transition-colors"
           >
             See example
           </a>
           <a
             href="#install"
-            className="soft-cta-secondary inline-flex min-h-11 items-center px-5 py-2 text-[13px] font-medium text-foreground transition-colors"
+            aria-label="Install for Claude Code and Codex"
+            className="soft-cta-primary inline-flex min-h-11 items-center gap-2.5 px-5 py-2 text-[13px] font-medium transition-opacity hover:opacity-90"
           >
-            Install
+            <InstallProviderIcons />
+            <span>Install</span>
           </a>
         </div>
       </section>
@@ -287,15 +389,16 @@ export default function Home() {
         <div className="flex max-w-3xl flex-col gap-3">
           <Label as="h2">Example run</Label>
           <p className="text-balance text-[15px] leading-relaxed text-foreground">
-            Normally you steer each step in chat. Here you describe the task
-            once, and the agent works a real process, asking only when a choice
-            genuinely needs you.
+            Most of us are steering the agent step by step in chat. Here you
+            describe the task once, and the agent follows a real process
+            informed by best practices, asking only when a choice genuinely
+            needs you.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.18fr)_minmax(18rem,0.72fr)] lg:items-start">
-          <div className="flex flex-col gap-3">
-            <div className="run-terminal-stage">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+          <div className="flex min-w-0 flex-col gap-3">
+            <div className="run-terminal-stage w-full">
               {/* Blurred ghost of the same content, masked to bloom only below
                   the opaque pane — the terminal's text showing through. */}
               <div
@@ -304,13 +407,13 @@ export default function Home() {
               >
                 <RunTerminalBody echo />
               </div>
-              <div className="run-terminal overflow-hidden font-mono text-[13px] leading-7">
+              <div className="run-terminal w-full overflow-hidden font-mono text-[13px] leading-7">
                 <RunTerminalBody />
               </div>
             </div>
           </div>
 
-          <ol className="flex max-w-sm flex-col gap-6 lg:justify-self-end">
+          <ol className="flex w-full max-w-[18rem] flex-col gap-6 lg:justify-self-end">
             {runBeats.map((beat, i) => (
               <li key={beat.label} className="flex gap-4">
                 <span
@@ -336,34 +439,38 @@ export default function Home() {
 
       {/* Section 3: What Circuit is */}
       <section
-        className="mt-28 flex max-w-3xl flex-col gap-10"
+        className="mt-28 grid gap-8 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)] lg:items-center"
         data-site-hue-stop="0.25"
       >
-        <Label as="h2">What Circuit is</Label>
+        <div className="flex max-w-3xl flex-col gap-10">
+          <Label as="h2">What Circuit is</Label>
 
-        <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
-          <p className="text-[17px] leading-snug text-foreground">
-            Skilled people rarely wing it. They follow a process, pick the right
-            move at the right moment, and check the work before moving on.
-          </p>
-          <p>
-            Ad-hoc chat makes you carry that process by hand: the state, the
-            next move, the right skill, when to check, and when to pause. That
-            is a tax on you, and it is not a great way for the agent to work
-            either.
-          </p>
-          <p>
-            Circuit gives that process to the agent. You describe the task;
-            Circuit brings the practice for how to do that kind of work well.
-            You delegate more, and you keep your confidence that the work was
-            done properly.
-          </p>
-          <p className="text-foreground">
-            A skill is one move. A flow is the practice: the right moves, in the
-            right order, with checks along the way. Process is the layer above
-            your skills that decides which to use and when.
-          </p>
+          <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
+            <p className="text-[17px] leading-snug text-foreground">
+              Skilled people rarely wing it. They follow a process, pick the right
+              move at the right moment, and check the work before moving on.
+            </p>
+            <p>
+              Ad-hoc chat makes you carry all the state in your head: the next
+              move, when to plan, when to build, what skill to use, when to
+              check, and when to pause. That is a tax on you, and it is not a
+              great way for the agent to work either.
+            </p>
+            <p>
+              Circuit gives that process to the agent. You describe the task;
+              Circuit brings the practice for how to do that kind of work well.
+              You delegate more, and you keep your confidence that the work was
+              done properly.
+            </p>
+            <p className="text-foreground">
+              A skill is one move. A flow is the practice: the right moves, in the
+              right order, with checks along the way. Process is the layer above
+              your skills that decides which to use and when.
+            </p>
+          </div>
         </div>
+
+        <ProcessArtwork />
       </section>
 
       {/* Section 4: Flows and blocks */}
@@ -391,12 +498,12 @@ export default function Home() {
 
       {/* Section 5: Block internals */}
       <section
-        className="relative left-1/2 mt-28 flex w-screen -translate-x-1/2 flex-col gap-10 bg-muted/20 px-6 py-14"
+        className="block-internals-section relative left-1/2 mt-28 flex w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-10 overflow-hidden bg-muted/20 px-6 py-14 sm:w-[calc(100vw-3rem)] sm:px-8 lg:w-[calc(100vw-4rem)]"
         data-site-hue-stop="0.5"
       >
         <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
           <div className="flex max-w-3xl flex-col gap-3">
-            <Label as="h2">Block internals</Label>
+            <Label as="h2">Building blocks</Label>
             <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
               Blocks are the power units inside every flow. Each one has a
               typed input, a typed output, and a clear job, so flows can combine
@@ -478,7 +585,7 @@ export default function Home() {
           </div>
           <div className="flex flex-col gap-2">
             <h3 className="text-[15px] font-medium tracking-tight">
-              Where it is heading
+              Memory
             </h3>
             <p className="text-[13px] leading-relaxed text-muted-foreground">
               Memory is in the works. Circuit already leaves structured run
@@ -490,92 +597,110 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Section 7: Circuit and your other tools */}
+      {/* Section 7: How Circuit compares */}
       <section
         className="mt-28 flex flex-col gap-10"
         data-site-hue-stop="0.75"
       >
-        <div className="flex max-w-3xl flex-col gap-5">
-          <Label as="h2">Circuit and your other tools</Label>
+        <div className="flex max-w-3xl flex-col gap-3">
+          <Label as="h2">How Circuit compares</Label>
           <p className="text-[15px] leading-relaxed text-foreground">
-            Circuit does not replace your coding agent, your skills, or anything
-            Claude Code or Codex already gives you. It sits above them and
-            decides how the work gets done.
-          </p>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
-            A skill teaches one move. Circuit decides which moves to use, in
-            what order, and what to check before moving on. Your skills still
-            apply, at the right steps.
-          </p>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
-            Claude Code&apos;s dynamic workflows orchestrate many subagents from
-            a script for big one-off jobs: a codebase-wide audit, a large
-            migration, deep research. Circuit is for the everyday work in front
-            of you. It picks a repeatable process for this task, keeps evidence
-            attached, and pauses only when your judgment matters. The two stack
-            rather than compete.
+            Circuit overlaps with tools you already use, but it solves a
+            different problem: not what the agent is capable of, but how the
+            work moves from request to evidence-backed outcome.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
           {comparison.map((c) => (
             <div
               key={c.name}
-              className="soft-info-card flex flex-col gap-2 p-5"
+              className="soft-info-card flex flex-col gap-5 p-5"
             >
               <h3 className="text-[15px] font-medium tracking-tight">
                 {c.name}
               </h3>
-              <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-                {c.detail}
-              </p>
+              <div className="flex flex-col gap-2">
+                <p className="font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  What it involves
+                </p>
+                <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
+                  {c.approach}
+                </p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <p className="font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  How Circuit differs
+                </p>
+                <p className="text-balance text-[13px] leading-relaxed text-foreground">
+                  {c.circuit}
+                </p>
+              </div>
             </div>
           ))}
         </div>
 
         <p className="max-w-3xl text-balance text-[13px] leading-relaxed text-muted-foreground">
-          If your task is a hand-rolled mega-orchestration, reach for a
-          workflow. If it is build this, fix that, review this change, reach for
-          Circuit.
+          The short version: skills add capability, workflows coordinate big
+          scripted efforts, and rules capture preferences. Circuit is the
+          repeatable process layer for the work you hand to an agent every day.
         </p>
       </section>
 
-      {/* Section 8: Install and start */}
+      {/* Section 8: Install and use */}
       <section
         id="install"
-        className="mt-28 flex flex-col gap-10"
+        className="mt-28 flex flex-col gap-7"
         data-site-hue-stop="0.875"
       >
-        <Label as="h2">Install and start</Label>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <h3 className="text-[15px] font-medium tracking-tight">
-              Claude Code
-            </h3>
-            <CodeBlock>
-              {`/plugin marketplace add petekp/circuit
-/plugin install circuit@circuit
-/reload-plugins`}
-            </CodeBlock>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <h3 className="text-[15px] font-medium tracking-tight">Codex</h3>
-            <CodeBlock>{codexInstallCommand}</CodeBlock>
-          </div>
-        </div>
-
         <div className="flex max-w-3xl flex-col gap-3">
-          <p className="text-[13px] text-muted-foreground">Then start with:</p>
-          <CodeBlock>{`/circuit:run <your task>`}</CodeBlock>
-          <p className="text-[13px] text-muted-foreground">
-            Circuit requires Node.js 22.18.0 or newer.
+          <Label as="h2">Install and use</Label>
+          <p className="text-balance text-[15px] leading-relaxed text-foreground">
+            Install Circuit once for the agent you use. After that, start work
+            through the same front door every time.
           </p>
         </div>
 
-        <div className="flex w-full max-w-3xl flex-col gap-3">
-          <Label>Copy these instructions to your coding agent</Label>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          {installTargets.map((target) => (
+            <article
+              key={target.name}
+              className="soft-info-card flex flex-col gap-5 p-5"
+            >
+              <div className="flex flex-col gap-2">
+                <h3 className="text-[15px] font-medium tracking-tight">
+                  {target.name}
+                </h3>
+                <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
+                  {target.detail}
+                </p>
+              </div>
+
+              <pre className="whitespace-pre-wrap break-words text-[13px] leading-7 text-foreground">
+                <code>{target.commands.join("\n")}</code>
+              </pre>
+            </article>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_minmax(18rem,0.74fr)]">
+          <div className="soft-info-card flex flex-col gap-5 p-5">
+            <div className="flex flex-col gap-2">
+              <p className="font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                Start every run
+              </p>
+              <h3 className="text-[15px] font-medium tracking-tight">
+                Use Circuit&apos;s front door
+              </h3>
+            </div>
+            <pre className="whitespace-pre-wrap break-words text-[16px] leading-7 text-foreground">
+              <code>{`/circuit:run <your task>`}</code>
+            </pre>
+            <p className="text-[12px] leading-relaxed text-muted-foreground">
+              Requires Node.js 22.18.0 or newer.
+            </p>
+          </div>
+
           <CopyInstallInstructions text={agentInstallInstructions} />
         </div>
       </section>

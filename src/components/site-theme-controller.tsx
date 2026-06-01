@@ -14,8 +14,8 @@ import {
   useTransform,
 } from "motion/react";
 
-export const DEFAULT_PRIMARY_HUE = 40;
-export const DEFAULT_GAMUT_SWEEP = 360;
+export const DEFAULT_PRIMARY_HUE = 150;
+export const DEFAULT_GAMUT_SWEEP = 215;
 export const SITE_THEME_PARAMS_EVENT = "site-theme-params";
 
 export type SiteThemeParams = {

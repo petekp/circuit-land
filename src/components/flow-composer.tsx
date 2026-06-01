@@ -302,56 +302,58 @@ export function FlowComposer() {
 
   return (
     <div
-      className="flex w-full flex-col gap-7"
+      className="flex w-full flex-col"
       style={{ "--flow-color": flow.color } as CSSProperties}
     >
-      {/* Flow toggle */}
-      <div role="group" aria-label="Choose a flow" className="flex flex-wrap gap-2.5">
-        {FLOWS.map((f) => {
-          const selected = f.key === active;
-          return (
-            <button
-              key={f.key}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => setActive(f.key)}
-              className="flow-picker-button inline-flex min-h-12 items-center gap-2.5 px-5 py-3 text-[16px] font-medium transition-colors hover:text-foreground"
-              style={{
-                color: selected ? "var(--foreground)" : "var(--muted-foreground)",
-                backgroundColor: selected
-                  ? `color-mix(in oklab, ${f.color} 22%, var(--muted))`
-                  : undefined,
-              }}
-            >
-              <FlowGlyph
-                name={f.name}
-                color={f.color}
-                accent={f.accent}
-                motif={f.motif}
-                cellSize={24}
-                className="size-6 shrink-0"
-              />
-              {f.name}
-              {f.planned ? (
-                <span className="soft-chip px-1.5 py-1 text-[10px] uppercase leading-none tracking-[0.15em] text-muted-foreground">
-                  soon
-                </span>
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-
       <LayoutGroup>
         {/* The selected flow: larger blocks wired by the artifacts they hand forward */}
         <div
-          className="flow-composer-panel p-5 transition-colors sm:p-8 lg:p-10"
+          className="flow-composer-panel flex flex-col gap-8 p-5 transition-colors sm:p-8 lg:p-10"
           style={{
             backgroundColor: planned
               ? "color-mix(in oklab, var(--muted) 58%, transparent)"
               : "color-mix(in oklab, var(--flow-color) 8%, var(--panel))",
           }}
         >
+          {/* Flow toggle */}
+          <div role="group" aria-label="Choose a flow" className="flow-picker-grid">
+            {FLOWS.map((f) => {
+              const selected = f.key === active;
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setActive(f.key)}
+                  className="flow-picker-button inline-flex min-h-12 items-center gap-2.5 px-5 py-3 text-[16px] font-medium transition-colors hover:text-foreground"
+                  style={{
+                    color: selected
+                      ? "var(--foreground)"
+                      : "var(--muted-foreground)",
+                    backgroundColor: selected
+                      ? `color-mix(in oklab, ${f.color} 22%, var(--muted))`
+                      : undefined,
+                  }}
+                >
+                  <FlowGlyph
+                    name={f.name}
+                    color={f.color}
+                    accent={f.accent}
+                    motif={f.motif}
+                    cellSize={24}
+                    className="size-6 shrink-0"
+                  />
+                  {f.name}
+                  {f.planned ? (
+                    <span className="soft-chip px-1.5 py-1 text-[10px] uppercase leading-none tracking-[0.15em] text-muted-foreground">
+                      soon
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
           {planned ? (
             <div className="flex max-w-xl flex-col gap-3 py-2">
               <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">

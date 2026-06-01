@@ -59,7 +59,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   // Matches the default globals.css --site-primary-hue background so mobile
   // browser chrome blends with the dark page before DialKit can run.
-  themeColor: "#1a1814",
+  themeColor: "#141a17",
 };
 
 export default function RootLayout({
