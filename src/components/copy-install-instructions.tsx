@@ -12,21 +12,10 @@ function useCopyText(text: string) {
     let copied = false;
 
     try {
-      if (!navigator.clipboard) {
-        throw new Error("Clipboard API unavailable");
-      }
       await navigator.clipboard.writeText(text);
       copied = true;
     } catch {
-      const field = document.createElement("textarea");
-      field.value = text;
-      field.setAttribute("readonly", "true");
-      field.style.position = "fixed";
-      field.style.opacity = "0";
-      document.body.appendChild(field);
-      field.select();
-      copied = document.execCommand("copy");
-      document.body.removeChild(field);
+      copied = false;
     }
 
     setCopyState(copied ? "copied" : "failed");
