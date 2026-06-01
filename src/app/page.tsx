@@ -1,27 +1,7 @@
-import type { CSSProperties, ReactNode } from "react";
-import { FlowGlyph, type MotifCell } from "@/components/flow-glyph";
+import type { ReactNode } from "react";
+import { CopyInstallInstructions } from "@/components/copy-install-instructions";
+import { FlowComposer } from "@/components/flow-composer";
 import { Wordmark } from "@/components/wordmark";
-
-type Flow = {
-  name: string;
-  command: string;
-  color: string;
-  accent: string;
-  motif: MotifCell[];
-  summary: string;
-};
-
-type DiagramStep = {
-  label: string;
-  short: string;
-};
-
-type DiagramFlow = {
-  name: string;
-  color: string;
-  accent: string;
-  steps: DiagramStep[];
-};
 
 type SurfaceLine = {
   text: string;
@@ -33,22 +13,25 @@ type RunBeat = {
   note: string;
 };
 
-// The real surface Circuit streamed while building this page. Captured from
-// the run, lightly trimmed to the meaningful beats.
+// Faithful reconstruction of a live Circuit Build surface, assembled from the
+// exact progress strings Circuit streams (circuit/src/flows/build/data.ts). The
+// final line is verbatim from this run's captured summary
+// (.circuit/runs/21c71c1e-.../reports/operator-summary.md).
 const runCommand = "/circuit:run build the Circuit landing page from the outline";
+const currentAlpha = "0.1.0-alpha.6";
+const alphaLabel = `Plugin alpha, ${currentAlpha}`;
+const codexInstallCommand =
+  "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.6";
 
 const runSurface: SurfaceLine[] = [
-  { text: "Circuit", emphasis: true },
+  { text: "CIRCUIT", emphasis: true },
   { text: "⎿ Chose build." },
-  { text: "⎿ A worker can edit this checkout." },
   { text: "⎿ Framing the work..." },
   { text: "⎿ Planning the work..." },
   { text: "⎿ Making the change..." },
   { text: "⎿ Asking the specialist to make the change..." },
   { text: "⎿ Finished the specialist pass." },
   { text: "⎿ Checking the work..." },
-  { text: "⎿ Asking the reviewer to check the result..." },
-  { text: "⎿ Finished checking the result." },
   {
     text: "⎿ Build complete. Change implemented, verification passed, review accepted.",
     emphasis: true,
@@ -62,151 +45,15 @@ const runBeats: RunBeat[] = [
   },
   {
     label: "Circuit selects the flow",
-    note: "It chose Build and recorded the choice. You did not have to pick one.",
+    note: "It chose Build — the process that fits this kind of task — and recorded the choice. You did not have to pick one.",
   },
   {
     label: "It works the process",
     note: "Plan, make the change, then a separate pass checks and reviews the result.",
   },
   {
-    label: "It asks only when needed",
-    note: "No checkpoint appeared here. Nothing needed your judgment, so it kept moving.",
-  },
-  {
     label: "A short outcome",
     note: "Done: change implemented, verification passed, review accepted.",
-  },
-];
-
-const flows: Flow[] = [
-  {
-    name: "EXPLORE",
-    command: "/circuit:explore",
-    color: "var(--flow-explore)",
-    accent: "var(--flow-explore-accent)",
-    motif: [
-      "filled", "empty", "filled",
-      "empty", "filled", "empty",
-      "filled", "empty", "filled",
-    ],
-    summary: "Compare paths before the agent commits to one.",
-  },
-  {
-    name: "BUILD",
-    command: "/circuit:build",
-    color: "var(--flow-build)",
-    accent: "var(--flow-build-accent)",
-    motif: [
-      "empty", "empty", "filled",
-      "empty", "filled", "filled",
-      "filled", "filled", "filled",
-    ],
-    summary: "Turn a clear brief into a plan, a change, checks, and review.",
-  },
-  {
-    name: "FIX",
-    command: "/circuit:fix",
-    color: "var(--flow-fix)",
-    accent: "var(--flow-fix-accent)",
-    motif: [
-      "empty", "filled", "empty",
-      "filled", "filled", "filled",
-      "empty", "filled", "empty",
-    ],
-    summary: "Find the cause, make the fix, and keep evidence attached.",
-  },
-  {
-    name: "REVIEW",
-    command: "/circuit:review",
-    color: "var(--flow-review)",
-    accent: "var(--flow-review-accent)",
-    motif: [
-      "filled", "filled", "filled",
-      "filled", "empty", "filled",
-      "filled", "filled", "filled",
-    ],
-    summary: "Review a scoped change against evidence, not guesswork.",
-  },
-  {
-    name: "GOAL",
-    command: "/circuit:goal",
-    color: "var(--flow-goal)",
-    accent: "var(--flow-goal-accent)",
-    motif: [
-      "empty", "filled", "empty",
-      "filled", "empty", "filled",
-      "empty", "filled", "empty",
-    ],
-    summary:
-      "Keep a bounded objective moving until it is done, blocked, or needs a decision.",
-  },
-];
-
-const blocks = [
-  "Clarify",
-  "Frame",
-  "Gather Context",
-  "Diagnose",
-  "Plan",
-  "Act",
-  "Run Verification",
-  "Review",
-  "Human Decision",
-  "Close With Evidence",
-];
-
-const blockPool = [
-  "Clarify",
-  "Frame",
-  "Context",
-  "Diagnose",
-  "Plan",
-  "Act",
-  "Verify",
-  "Review",
-  "Decide",
-  "Close",
-];
-
-const diagramFlows: DiagramFlow[] = [
-  {
-    name: "Build",
-    color: "var(--flow-build)",
-    accent: "var(--flow-build-accent)",
-    steps: [
-      { label: "Frame", short: "Frame" },
-      { label: "Plan", short: "Plan" },
-      { label: "Act", short: "Act" },
-      { label: "Run Verification", short: "Verify" },
-      { label: "Review", short: "Review" },
-      { label: "Close With Evidence", short: "Close" },
-    ],
-  },
-  {
-    name: "Fix",
-    color: "var(--flow-fix)",
-    accent: "var(--flow-fix-accent)",
-    steps: [
-      { label: "Frame", short: "Frame" },
-      { label: "Diagnose", short: "Diagnose" },
-      { label: "Act", short: "Act" },
-      { label: "Run Verification", short: "Verify" },
-      { label: "Review", short: "Review" },
-      { label: "Close With Evidence", short: "Close" },
-    ],
-  },
-  {
-    name: "Goal",
-    color: "var(--flow-goal)",
-    accent: "var(--flow-goal-accent)",
-    steps: [
-      { label: "Clarify", short: "Clarify" },
-      { label: "Frame", short: "Frame" },
-      { label: "Human Decision", short: "Decide" },
-      { label: "Act", short: "Act" },
-      { label: "Run Verification", short: "Verify" },
-      { label: "Close With Evidence", short: "Close" },
-    ],
   },
 ];
 
@@ -216,7 +63,7 @@ const comparison = [
     detail: "One move. A skill teaches a single capable thing to do.",
   },
   {
-    name: "Dynamic workflows",
+    name: "Dynamic workflows (Claude Code)",
     detail:
       "Orchestrate many agents for large one-off jobs: a codebase-wide audit, a big migration, deep research.",
   },
@@ -224,6 +71,79 @@ const comparison = [
     name: "Circuit",
     detail:
       "A repeatable, evidence-backed process for everyday work, behind one front door.",
+  },
+];
+
+const blockInternals = [
+  {
+    name: "Frame",
+    input: "Your raw task",
+    output: "Scoped brief",
+    detail:
+      "Turns a loose request into scope, goal, constraints, and a concrete done condition before work starts.",
+  },
+  {
+    name: "Gather Context",
+    input: "Brief plus repo signals",
+    output: "Relevant context",
+    detail:
+      "Finds the files, docs, errors, prior decisions, and live state that should shape the next move.",
+  },
+  {
+    name: "Diagnose",
+    input: "Context packet",
+    output: "Cause and confidence",
+    detail:
+      "Separates symptoms from cause, names the likely failure mode, and keeps uncertainty visible.",
+  },
+  {
+    name: "Human Decision",
+    input: "A real fork in the work",
+    output: "User decision",
+    detail:
+      "Pauses only when judgment changes the result: tradeoffs, taste calls, risky scope, or missing intent.",
+  },
+  {
+    name: "Plan",
+    input: "Brief and context",
+    output: "Work strategy",
+    detail:
+      "Chooses the path, order, verification points, and handoffs before the agent starts changing things.",
+  },
+  {
+    name: "Coordinate",
+    input: "Several related goals",
+    output: "Dependency map",
+    detail:
+      "Keeps multi-part work legible by tracking dependencies, parallelizable chunks, and shared evidence.",
+  },
+  {
+    name: "Act",
+    input: "Plan strategy",
+    output: "Changed work",
+    detail:
+      "Makes the change and records what moved, why it moved, and what proof the next block needs.",
+  },
+  {
+    name: "Run Verification",
+    input: "Change evidence",
+    output: "Check results",
+    detail:
+      "Runs the checks that fit the work and reports the command, result, and any remaining risk.",
+  },
+  {
+    name: "Review",
+    input: "Change plus evidence",
+    output: "Review verdict",
+    detail:
+      "Checks behavior, scope, and proof from a separate review posture before the run calls itself done.",
+  },
+  {
+    name: "Close With Evidence",
+    input: "The final verdict",
+    output: "Final report",
+    detail:
+      "Leaves a short outcome with evidence pointers, decisions, residual risks, and the final status.",
   },
 ];
 
@@ -235,27 +155,76 @@ If this is Claude Code, run:
 /reload-plugins
 
 If this is Codex, run:
-codex plugin marketplace add petekp/circuit
+${codexInstallCommand}
 
 After Circuit is installed, start with:
 /circuit:run <my task>
 
-Use a direct flow only when it is clearly the right fit:
-/circuit:explore, /circuit:build, /circuit:fix, /circuit:review, or /circuit:goal`;
+Use /circuit:run as the normal front door. Circuit routes the task to Build, Fix, Review, Explore, Prototype, or Pursue when that is the right fit.`;
 
-function Label({ children }: { children: ReactNode }) {
+function Label({
+  children,
+  as: Tag = "div",
+}: {
+  children: ReactNode;
+  as?: "div" | "h2";
+}) {
   return (
-    <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+    <Tag className="font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
       {children}
-    </div>
+    </Tag>
   );
 }
 
 function CodeBlock({ children }: { children: ReactNode }) {
   return (
-    <pre className="overflow-x-auto border border-border bg-[var(--panel)] px-5 py-4 text-[13px] leading-7 text-foreground">
+    <pre className="soft-code-block whitespace-pre-wrap break-words px-5 py-4 text-[13px] leading-7 text-foreground">
       <code>{children}</code>
     </pre>
+  );
+}
+
+// Shared body for the run terminal. The real pane and its blurred under-echo
+// render the same rows, so their padding and leading can only be defined once
+// (the echo just drops the per-line coloring and the prompt divider).
+function RunTerminalBody({ echo = false }: { echo?: boolean }) {
+  return (
+    <>
+      <div
+        className={
+          echo ? "px-5 py-3" : "run-terminal-divider px-5 py-3 text-foreground"
+        }
+      >
+        <span className={echo ? undefined : "text-muted-foreground"}>$ </span>
+        {echo ? (
+          runCommand
+        ) : (
+          <>
+            <span className="font-medium text-foreground">/circuit:run</span>
+            <span className="text-muted-foreground">
+              {" "}
+              build the Circuit landing page from the outline
+            </span>
+          </>
+        )}
+      </div>
+      <div className="flex flex-col px-5 py-4">
+        {runSurface.map((line) => (
+          <span
+            key={line.text}
+            className={
+              echo
+                ? undefined
+                : line.emphasis
+                  ? "text-foreground"
+                  : "text-muted-foreground"
+            }
+          >
+            {line.text}
+          </span>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -272,7 +241,10 @@ export default function Home() {
         </a>
       </header>
 
-      <section className="mt-12 flex flex-col gap-8 sm:mt-16">
+      <section
+        className="mt-12 flex flex-col gap-8 sm:mt-16"
+        data-site-hue-stop="0"
+      >
         <div className="flex flex-col gap-2">
           <Wordmark />
           <p className="text-[11px] leading-none text-muted-foreground">
@@ -290,20 +262,16 @@ export default function Home() {
           so you can hand off the work instead.
         </p>
 
-        <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          Alpha, v0.0.1.
-        </p>
-
         <div className="flex flex-wrap items-center gap-3">
           <a
             href="#see-one-run"
-            className="inline-flex items-center border border-border bg-primary px-4 py-2 text-[13px] font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            className="soft-cta-primary inline-flex min-h-11 items-center px-5 py-2 text-[13px] font-medium transition-opacity hover:opacity-90"
           >
-            See a run
+            See example
           </a>
           <a
             href="#install"
-            className="inline-flex items-center border border-border bg-[var(--panel)] px-4 py-2 text-[13px] font-medium text-foreground transition-colors hover:bg-muted"
+            className="soft-cta-secondary inline-flex min-h-11 items-center px-5 py-2 text-[13px] font-medium text-foreground transition-colors"
           >
             Install
           </a>
@@ -311,9 +279,13 @@ export default function Home() {
       </section>
 
       {/* Section 2: See one run */}
-      <section id="see-one-run" className="mt-28 flex flex-col gap-10">
+      <section
+        id="see-one-run"
+        className="mt-28 flex flex-col gap-10"
+        data-site-hue-stop="0.125"
+      >
         <div className="flex max-w-3xl flex-col gap-3">
-          <Label>[ See one run ]</Label>
+          <Label as="h2">Example run</Label>
           <p className="text-balance text-[15px] leading-relaxed text-foreground">
             Normally you steer each step in chat. Here you describe the task
             once, and the agent works a real process, asking only when a choice
@@ -321,54 +293,53 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.18fr)_minmax(18rem,0.72fr)] lg:items-start">
           <div className="flex flex-col gap-3">
-            <div className="overflow-x-auto border border-border bg-[var(--panel)] px-5 py-4 font-mono text-[13px] leading-7">
-              <div className="text-foreground">
-                <span className="text-muted-foreground">$ </span>
-                {runCommand}
+            <div className="run-terminal-stage">
+              {/* Blurred ghost of the same content, masked to bloom only below
+                  the opaque pane — the terminal's text showing through. */}
+              <div
+                aria-hidden="true"
+                className="run-terminal-echo font-mono text-[13px] leading-7"
+              >
+                <RunTerminalBody echo />
               </div>
-              <div className="mt-2 flex flex-col">
-                {runSurface.map((line) => (
-                  <span
-                    key={line.text}
-                    className={
-                      line.emphasis ? "text-foreground" : "text-muted-foreground"
-                    }
-                  >
-                    {line.text}
-                  </span>
-                ))}
+              <div className="run-terminal overflow-hidden font-mono text-[13px] leading-7">
+                <RunTerminalBody />
               </div>
             </div>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-              This page was built by this run.
-            </p>
           </div>
 
-          <ol className="flex flex-col gap-6">
-            {runBeats.map((beat) => (
-              <li key={beat.label} className="flex flex-col gap-1">
-                <h3 className="text-[14px] font-medium tracking-tight">
-                  {beat.label}
-                </h3>
-                <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-                  {beat.note}
-                </p>
+          <ol className="flex max-w-sm flex-col gap-6 lg:justify-self-end">
+            {runBeats.map((beat, i) => (
+              <li key={beat.label} className="flex gap-4">
+                <span
+                  aria-hidden="true"
+                  className="mt-px shrink-0 text-[12px] tabular-nums text-muted-foreground"
+                >
+                  {i + 1}
+                </span>
+                <div className="flex flex-col gap-1">
+                  <h3 className="text-balance text-[14px] font-medium tracking-tight">
+                    {beat.label}
+                  </h3>
+                  <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
+                    {beat.note}
+                  </p>
+                </div>
               </li>
             ))}
           </ol>
         </div>
 
-        <p className="max-w-3xl text-balance text-[13px] leading-relaxed text-muted-foreground">
-          The screen stays short on purpose. The full record (plan, checks,
-          evidence) is kept for the agent and the next run, not dumped on you.
-        </p>
       </section>
 
       {/* Section 3: What Circuit is */}
-      <section className="mt-28 flex max-w-3xl flex-col gap-10">
-        <Label>[ What Circuit is ]</Label>
+      <section
+        className="mt-28 flex max-w-3xl flex-col gap-10"
+        data-site-hue-stop="0.25"
+      >
+        <Label as="h2">What Circuit is</Label>
 
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
           <p className="text-[17px] leading-snug text-foreground">
@@ -396,114 +367,85 @@ export default function Home() {
       </section>
 
       {/* Section 4: Flows and blocks */}
-      <section className="mt-28 flex flex-col gap-10">
-        <div className="flex max-w-3xl flex-col gap-3">
-          <Label>[ Flows and blocks ]</Label>
-          <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-            You never have to pick a flow. Run chooses the one that fits the
-            task. But here is what is under the hood.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-5">
-          {flows.map((f) => (
-            <div key={f.name} className="flex flex-col gap-5">
-              <FlowGlyph
-                name={f.name}
-                color={f.color}
-                accent={f.accent}
-                motif={f.motif}
-                cellSize={25}
-              />
-              <div className="flex flex-col gap-1">
-                <div className="text-[15px] font-medium tracking-tight">
-                  {f.name}
-                </div>
-                <code className="text-[11px] text-muted-foreground">
-                  {f.command}
-                </code>
-              </div>
-              <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-                {f.summary}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <Label>[ Blocks ]</Label>
-          <div className="flex flex-wrap gap-2">
-            {blocks.map((b) => (
-              <span
-                key={b}
-                className="border border-border bg-[var(--panel)] px-3 py-2 text-[13px] text-foreground"
-              >
-                {b}
-              </span>
-            ))}
+      <section
+        className="relative left-1/2 mt-28 flex w-screen -translate-x-1/2 flex-col gap-10 px-6"
+        data-site-hue-stop="0.375"
+      >
+        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
+          <div className="flex max-w-3xl flex-col gap-3">
+            <Label as="h2">Flows and blocks</Label>
+            <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
+              You never pick a flow —{" "}
+              <span className="font-mono font-medium text-foreground">
+                /circuit:run
+              </span>{" "}
+              reads the task and routes it. Each flow is the same set of typed
+              blocks, arranged for one kind of work. Pick one to watch it
+              compose.
+            </p>
           </div>
-          <p className="max-w-3xl text-balance text-[13px] leading-relaxed text-muted-foreground">
-            A flow is just these blocks arranged for a kind of work. Same
-            pieces, different order.
-          </p>
+
+          <FlowComposer />
         </div>
+      </section>
 
-        <div className="flow-composer" aria-label="Flows made from blocks">
-          <div className="flow-composer-grid">
-            <div className="flow-composer-bank">
-              <div className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
-                Reusable blocks
-              </div>
-              <div className="flow-composer-pool">
-                {blockPool.map((block) => (
-                  <span className="flow-composer-pool-chip" key={block}>
-                    {block}
-                  </span>
-                ))}
-              </div>
-            </div>
+      {/* Section 5: Block internals */}
+      <section
+        className="relative left-1/2 mt-28 flex w-screen -translate-x-1/2 flex-col gap-10 bg-muted/20 px-6 py-14"
+        data-site-hue-stop="0.5"
+      >
+        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
+          <div className="flex max-w-3xl flex-col gap-3">
+            <Label as="h2">Block internals</Label>
+            <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
+              Blocks are the power units inside every flow. Each one has a
+              typed input, a typed output, and a clear job, so flows can combine
+              them without losing track of what the agent knows.
+            </p>
+          </div>
 
-            <div className="flow-composer-routes">
-              {diagramFlows.map((flow) => (
-                <div
-                  className="flow-composer-route"
-                  key={flow.name}
-                  style={
-                    {
-                      "--flow-color": flow.color,
-                      "--flow-accent": flow.accent,
-                    } as CSSProperties
-                  }
-                >
-                  <div className="flow-composer-route-name">
-                    <span>{flow.name}</span>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {blockInternals.map((block) => (
+              <article
+                key={block.name}
+                className="block-internal-card flex flex-col gap-4 bg-muted/70 p-5"
+              >
+                <h3 className="text-balance text-[15px] font-medium leading-tight tracking-tight">
+                  {block.name}
+                </h3>
+                <dl className="flex flex-col gap-1.5 text-[11px] leading-snug">
+                  <div className="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-3">
+                    <dt className="uppercase tracking-[0.18em] text-muted-foreground">
+                      Input
+                    </dt>
+                    <dd className="text-balance text-[12px] text-foreground">
+                      {block.input}
+                    </dd>
                   </div>
-                  <div
-                    className="flow-composer-sequence"
-                    aria-label={`${flow.name} flow blocks: ${flow.steps
-                      .map((step) => step.label)
-                      .join(", ")}`}
-                  >
-                    {flow.steps.map((step) => (
-                      <span
-                        className="flow-composer-step"
-                        key={`${flow.name}-${step.label}`}
-                        title={step.label}
-                      >
-                        {step.short}
-                      </span>
-                    ))}
+                  <div className="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-3">
+                    <dt className="uppercase tracking-[0.18em] text-muted-foreground">
+                      Output
+                    </dt>
+                    <dd className="text-balance text-[12px] text-foreground">
+                      {block.output}
+                    </dd>
                   </div>
-                </div>
-              ))}
-            </div>
+                </dl>
+                <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
+                  {block.detail}
+                </p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Section 5: What you can trust */}
-      <section className="mt-28 flex max-w-3xl flex-col gap-10">
-        <Label>[ What you can trust ]</Label>
+      {/* Section 6: What you can trust */}
+      <section
+        className="mt-28 flex max-w-3xl flex-col gap-10"
+        data-site-hue-stop="0.625"
+      >
+        <Label as="h2">What you can trust</Label>
 
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-2">
@@ -529,9 +471,9 @@ export default function Home() {
               Confidence
             </h3>
             <p className="text-[13px] leading-relaxed text-muted-foreground">
-              The point is confidence while you delegate more: you can trust the
-              agent did its best work, did not cut corners, did not spin its
-              wheels, and is learning from what came before.
+              The point is confidence while you delegate more: Circuit keeps
+              the process explicit, the evidence attached, and the outcome
+              honest.
             </p>
           </div>
           <div className="flex flex-col gap-2">
@@ -539,19 +481,22 @@ export default function Home() {
               Where it is heading
             </h3>
             <p className="text-[13px] leading-relaxed text-muted-foreground">
-              Circuit also keeps a record across runs so future work can build
-              on what was already learned in your project. Think of it the way a
-              practitioner gets better with experience. This part is in active
-              development.
+              Memory is in the works. Circuit already leaves structured run
+              records, evidence links, flow choices, checks, and history entries
+              behind each run. That gives future memory something concrete to
+              cite: what happened, why it happened, and which proof backed it.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Section 6: Circuit and your other tools */}
-      <section className="mt-28 flex flex-col gap-10">
+      {/* Section 7: Circuit and your other tools */}
+      <section
+        className="mt-28 flex flex-col gap-10"
+        data-site-hue-stop="0.75"
+      >
         <div className="flex max-w-3xl flex-col gap-5">
-          <Label>[ Circuit and your other tools ]</Label>
+          <Label as="h2">Circuit and your other tools</Label>
           <p className="text-[15px] leading-relaxed text-foreground">
             Circuit does not replace your coding agent, your skills, or anything
             Claude Code or Codex already gives you. It sits above them and
@@ -572,11 +517,11 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 border-y border-border sm:grid-cols-3 sm:border-y-0">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {comparison.map((c) => (
             <div
               key={c.name}
-              className="flex flex-col gap-2 border-b border-border py-5 sm:border-b-0 sm:border-r sm:px-5 sm:py-0 sm:first:pl-0 sm:last:border-r-0"
+              className="soft-info-card flex flex-col gap-2 p-5"
             >
               <h3 className="text-[15px] font-medium tracking-tight">
                 {c.name}
@@ -595,15 +540,19 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Section 7: Install and start */}
-      <section id="install" className="mt-28 flex flex-col gap-10">
-        <Label>[ Install and start ]</Label>
+      {/* Section 8: Install and start */}
+      <section
+        id="install"
+        className="mt-28 flex flex-col gap-10"
+        data-site-hue-stop="0.875"
+      >
+        <Label as="h2">Install and start</Label>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <h2 className="text-[15px] font-medium tracking-tight">
+            <h3 className="text-[15px] font-medium tracking-tight">
               Claude Code
-            </h2>
+            </h3>
             <CodeBlock>
               {`/plugin marketplace add petekp/circuit
 /plugin install circuit@circuit
@@ -612,8 +561,8 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <h2 className="text-[15px] font-medium tracking-tight">Codex</h2>
-            <CodeBlock>{`codex plugin marketplace add petekp/circuit`}</CodeBlock>
+            <h3 className="text-[15px] font-medium tracking-tight">Codex</h3>
+            <CodeBlock>{codexInstallCommand}</CodeBlock>
           </div>
         </div>
 
@@ -621,23 +570,21 @@ export default function Home() {
           <p className="text-[13px] text-muted-foreground">Then start with:</p>
           <CodeBlock>{`/circuit:run <your task>`}</CodeBlock>
           <p className="text-[13px] text-muted-foreground">
-            The CLI needs Node.js 22.18.0 or newer.
+            Circuit requires Node.js 22.18.0 or newer.
           </p>
         </div>
 
         <div className="flex w-full max-w-3xl flex-col gap-3">
-          <Label>[ Copy these instructions to your coding agent ]</Label>
-          <textarea
-            readOnly
-            rows={9}
-            value={agentInstallInstructions}
-            className="max-h-56 min-h-36 w-full resize-y overflow-y-auto border border-border bg-[var(--panel)] px-5 py-4 font-mono text-[13px] leading-6 text-foreground outline-none"
-          />
+          <Label>Copy these instructions to your coding agent</Label>
+          <CopyInstallInstructions text={agentInstallInstructions} />
         </div>
       </section>
 
-      {/* Section 8: Footer */}
-      <footer className="mt-28 flex flex-col gap-3 border-t border-border pt-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+      {/* Section 9: Footer */}
+      <footer
+        className="mt-28 flex flex-col gap-3 pt-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
+        data-site-hue-stop="1"
+      >
         <a
           href="https://github.com/petekp/circuit"
           className="transition-colors hover:text-foreground"
@@ -649,11 +596,11 @@ export default function Home() {
             href="https://github.com/petekp/circuit/blob/main/LICENSE"
             className="underline underline-offset-4 transition-colors hover:text-foreground"
           >
-            MIT
-          </a>{" "}
-          licensed.
+            MIT licensed
+          </a>
+          .
         </span>
-        <span>Alpha, v0.0.1.</span>
+        <span>{alphaLabel}</span>
       </footer>
     </main>
   );

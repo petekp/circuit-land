@@ -9,7 +9,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -51,24 +51,28 @@
 }
 
 :root {
-  --background: hsl(40 15% 9%);
-  --foreground: hsl(45 28% 93%);
-  --card: hsl(40 12% 12%);
-  --card-foreground: hsl(45 28% 93%);
-  --popover: hsl(40 12% 12%);
-  --popover-foreground: hsl(45 28% 93%);
-  --primary: hsl(45 28% 93%);
-  --primary-foreground: hsl(40 15% 9%);
-  --secondary: hsl(40 12% 18%);
-  --secondary-foreground: hsl(45 28% 93%);
-  --muted: hsl(40 12% 18%);
-  --muted-foreground: hsl(42 10% 62%);
-  --accent: hsl(40 12% 18%);
-  --accent-foreground: hsl(45 28% 93%);
+  --site-primary-hue: 40;
+  --site-primary-hue-soft: calc(var(--site-primary-hue) + 2);
+  --site-primary-hue-light: calc(var(--site-primary-hue) + 5);
+  --site-primary-hue-gold: calc(var(--site-primary-hue) + 6);
+  --background: hsl(var(--site-primary-hue) 15% 9%);
+  --foreground: hsl(var(--site-primary-hue-light) 28% 93%);
+  --card: hsl(var(--site-primary-hue) 12% 12%);
+  --card-foreground: hsl(var(--site-primary-hue-light) 28% 93%);
+  --popover: hsl(var(--site-primary-hue) 12% 12%);
+  --popover-foreground: hsl(var(--site-primary-hue-light) 28% 93%);
+  --primary: hsl(var(--site-primary-hue-light) 28% 93%);
+  --primary-foreground: hsl(var(--site-primary-hue) 15% 9%);
+  --secondary: hsl(var(--site-primary-hue) 12% 18%);
+  --secondary-foreground: hsl(var(--site-primary-hue-light) 28% 93%);
+  --muted: hsl(var(--site-primary-hue) 12% 18%);
+  --muted-foreground: hsl(var(--site-primary-hue-soft) 10% 62%);
+  --accent: hsl(var(--site-primary-hue) 12% 18%);
+  --accent-foreground: hsl(var(--site-primary-hue-light) 28% 93%);
   --destructive: hsl(3 75% 58%);
-  --border: hsl(40 10% 24%);
-  --input: hsl(40 10% 24%);
-  --ring: hsl(42 8% 52%);
+  --border: hsl(var(--site-primary-hue) 10% 24%);
+  --input: hsl(var(--site-primary-hue) 10% 24%);
+  --ring: hsl(var(--site-primary-hue-soft) 8% 52%);
   --chart-1: hsl(0 0% 87%);
   --chart-2: hsl(0 0% 56%);
   --chart-3: hsl(0 0% 44%);
@@ -88,7 +92,7 @@
   --sticker-shadow: hsl(0 0% 0%);
   --wordmark-a: hsl(169 100% 50%);
   --wordmark-b: hsl(334 100% 59%);
-  --wordmark-c: hsl(46 100% 62%);
+  --wordmark-c: hsl(var(--site-primary-hue-gold) 100% 62%);
   --wordmark-d: hsl(254 100% 65%);
   --wordmark-e: hsl(188 100% 42%);
   --flow-explore: hsl(188 100% 42%);
@@ -99,12 +103,10 @@
   --flow-fix-accent: hsl(73 100% 50%);
   --flow-review: hsl(145 100% 39%);
   --flow-review-accent: hsl(338 100% 65%);
-  --flow-goal: hsl(46 100% 62%);
-  --flow-goal-accent: hsl(334 100% 59%);
-  --diagram-surface: hsl(0 0% 0% / 28%);
-  --diagram-chip: hsl(40 12% 15%);
-  --diagram-chip-text: hsl(45 28% 93%);
-  --diagram-shadow: hsl(0 0% 0% / 28%);
+  --flow-prototype: hsl(254 100% 65%);
+  --flow-prototype-accent: hsl(var(--site-primary-hue-gold) 100% 62%);
+  --flow-pursue: hsl(43 92% 55%);
+  --flow-pursue-accent: hsl(54 96% 68%);
 }
 
 .dark {
@@ -139,98 +141,6 @@
   --sidebar-accent-foreground: hsl(0 0% 98%);
   --sidebar-border: hsl(0 0% 100% / 10%);
   --sidebar-ring: hsl(0 0% 56%);
-}
-
-@supports (color: color(display-p3 1 1 1)) {
-  :root {
-    --background: color(display-p3 0.093 0.085 0.074);
-    --foreground: color(display-p3 0.945 0.93 0.89);
-    --card: color(display-p3 0.12 0.11 0.095);
-    --card-foreground: color(display-p3 0.945 0.93 0.89);
-    --popover: color(display-p3 0.12 0.11 0.095);
-    --popover-foreground: color(display-p3 0.945 0.93 0.89);
-    --primary: color(display-p3 0.945 0.93 0.89);
-    --primary-foreground: color(display-p3 0.093 0.085 0.074);
-    --secondary: color(display-p3 0.18 0.165 0.145);
-    --secondary-foreground: color(display-p3 0.945 0.93 0.89);
-    --muted: color(display-p3 0.18 0.165 0.145);
-    --muted-foreground: color(display-p3 0.66 0.62 0.55);
-    --accent: color(display-p3 0.18 0.165 0.145);
-    --accent-foreground: color(display-p3 0.945 0.93 0.89);
-    --destructive: color(display-p3 0.84 0.22 0.16);
-    --border: color(display-p3 0.25 0.23 0.2);
-    --input: color(display-p3 0.25 0.23 0.2);
-    --ring: color(display-p3 0.57 0.53 0.47);
-    --chart-1: color(display-p3 0.87 0.87 0.87);
-    --chart-2: color(display-p3 0.56 0.56 0.56);
-    --chart-3: color(display-p3 0.44 0.44 0.44);
-    --chart-4: color(display-p3 0.37 0.37 0.37);
-    --chart-5: color(display-p3 0.27 0.27 0.27);
-    --sidebar: color(display-p3 0.98 0.98 0.98);
-    --sidebar-foreground: color(display-p3 0.15 0.15 0.15);
-    --sidebar-primary: color(display-p3 0.21 0.21 0.21);
-    --sidebar-primary-foreground: color(display-p3 0.98 0.98 0.98);
-    --sidebar-accent: color(display-p3 0.97 0.97 0.97);
-    --sidebar-accent-foreground: color(display-p3 0.21 0.21 0.21);
-    --sidebar-border: color(display-p3 0.92 0.92 0.92);
-    --sidebar-ring: color(display-p3 0.71 0.71 0.71);
-    --panel: color(display-p3 0 0 0 / 40%);
-    --sticker-light: color(display-p3 1 1 1);
-    --sticker-shadow: color(display-p3 0 0 0);
-    --wordmark-a: color(display-p3 0 1 0.82);
-    --wordmark-b: color(display-p3 1 0.18 0.53);
-    --wordmark-c: color(display-p3 1 0.82 0.25);
-    --wordmark-d: color(display-p3 0.49 0.3 1);
-    --wordmark-e: color(display-p3 0 0.72 0.83);
-    --flow-explore: color(display-p3 0 0.72 0.83);
-    --flow-explore-accent: color(display-p3 0.85 1 0.25);
-    --flow-build: color(display-p3 1 0.42 0.1);
-    --flow-build-accent: color(display-p3 0.23 0 1);
-    --flow-fix: color(display-p3 0.91 0.12 0.39);
-    --flow-fix-accent: color(display-p3 0.78 1 0);
-    --flow-review: color(display-p3 0 0.78 0.33);
-    --flow-review-accent: color(display-p3 1 0.3 0.55);
-    --flow-goal: color(display-p3 1 0.82 0.25);
-    --flow-goal-accent: color(display-p3 1 0.18 0.53);
-    --diagram-surface: color(display-p3 0 0 0 / 28%);
-    --diagram-chip: color(display-p3 0.15 0.135 0.115);
-    --diagram-chip-text: color(display-p3 0.945 0.93 0.89);
-    --diagram-shadow: color(display-p3 0 0 0 / 28%);
-  }
-
-  .dark {
-    --background: color(display-p3 0.14 0.14 0.14);
-    --foreground: color(display-p3 0.98 0.98 0.98);
-    --card: color(display-p3 0.21 0.21 0.21);
-    --card-foreground: color(display-p3 0.98 0.98 0.98);
-    --popover: color(display-p3 0.21 0.21 0.21);
-    --popover-foreground: color(display-p3 0.98 0.98 0.98);
-    --primary: color(display-p3 0.92 0.92 0.92);
-    --primary-foreground: color(display-p3 0.21 0.21 0.21);
-    --secondary: color(display-p3 0.27 0.27 0.27);
-    --secondary-foreground: color(display-p3 0.98 0.98 0.98);
-    --muted: color(display-p3 0.27 0.27 0.27);
-    --muted-foreground: color(display-p3 0.71 0.71 0.71);
-    --accent: color(display-p3 0.27 0.27 0.27);
-    --accent-foreground: color(display-p3 0.98 0.98 0.98);
-    --destructive: color(display-p3 0.84 0.2 0.16);
-    --border: color(display-p3 1 1 1 / 10%);
-    --input: color(display-p3 1 1 1 / 15%);
-    --ring: color(display-p3 0.56 0.56 0.56);
-    --chart-1: color(display-p3 0.87 0.87 0.87);
-    --chart-2: color(display-p3 0.56 0.56 0.56);
-    --chart-3: color(display-p3 0.44 0.44 0.44);
-    --chart-4: color(display-p3 0.37 0.37 0.37);
-    --chart-5: color(display-p3 0.27 0.27 0.27);
-    --sidebar: color(display-p3 0.21 0.21 0.21);
-    --sidebar-foreground: color(display-p3 0.98 0.98 0.98);
-    --sidebar-primary: color(display-p3 0.49 0.24 0.93);
-    --sidebar-primary-foreground: color(display-p3 0.98 0.98 0.98);
-    --sidebar-accent: color(display-p3 0.27 0.27 0.27);
-    --sidebar-accent-foreground: color(display-p3 0.98 0.98 0.98);
-    --sidebar-border: color(display-p3 1 1 1 / 10%);
-    --sidebar-ring: color(display-p3 0.56 0.56 0.56);
-  }
 }
 
 @layer base {
@@ -290,163 +200,152 @@
   }
 }
 
-.flow-composer {
-  position: relative;
-  overflow: hidden;
-  border-block: 1px solid var(--border);
-  border-radius: 6px;
-  background: linear-gradient(
-    135deg,
-    var(--diagram-surface) 0%,
-    var(--panel) 100%
-  );
-}
-
-.flow-composer-grid {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.65fr);
-  gap: 1.5rem;
-  padding: 1.25rem;
-}
-
-.flow-composer-bank,
-.flow-composer-routes {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-}
-
-.flow-composer-bank {
-  gap: 1rem;
-}
-
-.flow-composer-pool {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-.flow-composer-pool-chip,
-.flow-composer-step {
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--diagram-chip-text);
-  background: var(--diagram-chip);
-  box-shadow:
-    inset 0 1px 0 hsl(0 0% 100% / 12%),
-    0 1px 0 var(--diagram-shadow);
-}
-
-@supports (color: color(display-p3 1 1 1)) {
-  .flow-composer-pool-chip,
-  .flow-composer-step {
-    box-shadow:
-      inset 0 1px 0 color(display-p3 1 1 1 / 12%),
-      0 1px 0 var(--diagram-shadow);
+@media (prefers-reduced-motion: reduce) {
+  .circuit-wordmark {
+    animation: none;
   }
 }
 
-.flow-composer-pool-chip {
-  display: flex;
-  min-height: 2.35rem;
-  align-items: center;
-  justify-content: center;
-  padding: 0.55rem 0.4rem;
-  font-size: 0.7rem;
-  line-height: 1.1;
-  text-align: center;
-}
-
-.flow-composer-routes {
-  gap: 0.8rem;
-}
-
-.flow-composer-route {
+/* Glassy run terminal (Section 2). A translucent, lightly frosted pane that
+   floats above the page on a soft shadow, with a faint bloom beneath it — the
+   light of the terminal content reading through the glass against the warm
+   near-black background. */
+.run-terminal-stage {
   position: relative;
-  display: grid;
-  grid-template-columns: 5.2rem minmax(0, 1fr);
-  gap: 1rem;
-  align-items: center;
-  min-height: 4.35rem;
-  padding: 0.8rem 0;
+  isolation: isolate;
 }
 
-.flow-composer-route + .flow-composer-route {
-  border-top: 1px solid var(--border);
-}
-
-.flow-composer-route::before {
+/* The content echo: an aria-hidden, blurred copy of the terminal's own text,
+   pushed down and behind the opaque pane and masked to fade in toward the
+   floor. The pane occludes the sharp copy; only a soft, warm ghost of the
+   command and run output bleeds out beneath — the content showing through. */
+.run-terminal-echo {
   position: absolute;
-  top: 50%;
-  right: 0;
-  left: 6.2rem;
-  height: 1px;
-  content: "";
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--flow-color) 20%,
-    var(--flow-accent) 70%,
-    transparent 100%
-  );
-  opacity: 0.38;
+  inset: 0 18px;
+  z-index: 0;
+  color: hsl(var(--site-primary-hue-soft) 58% 60%);
+  opacity: 0.34;
+  transform: translateY(26px);
+  transform-origin: bottom center;
+  /* Heavy blur dissolves the glyphs into a content-shaped color wash rather
+     than a legible double of the text; the inset keeps the bloom from
+     spilling past the pane's sides, and the mask blooms only at the floor. */
+  filter: blur(20px) saturate(1.2);
+  pointer-events: none;
+  user-select: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 40%, #000 96%);
+  mask-image: linear-gradient(180deg, transparent 40%, #000 96%);
 }
 
-.flow-composer-route-name {
+.run-terminal {
   position: relative;
   z-index: 1;
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.2rem;
+  /* Squircle (superellipse) corners on supporting browsers; gracefully a
+     rounded rect elsewhere. corner-shape reshapes the radius the border,
+     bevel, and shadows already follow. */
+  border-radius: 28px;
+  corner-shape: squircle;
+  border: 1px solid hsl(calc(var(--site-primary-hue) + 4) 22% 74% / 0.18);
+  /* warm slab lit from above, with a soft glass sheen catching the top edge */
+  background:
+    radial-gradient(
+      125% 90% at 50% -18%,
+      hsl(var(--site-primary-hue-light) 32% 84% / 0.08),
+      transparent 56%
+    ),
+    linear-gradient(
+      180deg,
+      hsl(var(--site-primary-hue) 16% 10.5%) 0%,
+      hsl(var(--site-primary-hue) 17% 8.5%) 42%,
+      hsl(var(--site-primary-hue) 19% 7%) 100%
+    );
+  box-shadow:
+    inset 0 1.5px 0 hsl(var(--site-primary-hue-light) 40% 94% / 0.16),
+    inset 0 0 0 1px hsl(var(--site-primary-hue-light) 30% 88% / 0.04),
+    inset 0 -24px 40px -24px hsl(0 0% 0% / 0.66),
+    0 1px 2px hsl(0 0% 0% / 0.4),
+    0 22px 52px -22px hsl(0 0% 0% / 0.72),
+    0 3px 18px hsl(var(--site-primary-hue) 60% 55% / 0.04);
 }
 
-.flow-composer-route-name span {
-  font-size: 0.86rem;
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: 0;
+/* Hairline that separates the command row from the streamed output, the way a
+   prompt sits above its result. */
+.run-terminal-divider {
+  border-bottom: 1px solid hsl(var(--site-primary-hue-light) 25% 78% / 0.1);
 }
 
-.flow-composer-sequence {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  min-width: 0;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
+.soft-cta-primary,
+.soft-cta-secondary,
+.soft-code-block,
+.soft-info-card,
+.soft-chip,
+.flow-picker-button,
+.flow-composer-panel,
+.flow-block-tile,
+.block-internal-card {
+  corner-shape: squircle;
 }
 
-.flow-composer-step {
-  position: relative;
-  overflow: hidden;
-  padding: 0.48rem 0.58rem;
-  font-size: 0.7rem;
-  line-height: 1;
+.soft-cta-primary {
+  border-radius: 18px;
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
 
-@media (max-width: 760px) {
-  .flow-composer-grid {
-    grid-template-columns: 1fr;
-    padding: 1rem;
-  }
-
-  .flow-composer-route {
-    grid-template-columns: 1fr;
-    gap: 0.65rem;
-  }
-
-  .flow-composer-route::before {
-    display: none;
-  }
+.soft-cta-secondary {
+  border-radius: 18px;
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
 }
 
-@media (max-width: 520px) {
-  .flow-composer-pool {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.soft-cta-secondary:hover,
+.flow-picker-button:hover {
+  background: color-mix(in oklab, var(--muted) 86%, transparent);
+}
+
+.soft-code-block,
+.soft-info-card {
+  border-radius: 24px;
+  background: color-mix(in oklab, var(--muted) 54%, transparent);
+}
+
+.soft-chip {
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--muted) 82%, transparent);
+}
+
+.flow-picker-button {
+  border-radius: 22px;
+  background: color-mix(in oklab, var(--muted) 64%, transparent);
+}
+
+.flow-composer-panel {
+  border-radius: 30px;
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.04),
+    0 14px 34px -28px hsl(0 0% 0% / 0.6);
+}
+
+.flow-block-tile {
+  border-radius: 20px;
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.05);
+}
+
+.flow-fanout-cluster,
+.flow-fanout-branch {
+  corner-shape: squircle;
+}
+
+.flow-fanout-cluster {
+  border-radius: 22px;
+  background: color-mix(in oklab, var(--flow-color) 12%, var(--muted));
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.05);
+}
+
+.flow-fanout-branch {
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--flow-color) 20%, var(--muted));
+}
+
+.block-internal-card {
+  border-radius: 22px;
 }

@@ -45,3 +45,4 @@ next-env.d.ts
 .circuit/
 .circuit-build-surface.log
 .devserver.log
+.claude/scheduled_tasks.lock

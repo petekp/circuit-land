@@ -11,7 +11,7 @@ export function FlowGlyph({
   name: string;
   color: string;
   accent: string;
-  motif: MotifCell[];
+  motif: readonly MotifCell[];
   cellSize?: number;
   className?: string;
 }) {

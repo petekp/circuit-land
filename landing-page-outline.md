@@ -100,7 +100,7 @@ from existing sources and should be reproduced exactly.
   > "You hand a task to a coding agent, then spend the next hour steering every
   > step in chat. Circuit gives the agent a real process to follow, so you can
   > hand off the work instead."
-- Honest status line: "Alpha, v0.0.1."
+- Honest status line: "Plugin alpha, 0.1.0-alpha.6."
 - Two calls to action, each with one unambiguous behavior:
   - "See a run" scrolls to Section 2.
   - "Install" jumps to the install block in Section 7. It does not reveal
@@ -163,15 +163,16 @@ headed. Design TBD.]`
 `[FEATURES]`
 
 - Lead line:
-  > "You never have to pick a flow. Run chooses the one that fits the task. But
-  > here is what is under the hood."
-- `[FEATURES: flows]` Five flows, each with its command and one line (reuse
-  existing summaries):
-  - **Explore** `/circuit:explore`: compare paths before the agent commits to one.
-  - **Build** `/circuit:build`: turn a clear brief into a plan, a change, checks, and review.
-  - **Fix** `/circuit:fix`: find the cause, make the fix, and keep evidence attached.
-  - **Review** `/circuit:review`: review a scoped change against evidence, not guesswork.
-  - **Goal** `/circuit:goal`: keep a bounded objective moving until it is done, blocked, or needs a decision.
+  > "You never have to pick a flow. /circuit:run chooses the one that fits the
+  > task. Here is what it can route to."
+- `[FEATURES: flows]` Six routed public flows. Do not present them as separate
+  host commands:
+  - **Explore**: compare paths before the agent commits to one.
+  - **Build**: turn a clear brief into a plan, a change, checks, and review.
+  - **Fix**: find the cause, make the fix, and keep evidence attached.
+  - **Review**: review a scoped change against evidence, not guesswork.
+  - **Prototype**: try a local sketch or comparison before committing to a build.
+  - **Pursue**: coordinate several related pieces of work without pretending they all run at once.
 - `[FEATURES: blocks]` The reusable moves a flow is built from:
   Clarify, Frame, Gather Context, Diagnose, Plan, Act, Run Verification, Review,
   Human Decision, Close With Evidence.
@@ -180,7 +181,7 @@ headed. Design TBD.]`
   > different order."
 
 `[VISUAL: the existing flow-assembly diagram (blocks composing into Build, Fix,
-Goal). Reuse what is already built.]`
+Pursue). Reuse what is already built.]`
 
 ### Section 5: What you can trust
 
@@ -196,13 +197,13 @@ ceremony.
   > changes the outcome: a risky direction, an ambiguous goal, a visual choice.
   > Otherwise it keeps moving."
 - Confidence:
-  > "The point is confidence while you delegate more: you can trust the agent did
-  > its best work, did not cut corners, did not spin its wheels, and is learning
-  > from what came before."
+  > "The point is confidence while you delegate more: Circuit keeps the process
+  > explicit, the evidence attached, and the outcome honest."
 - Where it is heading (clearly future, not a current promise):
-  > "Circuit also keeps a record across runs so future work can build on what was
-  > already learned in your project. Think of it the way a practitioner gets
-  > better with experience. This part is in active development."
+  > "Memory is in the works. Circuit already leaves structured run records,
+  > evidence links, flow choices, checks, and history entries behind each run.
+  > That gives future memory something concrete to cite: what happened, why it
+  > happened, and which proof backed it."
 
 ### Section 6: Circuit and your other tools
 
@@ -243,9 +244,9 @@ front door.]`
   /plugin install circuit@circuit
   /reload-plugins
   ```
-- `[INSTALL: Codex]` Needs your decision, see the note below. Current page shows:
+- `[INSTALL: Codex]` Public alpha install:
   ```text
-  codex plugin marketplace add petekp/circuit
+  codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.6
   ```
 - `[GETTING STARTED]` The one thing to do next (verbatim shape):
   > "Then start with:"
@@ -255,7 +256,7 @@ front door.]`
 - `[GETTING STARTED: copy for your agent]` Keep the existing "copy these
   instructions to your coding agent" block. It is a strong, low-friction path and
   already written.
-- Requirement, for the CLI path only: "The CLI needs Node.js 22.18.0 or newer."
+- Requirement: "Circuit requires Node.js 22.18.0 or newer."
 
 ### Section 8: Footer
 
@@ -263,7 +264,7 @@ front door.]`
 - `[LICENSE]` MIT. Short footer line: "MIT licensed." Link the word "MIT" to the
   LICENSE file in the repo. Free to use, modify, and redistribute; keep the
   copyright and license notice.
-- Repeat the alpha note: "Alpha, v0.0.1."
+- Repeat the alpha note: "Plugin alpha, 0.1.0-alpha.6."
 
 ---
 
@@ -271,11 +272,10 @@ front door.]`
 
 A few things I could not resolve from the sources alone:
 
-1. **Codex install command.** The current page shows
-   `codex plugin marketplace add petekp/circuit`, but the repo README's Codex
-   section instead documents `npm run sync:codex-plugin-cache` for host use from
-   a checkout. These describe different scenarios. Tell me which is the canonical
-   public install and I will lock Section 7.
+1. **Codex install command.** Resolved for this alpha:
+   `codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.6`.
+   The repo-local cache sync command remains for checkout dogfood, not public
+   installation.
 
 2. **License.** Resolved: MIT (free, attributable). The footer says "MIT
    licensed" and the repo now carries a `LICENSE` file, an SPDX `license` field
