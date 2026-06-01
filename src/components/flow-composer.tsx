@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+} from "react";
 import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { FlowGlyph, type MotifCell } from "@/components/flow-glyph";
 
@@ -152,49 +160,161 @@ const FLOWS: ComposerFlow[] = [
   },
 ];
 
-function Connector() {
-  return (
-    <div
-      aria-hidden
-      className="flex w-full shrink-0 select-none items-center justify-center self-center px-1 sm:w-auto"
-    >
-      <svg
-        width="34"
-        height="8"
-        viewBox="0 0 34 8"
-        fill="none"
-        className="shrink-0 rotate-90 sm:rotate-0"
-        style={{ color: "color-mix(in oklab, var(--flow-color) 60%, var(--border))" }}
-      >
-        <path
-          d="M0 4 H29 M25 1 L30 4 L25 7"
-          stroke="currentColor"
-          strokeWidth="1.25"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </div>
-  );
+// Explore renders a tournament fanout between Plan and Review. The "fanout"
+// pseudo-node is one wide cluster (a single list item); the verbatim aria-label
+// in FlowDiagram names the announced order including "fan out option cases".
+const EXPLORE_SEQUENCE = [
+  "frame",
+  "diagnose",
+  "plan",
+  "fanout",
+  "review",
+  "human-decision",
+  "close-with-evidence",
+] as const;
+
+// Theming recipes reused verbatim from the previous diagram so the new layout
+// reads as the same family. Everything tints off the inline --flow-color.
+const TILE_FILL = "color-mix(in oklab, var(--flow-color) 18%, var(--muted))";
+const CONNECTOR_STROKE = "color-mix(in oklab, var(--flow-color) 60%, var(--border))";
+
+// Geometry constants for the measured connector overlay.
+// Tolerance for "same row" — tiles in a flex row share a top (align-items:start).
+// Kept well below the row lane (gap-y-12/16, i.e. 48–64px) so two rows never
+// collapse into one band.
+const ROW_EPSILON = 18;
+const EDGE_INSET = 6; // px the connector stops short of a tile, leaving room for the chevron
+
+type Anchor = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  cx: number;
+  cy: number;
+};
+
+type Segment = {
+  id: string;
+  d: string;
+  head: { x: number; y: number; dir: "right" | "down" };
+};
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+// Stable no-op subscription: the "are we hydrated yet" value never changes once
+// the client takes over, so useSyncExternalStore only needs distinct server
+// (false) and client (true) snapshots — no real store to subscribe to.
+const emptySubscribe = () => () => {};
+
+function toAnchor(el: HTMLElement, origin: DOMRect): Anchor {
+  const r = el.getBoundingClientRect();
+  const left = r.left - origin.left;
+  const top = r.top - origin.top;
+  return {
+    left,
+    top,
+    right: left + r.width,
+    bottom: top + r.height,
+    cx: left + r.width / 2,
+    cy: top + r.height / 2,
+  };
+}
+
+// One connector between consecutive nodes. Same-row links curve flat from the
+// right of A to the left of B; wrapped links use a single cubic with vertical
+// tangents — a smooth serpentine that drops from the bottom of the last tile in
+// a row and rises into the top of the first tile on the next row, no elbow. The
+// mobile one-per-row case collapses this to a clean vertical curve for free.
+function connectorSegment(
+  a: Anchor,
+  b: Anchor,
+  containerWidth: number,
+): Omit<Segment, "id"> {
+  // Same row: tops align AND b sits to the right of a. Flat-tangent cubic. The
+  // right-of-a check also stops a FLIP frame that transiently measures b left of
+  // a from drawing a folded connector — those pairs fall through to a curve.
+  const sameRow = Math.abs(a.top - b.top) < ROW_EPSILON && b.left > a.right - 4;
+  if (sameRow) {
+    const x1 = a.right + EDGE_INSET;
+    const y1 = a.cy;
+    const x2 = b.left - EDGE_INSET;
+    const y2 = b.cy;
+    const k = Math.min(Math.max((x2 - x1) * 0.5, 12), 40);
+    return {
+      d: `M ${x1} ${y1} C ${x1 + k} ${y1}, ${x2 - k} ${y2}, ${x2} ${y2}`,
+      head: { x: x2, y: y2, dir: "right" },
+    };
+  }
+  // Stacked: the tiles' horizontal ranges overlap (mobile single column, or a
+  // block feeding the full-width fanout cluster). A clean vertical curve from
+  // the bottom of a to the top of b.
+  const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+  if (overlapX > 8) {
+    const x1 = a.cx;
+    const y1 = a.bottom + EDGE_INSET;
+    const x2 = b.cx;
+    const y2 = b.top - EDGE_INSET;
+    const k = Math.min(Math.max((y2 - y1) * 0.5, 12), 36);
+    return {
+      d: `M ${x1} ${y1} C ${x1} ${y1 + k}, ${x2} ${y2 - k}, ${x2} ${y2}`,
+      head: { x: x2, y: y2, dir: "down" },
+    };
+  }
+  // Wrap-back ribbon: b is on a lower row and left of a (the end of one row to
+  // the start of the next). Leave a's right edge heading right, then sweep down
+  // and around into b's top — horizontal tangent out, vertical tangent in, so it
+  // reads as one flowing ribbon rather than a right-angle return.
+  const x1 = a.right + EDGE_INSET;
+  const y1 = a.cy;
+  const x2 = b.cx;
+  const y2 = b.top - EDGE_INSET;
+  // Cap the rightward reach so the control point never bulges past the
+  // container edge when the row's last tile sits flush right.
+  const maxReachX = Math.max(8, containerWidth - x1 - 2);
+  const reachX = Math.min(Math.max((x1 - x2) * 0.32, 28), 52, maxReachX);
+  const reachY = Math.min(Math.max((y2 - y1) * 0.62, 26), 60);
+  return {
+    d: `M ${x1} ${y1} C ${x1 + reachX} ${y1}, ${x2} ${y2 - reachY}, ${x2} ${y2}`,
+    head: { x: x2, y: y2, dir: "down" },
+  };
+}
+
+// Vertical-tangent cubic, used for the fanout cluster's internal fan/merge wires.
+function verticalCubic(x1: number, y1: number, x2: number, y2: number): string {
+  const k = Math.max(Math.abs(y2 - y1) * 0.5, 12);
+  return `M ${x1} ${y1} C ${x1} ${y1 + k}, ${x2} ${y2 - k}, ${x2} ${y2}`;
+}
+
+function chevron(head: Segment["head"]): string {
+  const { x, y, dir } = head;
+  if (dir === "right") return `M ${x - 5} ${y - 3} L ${x} ${y} L ${x - 5} ${y + 3}`;
+  return `M ${x - 3} ${y - 5} L ${x} ${y} L ${x + 3} ${y - 5}`;
 }
 
 function BlockTile({
   block,
-  transition,
+  reduceMotion,
+  spring,
+  registerNode,
 }: {
   block: BlockId;
-  transition: Parameters<typeof motion.div>[0]["transition"];
+  reduceMotion: boolean;
+  spring: Parameters<typeof motion.div>[0]["transition"];
+  registerNode: (id: string) => (el: HTMLElement | null) => void;
 }) {
   return (
     <motion.div
-      layoutId={block}
+      ref={registerNode(block)}
       layout
-      transition={transition}
+      layoutId={block}
+      transition={spring}
+      initial={reduceMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
       role="listitem"
-      className="flow-block-tile flex w-full flex-col justify-center gap-2 px-4 py-4 text-foreground sm:w-auto sm:min-w-[108px]"
-      style={{
-        backgroundColor: "color-mix(in oklab, var(--flow-color) 18%, var(--muted))",
-      }}
+      className="flow-block-tile relative z-10 flex w-full flex-col justify-center gap-2 px-4 py-4 text-foreground sm:w-auto sm:min-w-[108px]"
+      style={{ backgroundColor: TILE_FILL }}
     >
       <span className="text-[15px] font-medium leading-tight tracking-tight">
         {BLOCK_LABEL[block]}
@@ -203,102 +323,342 @@ function BlockTile({
   );
 }
 
-function LinearFlowDiagram({
-  flow,
-  transition,
+function FanoutCluster({
+  reduceMotion,
+  spring,
+  registerNode,
 }: {
-  flow: ComposerFlow;
-  transition: Parameters<typeof motion.div>[0]["transition"];
+  reduceMotion: boolean;
+  spring: Parameters<typeof motion.div>[0]["transition"];
+  registerNode: (id: string) => (el: HTMLElement | null) => void;
 }) {
+  const clusterRef = useRef<HTMLElement | null>(null);
+  const branchRefs = useRef<(HTMLElement | null)[]>([]);
+  const [fanSegs, setFanSegs] = useState<{ id: string; d: string }[]>([]);
+  const [box, setBox] = useState({ w: 0, h: 0 });
+
+  // The cluster element is needed by the parent overlay (the plan->fanout and
+  // fanout->review connectors read it via "fanout") AND by this local overlay.
+  const setClusterRef = useCallback(
+    (el: HTMLElement | null) => {
+      clusterRef.current = el;
+      registerNode("fanout")(el);
+    },
+    [registerNode],
+  );
+
+  // Fan/merge geometry is internal to the cluster and moves with it, so it only
+  // changes on reflow (resize / font load), never during the cluster's FLIP —
+  // no rAF needed here, unlike the main sequence overlay.
+  const measureFan = useCallback(() => {
+    const cluster = clusterRef.current;
+    if (!cluster) return;
+    const origin = cluster.getBoundingClientRect();
+    const w = origin.width;
+    const h = origin.height;
+    const segs: { id: string; d: string }[] = [];
+    branchRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const bx = r.left - origin.left + r.width / 2;
+      const top = r.top - origin.top;
+      const bottom = top + r.height;
+      // Fan out from the top-center inlet to each branch; rejoin into the
+      // bottom-center outlet. Those inlet/outlet points sit on the cluster edge
+      // so they meet the plan->fanout and fanout->review connectors exactly.
+      segs.push({ id: `fan-${i}`, d: verticalCubic(w / 2, 0, bx, top) });
+      segs.push({ id: `merge-${i}`, d: verticalCubic(bx, bottom, w / 2, h) });
+    });
+    setFanSegs(segs);
+    setBox((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
+  }, []);
+
+  useIsomorphicLayoutEffect(() => {
+    measureFan();
+    const cluster = clusterRef.current;
+    if (!cluster || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => measureFan());
+    ro.observe(cluster);
+    return () => ro.disconnect();
+  }, [measureFan]);
+
+  useEffect(() => {
+    if (typeof document === "undefined" || !document.fonts?.ready) return;
+    let active = true;
+    document.fonts.ready.then(() => {
+      if (active) measureFan();
+    });
+    return () => {
+      active = false;
+    };
+  }, [measureFan]);
+
   return (
-    <div
-      className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-stretch sm:gap-x-1 sm:gap-y-5"
-      role="list"
-      aria-label={`${flow.name} flow, in order: ${flow.blocks
-        .map((b) => BLOCK_LABEL[b])
-        .join(", then ")}`}
+    <motion.div
+      ref={setClusterRef}
+      layout
+      layoutId="fanout"
+      transition={spring}
+      initial={reduceMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      role="listitem"
+      className="flow-fanout-cluster relative z-10 w-full px-3 pb-3 pt-3 text-foreground"
     >
-      {flow.blocks.map((b, i) => (
-        <div
-          key={b}
-          className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-1"
-        >
-          {i > 0 ? <Connector /> : null}
-          <BlockTile block={b} transition={transition} />
-        </div>
-      ))}
-    </div>
+      <span className="absolute left-3 top-3 z-20 text-[10px] uppercase leading-none tracking-[0.16em] text-muted-foreground">
+        Tournament fanout
+      </span>
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible"
+        viewBox={`0 0 ${box.w} ${box.h}`}
+        preserveAspectRatio="none"
+        fill="none"
+        style={{ color: CONNECTOR_STROKE }}
+      >
+        {fanSegs.map((s, i) => (
+          <motion.path
+            key={s.id}
+            d={s.d}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.25}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : { delay: 0.12 + i * 0.03, duration: 0.4, ease: "easeOut" }
+            }
+          />
+        ))}
+      </svg>
+      <div className="relative z-10 mb-7 mt-8 grid gap-1.5 sm:grid-cols-3">
+        {["Option case 1", "Option case 2", "Option case 3"].map((label, i) => (
+          <div
+            key={label}
+            ref={(el) => {
+              branchRefs.current[i] = el;
+            }}
+            className="flow-fanout-branch px-3 py-2 text-[12px] font-medium leading-tight"
+          >
+            {label}
+          </div>
+        ))}
+      </div>
+    </motion.div>
   );
 }
 
-function ExploreTournamentDiagram({
-  transition,
+function FlowDiagram({
+  flow,
+  reduceMotion,
 }: {
-  transition: Parameters<typeof motion.div>[0]["transition"];
+  flow: ComposerFlow;
+  reduceMotion: boolean;
 }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const nodeRefs = useRef(new Map<string, HTMLElement>());
+  const refCallbacks = useRef(new Map<string, (el: HTMLElement | null) => void>());
+  const lastSig = useRef("");
+  const [segments, setSegments] = useState<Segment[]>([]);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+
+  const spring = reduceMotion
+    ? { duration: 0 }
+    : ({ type: "spring", stiffness: 420, damping: 36, mass: 0.9 } as const);
+
+  // Stable ref callback per node id so the refs map does not churn each render.
+  const registerNode = useCallback((id: string) => {
+    let cb = refCallbacks.current.get(id);
+    if (!cb) {
+      cb = (el: HTMLElement | null) => {
+        if (el) nodeRefs.current.set(id, el);
+        else nodeRefs.current.delete(id);
+      };
+      refCallbacks.current.set(id, cb);
+    }
+    return cb;
+  }, []);
+
+  const measure = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const origin = container.getBoundingClientRect();
+    const sequence: readonly string[] =
+      flow.key === "explore" ? EXPLORE_SEQUENCE : flow.blocks;
+    const next: Segment[] = [];
+    for (let i = 0; i < sequence.length - 1; i += 1) {
+      const elA = nodeRefs.current.get(sequence[i]);
+      const elB = nodeRefs.current.get(sequence[i + 1]);
+      if (!elA || !elB) continue;
+      const seg = connectorSegment(
+        toAnchor(elA, origin),
+        toAnchor(elB, origin),
+        origin.width,
+      );
+      next.push({ id: `${flow.key}:${sequence[i]}->${sequence[i + 1]}`, ...seg });
+    }
+    // The bounded rAF loop fires ~40x per switch, but geometry only changes
+    // while tiles are gliding. Skip the state writes on no-op frames so we do
+    // not force a render (and SVG re-diff) every frame after the spring settles.
+    const sig = `${flow.key}|${origin.width}x${origin.height}|${next.map((s) => s.d).join("|")}`;
+    if (sig === lastSig.current) return;
+    lastSig.current = sig;
+    setSegments(next);
+    setSize((prev) =>
+      prev.w === origin.width && prev.h === origin.height
+        ? prev
+        : { w: origin.width, h: origin.height },
+    );
+  }, [flow]);
+
+  // Measure on mount and on every flow switch. With motion off we measure once
+  // at rest; otherwise a short, bounded rAF loop re-measures each frame for the
+  // duration of the FLIP spring so connectors track the gliding tiles, then a
+  // final measure locks the resting geometry.
+  useIsomorphicLayoutEffect(() => {
+    measure();
+    if (reduceMotion) {
+      const id = requestAnimationFrame(() => measure());
+      return () => cancelAnimationFrame(id);
+    }
+    let raf = 0;
+    let start = 0;
+    const step = (t: number) => {
+      if (!start) start = t;
+      measure();
+      if (t - start < 700) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [measure, reduceMotion]);
+
+  // Re-wrap on container resize.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [measure]);
+
+  // Geist Mono can change tile widths once loaded, shifting the wrap.
+  useEffect(() => {
+    if (typeof document === "undefined" || !document.fonts?.ready) return;
+    let active = true;
+    document.fonts.ready.then(() => {
+      if (active) measure();
+    });
+    return () => {
+      active = false;
+    };
+  }, [measure]);
+
+  const ariaLabel =
+    flow.key === "explore"
+      ? "Explore flow with tournament enabled, in order: Frame, Diagnose, Plan, fan out option cases, Review, Human Decision, Close With Evidence"
+      : `${flow.name} flow, in order: ${flow.blocks
+          .map((b) => BLOCK_LABEL[b])
+          .join(", then ")}`;
+
+  const renderSequence: readonly string[] =
+    flow.key === "explore" ? EXPLORE_SEQUENCE : flow.blocks;
+
   return (
-    <div
-      className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-1 sm:gap-y-5"
-      role="list"
-      aria-label="Explore flow with tournament enabled, in order: Frame, Diagnose, Plan, fan out option cases, Review, Human Decision, Close With Evidence"
-    >
-      {(["frame", "diagnose", "plan"] as const).map((block, i) => (
-        <div
-          key={block}
-          className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-1"
-        >
-          {i > 0 ? <Connector /> : null}
-          <BlockTile block={block} transition={transition} />
-        </div>
-      ))}
+    <div ref={containerRef} className="relative">
+      <svg
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible"
+        viewBox={`0 0 ${size.w} ${size.h}`}
+        preserveAspectRatio="none"
+        fill="none"
+        style={{ color: CONNECTOR_STROKE }}
+      >
+        {segments.map((seg, i) => (
+          <g key={seg.id}>
+            <motion.path
+              d={seg.d}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.25}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={
+                reduceMotion
+                  ? { duration: 0 }
+                  : { delay: i * 0.05, duration: 0.45, ease: "easeOut" }
+              }
+            />
+            <motion.path
+              d={chevron(seg.head)}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.25}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={
+                reduceMotion
+                  ? { duration: 0 }
+                  : { delay: i * 0.05 + 0.32, duration: 0.2 }
+              }
+            />
+          </g>
+        ))}
+      </svg>
 
-      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-1">
-        <Connector />
-        <div
-          role="listitem"
-          className="flow-fanout-cluster flex flex-col gap-2 px-3 py-3 text-foreground"
-        >
-          <div className="text-[10px] uppercase leading-none tracking-[0.16em] text-muted-foreground">
-            Tournament fanout
-          </div>
-          <div className="grid gap-1.5 sm:grid-cols-3">
-            {["Option case 1", "Option case 2", "Option case 3"].map((label) => (
-              <div
-                key={label}
-                className="flow-fanout-branch px-3 py-2 text-[12px] font-medium leading-tight"
-              >
-                {label}
-              </div>
-            ))}
-          </div>
-        </div>
+      <div
+        role="list"
+        aria-label={ariaLabel}
+        className="relative z-10 flex flex-wrap items-start gap-x-8 gap-y-12 sm:gap-y-16"
+      >
+        {renderSequence.map((id) =>
+          id === "fanout" ? (
+            <FanoutCluster
+              key="fanout"
+              reduceMotion={reduceMotion}
+              spring={spring}
+              registerNode={registerNode}
+            />
+          ) : (
+            <BlockTile
+              key={id}
+              block={id as BlockId}
+              reduceMotion={reduceMotion}
+              spring={spring}
+              registerNode={registerNode}
+            />
+          ),
+        )}
       </div>
-
-      {(["review", "human-decision", "close-with-evidence"] as const).map(
-        (block) => (
-          <div
-            key={block}
-            className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-1"
-          >
-            <Connector />
-            <BlockTile block={block} transition={transition} />
-          </div>
-        ),
-      )}
     </div>
   );
 }
 
 export function FlowComposer() {
   const [active, setActive] = useState<FlowKey>("build");
-  const reduceMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotion();
+  // useReducedMotion() is null on the server, so deriving animation state from
+  // it directly makes the first client render disagree with the SSR markup (a
+  // hydration mismatch, and an opacity-0 flash for reduced-motion users). Start
+  // in the static state — which the server also renders — then adopt the real
+  // preference after hydration. The entry draw-in sits far below the fold and
+  // would finish before it scrolls into view anyway; the flow-switch animations
+  // users actually trigger happen post-hydration and are unaffected.
+  const hydrated = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+  const reduceMotion = !hydrated || prefersReducedMotion === true;
 
   const flow = FLOWS.find((f) => f.key === active) ?? FLOWS[0];
   const planned = flow.planned === true;
-
-  const transition = reduceMotion
-    ? { duration: 0 }
-    : { type: "spring" as const, stiffness: 420, damping: 36, mass: 0.9 };
 
   return (
     <div
@@ -307,14 +667,7 @@ export function FlowComposer() {
     >
       <LayoutGroup>
         {/* The selected flow: larger blocks wired by the artifacts they hand forward */}
-        <div
-          className="flow-composer-panel flex flex-col gap-8 p-5 transition-colors sm:p-8 lg:p-10"
-          style={{
-            backgroundColor: planned
-              ? "color-mix(in oklab, var(--muted) 58%, transparent)"
-              : "color-mix(in oklab, var(--flow-color) 8%, var(--panel))",
-          }}
-        >
+        <div className="flow-composer-panel grid gap-8 lg:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)] lg:gap-10">
           {/* Flow toggle */}
           <div role="group" aria-label="Choose a flow" className="flow-picker-grid">
             {FLOWS.map((f) => {
@@ -354,55 +707,55 @@ export function FlowComposer() {
             })}
           </div>
 
-          {planned ? (
-            <div className="flex max-w-xl flex-col gap-3 py-2">
-              <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                Custom · not yet shipped
-              </div>
-              <p className="text-[15px] leading-relaxed text-foreground">
-                Compose a flow from any block in the catalog — or author new
-                blocks with their own typed contracts.
-              </p>
-              <p className="text-[13px] leading-relaxed text-muted-foreground">
-                Flow and block authoring is in the works. Today{" "}
-                <span className="font-mono text-foreground/80">/circuit:run</span>{" "}
-                routes to the six built-in flows above.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="mb-2 text-[18px] font-medium leading-tight tracking-tight text-foreground">
-                {flow.name}
-              </div>
-              {flow.summary ? (
-                <p className="mb-6 max-w-xl text-[13px] leading-relaxed text-muted-foreground">
-                  {flow.key === "explore" ? (
-                    <>
-                      Compare paths before the agent commits to one. With{" "}
-                      <span className="font-medium text-foreground">
-                        tournament
-                      </span>{" "}
-                      enabled, option cases fan out, then rejoin for review.
-                    </>
-                  ) : (
-                    flow.summary
-                  )}
+          <div className="min-w-0">
+            {planned ? (
+              <div className="flex max-w-xl flex-col gap-3 py-2">
+                <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Custom · not yet shipped
+                </div>
+                <p className="text-[15px] leading-relaxed text-foreground">
+                  Compose a flow from any block in the catalog — or author new
+                  blocks with their own typed contracts.
                 </p>
-              ) : null}
-              {flow.key === "explore" ? (
-                <ExploreTournamentDiagram transition={transition} />
-              ) : (
-                <LinearFlowDiagram flow={flow} transition={transition} />
-              )}
-              <p className="mt-6 max-w-2xl text-[12px] leading-relaxed text-muted-foreground">
-                Each block does one powerful job: frame the task, gather
-                context, decide the next move, make the change, or verify the
-                result. The flow makes those jobs compound, passing a
-                structured handoff forward until the agent can close with a
-                clear outcome, evidence, and remaining risk.
-              </p>
-            </>
-          )}
+                <p className="text-[13px] leading-relaxed text-muted-foreground">
+                  Flow and block authoring is in the works. Today{" "}
+                  <span className="font-mono text-foreground/80">
+                    /circuit:run
+                  </span>{" "}
+                  routes to the six built-in flows above.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-2 text-[18px] font-medium leading-tight tracking-tight text-foreground">
+                  {flow.name}
+                </div>
+                {flow.summary ? (
+                  <p className="mb-6 max-w-xl text-[13px] leading-relaxed text-muted-foreground">
+                    {flow.key === "explore" ? (
+                      <>
+                        Compare paths before the agent commits to one. With{" "}
+                        <span className="font-medium text-foreground">
+                          tournament
+                        </span>{" "}
+                        enabled, option cases fan out, then rejoin for review.
+                      </>
+                    ) : (
+                      flow.summary
+                    )}
+                  </p>
+                ) : null}
+                <FlowDiagram flow={flow} reduceMotion={reduceMotion} />
+                <p className="mt-6 max-w-2xl text-[12px] leading-relaxed text-muted-foreground">
+                  Each block does one powerful job: frame the task, gather
+                  context, decide the next move, make the change, or verify the
+                  result. The flow makes those jobs compound, passing a
+                  structured handoff forward until the agent can close with a
+                  clear outcome, evidence, and remaining risk.
+                </p>
+              </>
+            )}
+          </div>
         </div>
       </LayoutGroup>
     </div>

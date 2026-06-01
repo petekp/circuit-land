@@ -231,14 +231,13 @@
 .soft-code-block,
 .soft-info-card,
 .soft-chip,
+.install-terminal-card,
 .flow-picker-button,
 .flow-composer-panel,
 .flow-block-tile,
 .block-internal-card,
 .block-internals-section,
-.section-artwork,
-.process-artisan-frame,
-.install-provider-icon {
+.section-artwork {
   corner-shape: squircle;
 }
 
@@ -261,38 +260,72 @@
 .install-provider-icons {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 0.4rem;
   margin-left: -2px;
 }
 
-.install-provider-icon {
-  display: inline-flex;
-  width: 18px;
-  height: 18px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
+.install-provider-icons .claude-code-logo,
+.install-provider-icons .codex-logo {
+  width: 0.95rem;
+  height: 0.95rem;
 }
 
-.install-provider-icon svg {
-  width: 13px;
-  height: 13px;
-}
-
-.install-provider-icon-claude {
-  color: hsl(24 84% 45%);
-  background: hsl(24 84% 45% / 0.14);
-}
-
-.install-provider-icon-codex {
-  color: var(--primary-foreground);
-  background: hsl(var(--site-primary-hue) 18% 18% / 0.1);
+.install-provider-icons .codex-logo {
+  color: currentColor;
 }
 
 .soft-code-block,
 .soft-info-card {
   border-radius: 24px;
   background: color-mix(in oklab, var(--muted) 54%, transparent);
+}
+
+.install-terminal-card {
+  border-radius: 24px;
+  background: hsl(var(--site-primary-hue) 18% 6.5%);
+}
+
+.install-terminal-header {
+  border-bottom: 1px solid hsl(var(--site-primary-hue) 14% 18% / 0.52);
+  background: hsl(var(--site-primary-hue) 12% 8% / 0.62);
+}
+
+.install-terminal-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.install-command-copy {
+  min-height: 2rem;
+  padding: 0.375rem 0.75rem;
+  background: color-mix(in oklab, var(--foreground) 10%, transparent);
+  color: var(--foreground);
+}
+
+.install-command-copy:hover {
+  background: color-mix(in oklab, var(--foreground) 16%, transparent);
+}
+
+.claude-code-logo,
+.codex-logo,
+.opencode-logo {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+}
+
+.claude-code-logo {
+  color: #d97757;
+}
+
+.codex-logo {
+  color: var(--foreground);
+}
+
+.opencode-logo {
+  width: 0.75rem;
+  height: 1.1rem;
 }
 
 .soft-chip {
@@ -309,7 +342,7 @@
   display: grid;
   width: 100%;
   max-width: 68rem;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.625rem;
 }
 
@@ -318,23 +351,21 @@
   justify-content: flex-start;
 }
 
-@media (min-width: 520px) {
-  .flow-picker-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (min-width: 800px) {
   .flow-picker-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
+@media (min-width: 1024px) {
+  .flow-composer-panel .flow-picker-grid {
+    max-width: none;
+    grid-template-columns: 1fr;
+  }
+}
+
 .flow-composer-panel {
-  border-radius: 30px;
-  box-shadow:
-    inset 0 1px 0 hsl(0 0% 100% / 0.04),
-    0 14px 34px -28px hsl(0 0% 0% / 0.6);
+  align-items: start;
 }
 
 .flow-block-tile {
@@ -372,40 +403,4 @@
 
 .process-artwork {
   background: hsl(var(--site-primary-hue) 15% 15% / 0.86);
-}
-
-.process-artwork-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(
-      hsl(var(--site-primary-hue) 20% 70% / 0.06) 1px,
-      transparent 1px
-    ),
-    linear-gradient(
-      90deg,
-      hsl(var(--site-primary-hue) 20% 70% / 0.06) 1px,
-      transparent 1px
-    );
-  background-size: 28px 28px;
-  mask-image: radial-gradient(circle at 50% 45%, black, transparent 78%);
-}
-
-.process-artisan-frame {
-  border-radius: 24px;
-  background: hsl(var(--site-primary-hue) 14% 20% / 0.78);
-}
-
-.process-artisan-frame:nth-child(2),
-.process-artisan-frame:nth-child(5) {
-  background: hsl(calc(var(--site-primary-hue) + 18) 14% 22% / 0.72);
-}
-
-.process-artisan-frame:nth-child(3),
-.process-artisan-frame:nth-child(4) {
-  background: hsl(calc(var(--site-primary-hue) - 18) 13% 19% / 0.76);
-}
-
-.process-artisan-frame img {
-  filter: saturate(0.9) contrast(0.96) brightness(0.96);
 }

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "prepare:artisan-frames": "node scripts/key-artisan-frames.mjs",
+    "prepare:expert-process-artwork": "node scripts/build-expert-process-artwork.mjs",
     "lint": "eslint",
     "check": "tsc --noEmit && eslint"
   },
