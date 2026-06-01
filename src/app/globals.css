@@ -393,6 +393,121 @@
   border-radius: 22px;
 }
 
+/* A 3-finger box joint between adjacent cards, cut from the same material. Each
+   joint is centred on a card's TOP and LEFT edge and holds three round-rect
+   "fingers" in the SAME colour as the cards (muted/70): two grown from this card
+   and one from the neighbour, nestled between them and offset along the edge so
+   they interlock with hairline seams. Fingers overlap ~1px into their parent
+   card, so they read as the card's own material rather than separate pieces, and
+   each finger reaches across the tight gap to nearly meet the opposite card.
+
+   Top/left only is deliberate: the grid fills left-to-right then top-to-bottom,
+   so a card's up/left neighbour always exists when the card does — a joint never
+   dangles into an empty cell of a partial last row. The grid sets
+   overflow:hidden, clipping any joint pointing at the outer perimeter, so joints
+   appear only between adjacent cards and the set re-derives itself as the grid
+   re-wraps across breakpoints. --block-joint-gap must match the grid gap
+   (gap-3 = 12px). */
+.block-edge {
+  --block-joint-gap: 12px;
+  --block-joint-overlap: 0px;
+  --block-finger-reach: 10px;
+  --block-finger-cross: 14px;
+  --block-finger-round: 4px;
+  --block-joint-band: 46px;
+  position: absolute;
+}
+
+/* Fingers sit fully inside the gap (no overlap into a card) and are FLAT on the
+   side that meets their parent card, ROUNDED only on the end projecting toward
+   the neighbour — so each reads as a tab growing out of its own card edge. */
+.block-edge i {
+  position: absolute;
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+}
+
+/* LEFT joint: fingers 1 & 3 grow leftward from this (right) card — flat right,
+   round left; finger 2 grows rightward from the previous (left) card. */
+.block-edge-l i:nth-child(1),
+.block-edge-l i:nth-child(3) {
+  border-radius: var(--block-finger-round) 0 0 var(--block-finger-round);
+}
+
+.block-edge-l i:nth-child(2) {
+  border-radius: 0 var(--block-finger-round) var(--block-finger-round) 0;
+}
+
+/* TOP joint: fingers 1 & 3 grow upward from this (lower) card — flat bottom,
+   round top; finger 2 grows downward from the previous (upper) card. */
+.block-edge-t i:nth-child(1),
+.block-edge-t i:nth-child(3) {
+  border-radius: var(--block-finger-round) var(--block-finger-round) 0 0;
+}
+
+.block-edge-t i:nth-child(2) {
+  border-radius: 0 0 var(--block-finger-round) var(--block-finger-round);
+}
+
+/* LEFT joint: spans the gap to the card on the left, centred on the left edge. */
+.block-edge-l {
+  top: 50%;
+  left: calc(-1 * var(--block-joint-gap) - var(--block-joint-overlap));
+  width: calc(var(--block-joint-gap) + 2 * var(--block-joint-overlap));
+  height: var(--block-joint-band);
+  transform: translateY(-50%);
+}
+
+.block-edge-l i {
+  width: var(--block-finger-reach);
+  height: var(--block-finger-cross);
+}
+
+.block-edge-l i:nth-child(1) {
+  top: 0;
+  right: 0;
+}
+
+.block-edge-l i:nth-child(2) {
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.block-edge-l i:nth-child(3) {
+  bottom: 0;
+  right: 0;
+}
+
+/* TOP joint: spans the gap to the card above, centred on the top edge. */
+.block-edge-t {
+  left: 50%;
+  top: calc(-1 * var(--block-joint-gap) - var(--block-joint-overlap));
+  width: var(--block-joint-band);
+  height: calc(var(--block-joint-gap) + 2 * var(--block-joint-overlap));
+  transform: translateX(-50%);
+}
+
+.block-edge-t i {
+  width: var(--block-finger-cross);
+  height: var(--block-finger-reach);
+}
+
+.block-edge-t i:nth-child(1) {
+  left: 0;
+  bottom: 0;
+}
+
+.block-edge-t i:nth-child(2) {
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.block-edge-t i:nth-child(3) {
+  right: 0;
+  bottom: 0;
+}
+
 .block-internals-section {
   border-radius: 30px;
 }

@@ -19,7 +19,6 @@ type RunBeat = {
 
 type InstallTarget = {
   name: "Claude Code" | "Codex" | "OpenCode";
-  detail: string;
   commands?: string[];
   comingSoon?: boolean;
 };
@@ -35,7 +34,6 @@ const codexInstallCommand =
 const installTargets: InstallTarget[] = [
   {
     name: "Claude Code",
-    detail: "Install from the plugin marketplace.",
     commands: [
       "/plugin marketplace add petekp/circuit",
       "/plugin install circuit@circuit",
@@ -44,12 +42,10 @@ const installTargets: InstallTarget[] = [
   },
   {
     name: "Codex",
-    detail: "Add Circuit from the marketplace.",
     commands: [codexInstallCommand],
   },
   {
     name: "OpenCode",
-    detail: "OpenCode support is coming soon.",
     comingSoon: true,
   },
 ];
@@ -71,19 +67,19 @@ const runSurface: SurfaceLine[] = [
 const runBeats: RunBeat[] = [
   {
     label: "You describe the task",
-    note: "One line in. You do not script the steps yourself.",
+    note: "You can focus on the goal rather than the precise means.",
   },
   {
     label: "Circuit selects the flow",
-    note: "Build is the right process for this kind of task. No manual flow choice required.",
+    note: "The right process is inferred based on your prompt. You can optionally specify, too.",
   },
   {
-    label: "It works the process",
+    label: "It follows a process",
     note: "Plan → change → check → review.",
   },
   {
-    label: "A short outcome",
-    note: "Done: change implemented, verification passed, review accepted.",
+    label: "Outcome",
+    note: "A factual, verified result is provided. No gaslighting.",
   },
 ];
 
@@ -96,6 +92,20 @@ const comparison = [
       "Circuit uses those moves inside a flow. It routes the task, chooses the next block, carries context forward, and asks for your judgment only when the result depends on it.",
   },
   {
+    name: "AGENTS.md and Playbooks",
+    approach:
+      "Rules, docs, and saved prompts tell the agent what good work should look like. They are useful context, but they mostly sit still until you remember to apply them.",
+    circuit:
+      "Circuit turns the playbook into motion. Each block has an input, output, and done condition, so the process produces evidence instead of relying on memory and vibes.",
+  },
+  {
+    name: "Spec-driven development",
+    approach:
+      "Write a detailed spec and the agent implements against it. The spec captures intent well, but it stays a document. It does not carry the work through building, checking, and review.",
+    circuit:
+      "Circuit treats the spec as one input. Frame turns intent into a typed brief, then the flow carries it forward through plan, act, verify, and review until the outcome is backed by evidence.",
+  },
+  {
     name: "Claude Code's Dynamic Workflows",
     approach:
       "Workflows orchestrate many agents from a script. They are great for large one-off jobs: codebase audits, migrations, deep research, or hand-rolled fanout.",
@@ -103,11 +113,18 @@ const comparison = [
       "Circuit is the repeatable process for everyday work. It picks Build, Fix, Review, Explore, Prototype, or Pursue, then runs the same proven process without making you design the orchestration.",
   },
   {
-    name: "AGENTS.md and Playbooks",
+    name: "Autonomous coding agents",
     approach:
-      "Rules, docs, and saved prompts tell the agent what good work should look like. They are useful context, but they mostly sit still until you remember to apply them.",
+      "Agents like Cursor, Devin, or Copilot's agent take a task and run it end to end. They are powerful, but each run is shaped by the prompt, so what they do and how rigorously they do it varies.",
     circuit:
-      "Circuit turns the playbook into motion. Each block has an input, output, and done condition, so the process produces evidence instead of relying on memory and vibes.",
+      "Circuit is not another agent. It is the process your agent follows: running inside Claude Code or Codex, it moves the same kind of work the same way every time, with evidence to show for it.",
+  },
+  {
+    name: "Compound engineering",
+    approach:
+      "A philosophy: each task should leave the system smarter, so the next one is easier, through planning, parallel review, and documenting what worked. You assemble that loop yourself, task by task.",
+    circuit:
+      "Circuit is that loop, productized. Every flow already plans, acts, reviews, and checks, and each run leaves structured records: the substrate that longitudinal memory builds on.",
   },
 ];
 
@@ -271,6 +288,34 @@ function OpenCodeLogo() {
   );
 }
 
+function GithubLogo() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="size-[18px]"
+      focusable="false"
+    >
+      <path d="M12 .5C5.37.5 0 5.78 0 12.292c0 5.211 3.438 9.63 8.205 11.188.6.111.82-.254.82-.567 0-.28-.01-1.022-.015-2.005-3.338.711-4.042-1.582-4.042-1.582-.546-1.361-1.335-1.725-1.335-1.725-1.087-.731.084-.716.084-.716 1.205.082 1.838 1.215 1.838 1.215 1.07 1.803 2.809 1.282 3.495.981.108-.763.417-1.282.76-1.577-2.665-.295-5.466-1.309-5.466-5.827 0-1.287.465-2.339 1.235-3.164-.135-.295-.54-1.494.105-3.117 0 0 1.005-.315 3.3 1.209.96-.262 1.98-.392 3-.398 1.02.006 2.04.136 3 .398 2.28-1.524 3.285-1.209 3.285-1.209.645 1.623.24 2.822.12 3.117.765.825 1.23 1.877 1.23 3.164 0 4.53-2.805 5.527-5.475 5.817.42.354.81 1.077.81 2.182 0 1.578-.015 2.846-.015 3.229 0 .309.21.678.825.561C20.565 21.917 24 17.495 24 12.292 24 5.78 18.627.5 12 .5z" />
+    </svg>
+  );
+}
+
+function XLogo() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="size-4"
+      focusable="false"
+    >
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
 // Shared body for the run terminal. The real pane and its blurred under-echo
 // render the same rows, so their padding and leading can only be defined once
 // (the echo just drops the per-line coloring and the prompt divider).
@@ -333,24 +378,33 @@ export default function Home() {
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-16">
       {/* Section 1: Masthead */}
-      <header className="flex items-center justify-end">
-        <a
-          href="https://github.com/petekp/circuit"
-          className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
-        >
-          github.com/petekp/circuit
-        </a>
-      </header>
-
       <section
-        className="mt-12 flex flex-col gap-8 sm:mt-16"
+        className="mt-4 flex flex-col gap-8 sm:mt-6"
         data-site-hue-stop="0"
       >
-        <div className="flex flex-col gap-2">
-          <Wordmark />
-          <p className="text-[11px] leading-none text-muted-foreground">
-            a plugin for Claude Code and Codex
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <Wordmark />
+            <p className="text-[11px] leading-none text-muted-foreground">
+              a plugin for Claude Code and Codex
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://github.com/petekp/circuit"
+              aria-label="Circuit on GitHub"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <GithubLogo />
+            </a>
+            <a
+              href="https://x.com/petekp"
+              aria-label="Pete Petrash on X"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <XLogo />
+            </a>
+          </div>
         </div>
 
         <h1 className="max-w-2xl text-base font-medium leading-tight tracking-tight sm:text-xl">
@@ -358,9 +412,9 @@ export default function Home() {
         </h1>
 
         <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-          You hand a task to a coding agent, then spend the next hour steering
-          every step in chat. Circuit gives the agent a real process to follow,
-          so you can hand off the work to a trusted colleague instead.
+          Circuit gives agents a finely-tuned process to follow, so instead of
+          micro-managing, you&apos;re handing the work off to a trusted
+          colleague.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -388,17 +442,15 @@ export default function Home() {
         data-site-hue-stop="0.125"
       >
         <div className="flex max-w-3xl flex-col gap-3">
-          <Label as="h2">See one run</Label>
+          <Label as="h2">Example Run</Label>
           <p className="text-balance text-[15px] leading-relaxed text-foreground">
-            Most of us are steering the agent step by step in chat. Here you
-            describe the task once, and the agent works through a process built
-            for that kind of work, asking only when a choice truly needs you.
+            Most of us are steering our agents step-by-step in chat.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-stretch">
           <div className="flex min-w-0 flex-col gap-3">
-            <div className="run-terminal-stage w-full">
+            <div className="run-terminal-stage flex w-full flex-1 flex-col">
               {/* Blurred ghost of the same content, masked to bloom only below
                   the opaque pane — the terminal's text showing through. */}
               <div
@@ -407,7 +459,7 @@ export default function Home() {
               >
                 <RunTerminalBody echo />
               </div>
-              <div className="run-terminal w-full overflow-hidden font-mono text-[13px] leading-7">
+              <div className="run-terminal w-full flex-1 overflow-hidden font-mono text-[13px] leading-7">
                 <RunTerminalBody />
               </div>
             </div>
@@ -446,35 +498,34 @@ export default function Home() {
           <Label as="h2">Why process</Label>
 
           <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
-            <p className="text-[17px] leading-snug text-foreground">
-              Good engineers don&apos;t rely on raw talent. They work through a
-              process they trust, and that process is what lets their judgment
-              do its best work. It frees them to stop re-deciding the basics and
-              spend attention where it matters.
-            </p>
+            <div className="flex flex-col gap-3">
+              <p className="text-[18px] font-medium leading-snug tracking-tight text-foreground">
+                Great engineers don&apos;t rely on raw talent.
+              </p>
+              <p>
+                They work through a process they trust, and that process is what
+                lets their judgment do its best work. It frees them to stop
+                re-deciding the basics and spend attention where it matters.
+              </p>
+            </div>
             <p>
-              Coding agents are already surprisingly capable, but like humans,
-              ad-hoc chat isn&apos;t the best way to do effective work.
-              There&apos;s no process to follow, so you supply it by hand: when
-              to plan, when to build, which skill to reach for, when to check,
-              when to stop. You become the agent&apos;s working memory.
-              That&apos;s a tax on you, and a poor environment for the agent.
+              Coding agents are surprisingly capable, but like humans, ad-hoc
+              chat isn&apos;t the best way to do effective work. You become the
+              agent&apos;s working memory. This is taxing for you, and a
+              suboptimal experience for the agent that puts it at a disadvantage.
             </p>
-            <p>
-              Circuit gives the agent a better place to work. You describe the
-              task, and Circuit brings the process that fits it: the moves a
-              skilled practitioner would make, in the right order, with the
-              checks that prove the work. You hand off more and keep your
-              confidence. You know the agent did its best work, didn&apos;t cut
-              corners or spin its wheels, and can show you the evidence.
-            </p>
-            <p className="text-foreground">
-              Your skill files give an agent sharper moves. A flow turns those
-              moves into practice, choosing which one the work needs next and
-              knowing when the work is done. That practice is the layer ad-hoc
-              chat leaves out, and the one Circuit puts back. The agent was
-              always capable; it finally has a good place to work.
-            </p>
+            <div className="flex flex-col gap-3">
+              <p className="text-[18px] font-medium leading-snug tracking-tight text-foreground">
+                Circuit sets agents up for success.
+              </p>
+              <p>
+                You describe the task, and Circuit supplies the process that
+                fits it: the right moves, in the right order, with the checks
+                that prove the work. You hand off more and keep your confidence,
+                because the result comes with evidence, not just a claim that
+                it&apos;s done.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -490,13 +541,14 @@ export default function Home() {
           <div className="flex max-w-3xl flex-col gap-3">
             <Label as="h2">Routed, not chosen</Label>
             <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-              You never pick a flow —{" "}
               <span className="font-mono font-medium text-foreground">
                 /circuit:run
               </span>{" "}
-              reads the task and routes it. Each flow is the same set of typed
-              blocks, arranged for one kind of work. Pick one to watch it
-              compose.
+              interprets your intent and routes it to the appropriate flow,
+              automatically. Each flow is a specialized set of typed blocks. Each
+              block does one job. The flow makes these jobs compound, passing
+              structured handoff forward until the agent can deliver a clear
+              outcome with evidence.
             </p>
           </div>
 
@@ -519,12 +571,22 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 overflow-hidden sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {blockInternals.map((block) => (
               <article
                 key={block.name}
-                className="block-internal-card flex flex-col gap-4 bg-muted/70 p-5"
+                className="block-internal-card relative flex flex-col gap-4 bg-muted/70 p-5"
               >
+                <span aria-hidden="true" className="block-edge block-edge-t">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <span aria-hidden="true" className="block-edge block-edge-l">
+                  <i />
+                  <i />
+                  <i />
+                </span>
                 <h3 className="text-balance text-[15px] font-medium leading-tight tracking-tight">
                   {block.name}
                 </h3>
@@ -576,9 +638,9 @@ export default function Home() {
               Checkpoints
             </h3>
             <p className="text-[13px] leading-relaxed text-muted-foreground">
-              Checkpoints are rare and worth it. Circuit pauses when your
-              judgment changes the outcome: a risky direction, an ambiguous
-              goal, a visual choice. Otherwise it keeps moving.
+              Circuit pauses when your judgment changes the outcome: a risky
+              direction, an ambiguous goal, a visual choice. Otherwise it keeps
+              moving.
             </p>
           </div>
           <div className="flex min-w-0 flex-col gap-2">
@@ -592,13 +654,16 @@ export default function Home() {
             </p>
           </div>
           <div className="flex min-w-0 flex-col gap-2">
-            <h3 className="text-[15px] font-medium tracking-tight">
-              Memory
-            </h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-[15px] font-medium tracking-tight">Memory</h3>
+              <span className="soft-chip shrink-0 px-1.5 py-1 text-[10px] uppercase leading-none tracking-[0.15em] text-muted-foreground">
+                soon
+              </span>
+            </div>
             <p className="text-[13px] leading-relaxed text-muted-foreground">
-              Circuit leaves structured run records: choices, checks, evidence,
-              and what happened next. Future memory has something concrete to
-              cite.
+              Every run generates structured, CLI-queryable records: choices,
+              checks, evidence, and what happened next. These form a powerful
+              substrate for longitudinal memory.
             </p>
           </div>
         </div>
@@ -612,9 +677,10 @@ export default function Home() {
         <div className="flex max-w-3xl flex-col gap-3">
           <Label as="h2">Where it fits</Label>
           <p className="text-[15px] leading-relaxed text-foreground">
-            Circuit overlaps with tools you already use, but it solves a
-            different problem. Those tools shape what the agent can do; Circuit
-            shapes how the work moves from request to evidence-backed outcome.
+            Circuit overlaps with tools and approaches you already use, but it
+            solves a different problem. Those tools shape what the agent can do;
+            Circuit shapes how the work moves from request to evidence-backed
+            outcome.
           </p>
         </div>
 
@@ -628,9 +694,6 @@ export default function Home() {
                 {c.name}
               </h3>
               <div className="flex flex-col gap-2">
-                <p className="font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  What it involves
-                </p>
                 <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
                   {c.approach}
                 </p>
@@ -677,35 +740,36 @@ export default function Home() {
                 .filter(Boolean)
                 .join(" ")}
             >
-              <div className="install-terminal-header flex flex-col gap-2 px-5 py-4">
+              <div className="install-terminal-header flex items-center justify-between gap-3 px-5 py-4">
                 <h3 className="install-terminal-title text-[15px] font-medium tracking-tight">
                   {target.name === "Claude Code" ? <ClaudeCodeLogo /> : null}
                   {target.name === "Codex" ? <CodexLogo /> : null}
                   {target.name === "OpenCode" ? <OpenCodeLogo /> : null}
                   {target.name}
                 </h3>
-                <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
-                  {target.detail}
-                </p>
+                {target.commands ? (
+                  <CopyTextButton
+                    text={target.commands.join("\n")}
+                    className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
+                  />
+                ) : target.comingSoon ? (
+                  <span className="soft-chip inline-flex min-h-8 shrink-0 items-center justify-center px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    Soon
+                  </span>
+                ) : null}
               </div>
 
               {target.commands ? (
-                <div className="relative">
-                  <pre className="whitespace-pre-wrap break-words px-5 py-4 pr-24 text-[13px] leading-7 text-foreground">
-                    <code>
-                      {target.commands
-                        .map((command) => `› ${command}`)
-                        .join("\n")}
-                    </code>
-                  </pre>
-                  <CopyTextButton
-                    text={target.commands.join("\n")}
-                    className="install-command-copy absolute right-4 top-4 min-h-8 px-3 py-1.5 text-[12px]"
-                  />
-                </div>
+                <pre className="whitespace-pre-wrap break-words px-5 py-4 text-[13px] leading-7 text-foreground">
+                  <code>
+                    {target.commands
+                      .map((command) => `› ${command}`)
+                      .join("\n")}
+                  </code>
+                </pre>
               ) : (
-                <div className="px-5 py-4 text-[13px] leading-7 text-muted-foreground">
-                  › Install path coming soon.
+                <div className="flex flex-1 items-center justify-center px-5 py-4 text-center text-[13px] leading-7 text-muted-foreground">
+                  OpenCode support coming soon.
                 </div>
               )}
             </article>
@@ -715,29 +779,30 @@ export default function Home() {
 
       {/* Section 9: Footer */}
       <footer
-        className="mt-28 flex flex-col gap-3 pt-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground sm:flex-row sm:items-center sm:justify-between"
+        className="mt-28 flex items-center justify-between gap-3 pt-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground"
         data-site-hue-stop="1"
       >
-        <a
-          href="https://github.com/petekp/circuit"
-          className="transition-colors hover:text-foreground"
-        >
-          github.com/petekp/circuit
-        </a>
-        <span className="normal-case tracking-normal">
+        <div className="flex items-center gap-4">
           <a
-            href="https://github.com/petekp/circuit/blob/main/LICENSE"
-            className="underline underline-offset-4 transition-colors hover:text-foreground"
+            href="https://github.com/petekp/circuit"
+            aria-label="Circuit on GitHub"
+            className="transition-colors hover:text-foreground"
           >
-            MIT licensed
+            <GithubLogo />
           </a>
-          .
-        </span>
+          <a
+            href="https://x.com/petekp"
+            aria-label="Pete Petrash on X"
+            className="transition-colors hover:text-foreground"
+          >
+            <XLogo />
+          </a>
+        </div>
         <a
-          href="https://x.com/petekp"
+          href="https://github.com/petekp/circuit/blob/main/LICENSE"
           className="transition-colors hover:text-foreground"
         >
-          x.com/petekp
+          Open Source
         </a>
       </footer>
     </main>

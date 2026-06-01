@@ -8,8 +8,15 @@ import {
   useState,
   useSyncExternalStore,
   type CSSProperties,
+  type Ref,
 } from "react";
-import { LayoutGroup, motion, useReducedMotion } from "motion/react";
+import {
+  AnimatePresence,
+  LayoutGroup,
+  motion,
+  useReducedMotion,
+  type MotionProps,
+} from "motion/react";
 import { FlowGlyph, type MotifCell } from "@/components/flow-glyph";
 
 type BlockId =
@@ -203,6 +210,17 @@ type Segment = {
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
+// AnimatePresence mode="popLayout" wraps every child in a PopChild that clones it
+// with an injected ref and, on exit, writes a `position: absolute` style block —
+// but ONLY if that ref resolves to the real DOM node. Our tiles already own a ref
+// (registerNode, used by the connector overlay), so we merge PopChild's ref into
+// it. Without this, exiting tiles stay in flow, hold their slot for the exit, and
+// the surviving tiles snap into the vacated gap instead of gliding cleanly.
+function assignRef(ref: Ref<HTMLElement> | undefined, el: HTMLElement | null) {
+  if (typeof ref === "function") ref(el);
+  else if (ref) (ref as { current: HTMLElement | null }).current = el;
+}
+
 // Stable no-op subscription: the "are we hydrated yet" value never changes once
 // the client takes over, so useSyncExternalStore only needs distinct server
 // (false) and client (true) snapshots — no real store to subscribe to.
@@ -227,14 +245,13 @@ function toAnchor(el: HTMLElement, origin: DOMRect): Anchor {
 // tangents — a smooth serpentine that drops from the bottom of the last tile in
 // a row and rises into the top of the first tile on the next row, no elbow. The
 // mobile one-per-row case collapses this to a clean vertical curve for free.
-function connectorSegment(
-  a: Anchor,
-  b: Anchor,
-  containerWidth: number,
-): Omit<Segment, "id"> {
-  // Same row: tops align AND b sits to the right of a. Flat-tangent cubic. The
-  // right-of-a check also stops a FLIP frame that transiently measures b left of
-  // a from drawing a folded connector — those pairs fall through to a curve.
+// Tight rounded elbow radius for orthogonal cross-row routing.
+const ELBOW_R = 9;
+
+function connectorSegment(a: Anchor, b: Anchor): Omit<Segment, "id"> {
+  // Same row: tops align AND b sits to the right of a. A flat link across the
+  // column gutter. (The right-of-a check also stops a transient FLIP frame from
+  // drawing a folded connector — such pairs fall through to the routed path.)
   const sameRow = Math.abs(a.top - b.top) < ROW_EPSILON && b.left > a.right - 4;
   if (sameRow) {
     const x1 = a.right + EDGE_INSET;
@@ -247,38 +264,36 @@ function connectorSegment(
       head: { x: x2, y: y2, dir: "right" },
     };
   }
-  // Stacked: the tiles' horizontal ranges overlap (mobile single column, or a
-  // block feeding the full-width fanout cluster). A clean vertical curve from
-  // the bottom of a to the top of b.
-  const overlapX = Math.min(a.right, b.right) - Math.max(a.left, b.left);
-  if (overlapX > 8) {
-    const x1 = a.cx;
-    const y1 = a.bottom + EDGE_INSET;
-    const x2 = b.cx;
-    const y2 = b.top - EDGE_INSET;
-    const k = Math.min(Math.max((y2 - y1) * 0.5, 12), 36);
-    return {
-      d: `M ${x1} ${y1} C ${x1} ${y1 + k}, ${x2} ${y2 - k}, ${x2} ${y2}`,
-      head: { x: x2, y: y2, dir: "down" },
-    };
-  }
-  // Wrap-back ribbon: b is on a lower row and left of a (the end of one row to
-  // the start of the next). Leave a's right edge heading right, then sweep down
-  // and around into b's top — horizontal tangent out, vertical tangent in, so it
-  // reads as one flowing ribbon rather than a right-angle return.
-  const x1 = a.right + EDGE_INSET;
-  const y1 = a.cy;
+  // Different rows (a wrap-back, the full-width fanout cluster, or the mobile
+  // single column). Drop out of the bottom of a, run along the empty lane
+  // between the two rows, and drop into the top of b — an orthogonal staple
+  // that passes BETWEEN the blocks instead of cutting across them.
+  const x1 = a.cx;
+  const y1 = a.bottom + EDGE_INSET;
   const x2 = b.cx;
   const y2 = b.top - EDGE_INSET;
-  // Cap the rightward reach so the control point never bulges past the
-  // container edge when the row's last tile sits flush right.
-  const maxReachX = Math.max(8, containerWidth - x1 - 2);
-  const reachX = Math.min(Math.max((x1 - x2) * 0.32, 28), 52, maxReachX);
-  const reachY = Math.min(Math.max((y2 - y1) * 0.62, 26), 60);
-  return {
-    d: `M ${x1} ${y1} C ${x1 + reachX} ${y1}, ${x2} ${y2 - reachY}, ${x2} ${y2}`,
-    head: { x: x2, y: y2, dir: "down" },
-  };
+  if (Math.abs(x2 - x1) < 6) {
+    // Vertically aligned (mobile stack): a clean straight drop.
+    return { d: `M ${x1} ${y1} L ${x2} ${y2}`, head: { x: x2, y: y2, dir: "down" } };
+  }
+  const midY = (a.bottom + b.top) / 2;
+  const dir = x2 > x1 ? 1 : -1;
+  // Clamp the corner radius to the available segment lengths so tight gaps or
+  // short horizontal runs never produce a kinked/overshooting elbow.
+  const r = Math.min(
+    ELBOW_R,
+    Math.abs(x2 - x1) / 2,
+    Math.abs(midY - y1),
+    Math.abs(y2 - midY),
+  );
+  const d =
+    `M ${x1} ${y1}` +
+    ` L ${x1} ${midY - r}` +
+    ` Q ${x1} ${midY} ${x1 + dir * r} ${midY}` +
+    ` L ${x2 - dir * r} ${midY}` +
+    ` Q ${x2} ${midY} ${x2} ${midY + r}` +
+    ` L ${x2} ${y2}`;
+  return { d, head: { x: x2, y: y2, dir: "down" } };
 }
 
 // Vertical-tangent cubic, used for the fanout cluster's internal fan/merge wires.
@@ -293,27 +308,102 @@ function chevron(head: Segment["head"]): string {
   return `M ${x - 3} ${y - 5} L ${x} ${y} L ${x + 3} ${y - 5}`;
 }
 
+// Enter/exit choreography for nodes that are NOT shared between the outgoing and
+// incoming flow. Shared nodes keep their layoutId and FLIP-morph to the new
+// position/theme; genuinely new (or removed) nodes instead fade + scale + deblur
+// in, and reverse on the way out. A node can never both morph and enter/exit at
+// once — persisted React instances never re-run initial/exit, and an entering
+// tile has a brand-new layoutId with no prior box — so the scale here can never
+// fight a layout animation. blur is a filter, not a transform, so it is likewise
+// independent of the FLIP. Layout stays on the tuned spring; the soft props get
+// their own ease. Under reduced motion this collapses to the prior opacity-only,
+// instant behavior.
+function tileMotionProps(
+  reduceMotion: boolean,
+  spring: Parameters<typeof motion.div>[0]["transition"],
+): MotionProps {
+  if (reduceMotion) {
+    return {
+      initial: false,
+      animate: { opacity: 1 },
+      exit: { opacity: 0, transition: { duration: 0 } },
+      transition: { duration: 0 },
+    };
+  }
+  return {
+    initial: { opacity: 0, scale: 0.9, filter: "blur(8px)" },
+    animate: { opacity: 1, scale: 1, filter: "blur(0px)" },
+    exit: {
+      opacity: 0,
+      scale: 0.9,
+      filter: "blur(8px)",
+      transition: { duration: 0.22, ease: "easeIn" },
+    },
+    transition: {
+      layout: spring,
+      opacity: { duration: 0.34, ease: "easeOut" },
+      scale: { duration: 0.4, ease: "easeOut" },
+      filter: { duration: 0.34, ease: "easeOut" },
+    },
+  };
+}
+
+// The connector analog of tileMotionProps, applied to each connector <g>. The
+// inner paths keep their own draw-in (pathLength on the line, delayed opacity on
+// the chevron); this wraps them so a connector deblurs in and fades + reblurs out
+// with the same soft focus as the tiles it joins. The group's opacity is left at
+// rest on enter so it does not double the inner paths' fade — only exit drives the
+// group opacity. Exit requires AnimatePresence. No popLayout here: SVG paths are
+// placed by `d`, not by layout flow, so there is no slot to pop. `delay` staggers
+// the draw to match the line/chevron timing.
+function connectorGroupProps(reduceMotion: boolean, delay: number): MotionProps {
+  if (reduceMotion) {
+    return {
+      initial: false,
+      animate: { filter: "blur(0px)" },
+      exit: { opacity: 0, transition: { duration: 0 } },
+      transition: { duration: 0 },
+    };
+  }
+  return {
+    initial: { filter: "blur(8px)" },
+    animate: { filter: "blur(0px)" },
+    exit: {
+      opacity: 0,
+      filter: "blur(8px)",
+      transition: { duration: 0.24, ease: "easeIn" },
+    },
+    transition: { filter: { delay, duration: 0.4, ease: "easeOut" } },
+  };
+}
+
 function BlockTile({
   block,
-  reduceMotion,
-  spring,
+  motionProps,
   registerNode,
+  ref,
 }: {
   block: BlockId;
-  reduceMotion: boolean;
-  spring: Parameters<typeof motion.div>[0]["transition"];
+  motionProps: MotionProps;
   registerNode: (id: string) => (el: HTMLElement | null) => void;
+  ref?: Ref<HTMLElement>;
 }) {
+  const nodeRef = registerNode(block);
+  const composedRef = useCallback(
+    (el: HTMLElement | null) => {
+      nodeRef(el);
+      assignRef(ref, el);
+    },
+    [nodeRef, ref],
+  );
   return (
     <motion.div
-      ref={registerNode(block)}
+      ref={composedRef}
       layout
       layoutId={block}
-      transition={spring}
-      initial={reduceMotion ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
+      {...motionProps}
       role="listitem"
-      className="flow-block-tile relative z-10 flex w-full flex-col justify-center gap-2 px-4 py-4 text-foreground sm:w-auto sm:min-w-[108px]"
+      className="flow-block-tile relative z-10 flex w-full flex-col items-center justify-center gap-2 px-4 py-4 text-center text-foreground sm:w-auto sm:min-w-[108px]"
       style={{ backgroundColor: TILE_FILL }}
     >
       <span className="text-[15px] font-medium leading-tight tracking-tight">
@@ -325,21 +415,35 @@ function BlockTile({
 
 function FanoutCluster({
   reduceMotion,
-  spring,
+  motionProps,
   registerNode,
+  ref,
 }: {
   reduceMotion: boolean;
-  spring: Parameters<typeof motion.div>[0]["transition"];
+  motionProps: MotionProps;
   registerNode: (id: string) => (el: HTMLElement | null) => void;
+  ref?: Ref<HTMLElement>;
 }) {
   const clusterRef = useRef<HTMLElement | null>(null);
   const branchRefs = useRef<(HTMLElement | null)[]>([]);
   const [fanSegs, setFanSegs] = useState<{ id: string; d: string }[]>([]);
   const [box, setBox] = useState({ w: 0, h: 0 });
 
-  // The cluster element is needed by the parent overlay (the plan->fanout and
-  // fanout->review connectors read it via "fanout") AND by this local overlay.
-  const setClusterRef = useCallback(
+  // Outer: a transparent full-width band whose only jobs are to break the flex
+  // row (so the cluster gets its own lane between Plan and Review) and to be the
+  // layout/AnimatePresence node — so it carries layoutId and the popLayout ref.
+  const setOuterRef = useCallback(
+    (el: HTMLElement | null) => {
+      assignRef(ref, el);
+    },
+    [ref],
+  );
+
+  // Inner card: the visible, content-width cluster. It is what the parent overlay
+  // anchors to ("fanout"), so the plan->fanout and fanout->review connectors meet
+  // the real card rather than the full-width band, and it carries clusterRef for
+  // the local fan/merge measurement.
+  const setCardRef = useCallback(
     (el: HTMLElement | null) => {
       clusterRef.current = el;
       registerNode("fanout")(el);
@@ -395,57 +499,60 @@ function FanoutCluster({
 
   return (
     <motion.div
-      ref={setClusterRef}
+      ref={setOuterRef}
       layout
       layoutId="fanout"
-      transition={spring}
-      initial={reduceMotion ? false : { opacity: 0 }}
-      animate={{ opacity: 1 }}
+      {...motionProps}
       role="listitem"
-      className="flow-fanout-cluster relative z-10 w-full px-3 pb-3 pt-3 text-foreground"
+      className="relative z-10 flex w-full origin-left justify-start"
     >
-      <span className="absolute left-3 top-3 z-20 text-[10px] uppercase leading-none tracking-[0.16em] text-muted-foreground">
-        Tournament fanout
-      </span>
-      <svg
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible"
-        viewBox={`0 0 ${box.w} ${box.h}`}
-        preserveAspectRatio="none"
-        fill="none"
-        style={{ color: CONNECTOR_STROKE }}
+      <div
+        ref={setCardRef}
+        className="flow-fanout-cluster relative w-fit px-3 pb-3 pt-3 text-foreground"
       >
-        {fanSegs.map((s, i) => (
-          <motion.path
-            key={s.id}
-            d={s.d}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.25}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={
-              reduceMotion
-                ? { duration: 0 }
-                : { delay: 0.12 + i * 0.03, duration: 0.4, ease: "easeOut" }
-            }
-          />
-        ))}
-      </svg>
-      <div className="relative z-10 mb-7 mt-8 grid gap-1.5 sm:grid-cols-3">
-        {["Option case 1", "Option case 2", "Option case 3"].map((label, i) => (
-          <div
-            key={label}
-            ref={(el) => {
-              branchRefs.current[i] = el;
-            }}
-            className="flow-fanout-branch px-3 py-2 text-[12px] font-medium leading-tight"
-          >
-            {label}
-          </div>
-        ))}
+        <span className="absolute left-3 top-3 z-20 text-[10px] uppercase leading-none tracking-[0.16em] text-muted-foreground">
+          Tournament fanout
+        </span>
+        <svg
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible"
+          viewBox={`0 0 ${box.w} ${box.h}`}
+          preserveAspectRatio="none"
+          fill="none"
+          style={{ color: CONNECTOR_STROKE }}
+        >
+          {fanSegs.map((s, i) => (
+            <motion.path
+              key={s.id}
+              d={s.d}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.25}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={
+                reduceMotion
+                  ? { duration: 0 }
+                  : { delay: 0.12 + i * 0.03, duration: 0.4, ease: "easeOut" }
+              }
+            />
+          ))}
+        </svg>
+        <div className="relative z-10 mb-7 mt-8 flex flex-wrap justify-center gap-1.5">
+          {["Option case 1", "Option case 2", "Option case 3"].map((label, i) => (
+            <div
+              key={label}
+              ref={(el) => {
+                branchRefs.current[i] = el;
+              }}
+              className="flow-fanout-branch px-3 py-2 text-[12px] font-medium leading-tight"
+            >
+              {label}
+            </div>
+          ))}
+        </div>
       </div>
     </motion.div>
   );
@@ -468,6 +575,9 @@ function FlowDiagram({
   const spring = reduceMotion
     ? { duration: 0 }
     : ({ type: "spring", stiffness: 420, damping: 36, mass: 0.9 } as const);
+
+  // Shared enter/exit/morph choreography handed to every node in the sequence.
+  const motionProps = tileMotionProps(reduceMotion, spring);
 
   // Stable ref callback per node id so the refs map does not churn each render.
   const registerNode = useCallback((id: string) => {
@@ -493,11 +603,7 @@ function FlowDiagram({
       const elA = nodeRefs.current.get(sequence[i]);
       const elB = nodeRefs.current.get(sequence[i + 1]);
       if (!elA || !elB) continue;
-      const seg = connectorSegment(
-        toAnchor(elA, origin),
-        toAnchor(elB, origin),
-        origin.width,
-      );
+      const seg = connectorSegment(toAnchor(elA, origin), toAnchor(elB, origin));
       next.push({ id: `${flow.key}:${sequence[i]}->${sequence[i + 1]}`, ...seg });
     }
     // The bounded rAF loop fires ~40x per switch, but geometry only changes
@@ -576,40 +682,42 @@ function FlowDiagram({
         fill="none"
         style={{ color: CONNECTOR_STROKE }}
       >
-        {segments.map((seg, i) => (
-          <g key={seg.id}>
-            <motion.path
-              d={seg.d}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.25}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={
-                reduceMotion
-                  ? { duration: 0 }
-                  : { delay: i * 0.05, duration: 0.45, ease: "easeOut" }
-              }
-            />
-            <motion.path
-              d={chevron(seg.head)}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.25}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              initial={reduceMotion ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={
-                reduceMotion
-                  ? { duration: 0 }
-                  : { delay: i * 0.05 + 0.32, duration: 0.2 }
-              }
-            />
-          </g>
-        ))}
+        <AnimatePresence initial={false}>
+          {segments.map((seg, i) => (
+            <motion.g key={seg.id} {...connectorGroupProps(reduceMotion, i * 0.05)}>
+              <motion.path
+                d={seg.d}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.25}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : { delay: i * 0.05, duration: 0.45, ease: "easeOut" }
+                }
+              />
+              <motion.path
+                d={chevron(seg.head)}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.25}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                initial={reduceMotion ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : { delay: i * 0.05 + 0.32, duration: 0.2 }
+                }
+              />
+            </motion.g>
+          ))}
+        </AnimatePresence>
       </svg>
 
       <div
@@ -617,24 +725,25 @@ function FlowDiagram({
         aria-label={ariaLabel}
         className="relative z-10 flex flex-wrap items-start gap-x-8 gap-y-12 sm:gap-y-16"
       >
-        {renderSequence.map((id) =>
-          id === "fanout" ? (
-            <FanoutCluster
-              key="fanout"
-              reduceMotion={reduceMotion}
-              spring={spring}
-              registerNode={registerNode}
-            />
-          ) : (
-            <BlockTile
-              key={id}
-              block={id as BlockId}
-              reduceMotion={reduceMotion}
-              spring={spring}
-              registerNode={registerNode}
-            />
-          ),
-        )}
+        <AnimatePresence mode="popLayout" initial={false}>
+          {renderSequence.map((id) =>
+            id === "fanout" ? (
+              <FanoutCluster
+                key="fanout"
+                reduceMotion={reduceMotion}
+                motionProps={motionProps}
+                registerNode={registerNode}
+              />
+            ) : (
+              <BlockTile
+                key={id}
+                block={id as BlockId}
+                motionProps={motionProps}
+                registerNode={registerNode}
+              />
+            ),
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -667,7 +776,7 @@ export function FlowComposer() {
     >
       <LayoutGroup>
         {/* The selected flow: larger blocks wired by the artifacts they hand forward */}
-        <div className="flow-composer-panel grid gap-8 lg:grid-cols-[minmax(12rem,16rem)_minmax(0,1fr)] lg:gap-10">
+        <div className="flow-composer-panel grid gap-8 lg:grid-cols-[minmax(10rem,13rem)_minmax(0,1fr)] lg:gap-10">
           {/* Flow toggle */}
           <div role="group" aria-label="Choose a flow" className="flow-picker-grid">
             {FLOWS.map((f) => {
@@ -746,13 +855,6 @@ export function FlowComposer() {
                   </p>
                 ) : null}
                 <FlowDiagram flow={flow} reduceMotion={reduceMotion} />
-                <p className="mt-6 max-w-2xl text-[12px] leading-relaxed text-muted-foreground">
-                  Each block does one powerful job: frame the task, gather
-                  context, decide the next move, make the change, or verify the
-                  result. The flow makes those jobs compound, passing a
-                  structured handoff forward until the agent can close with a
-                  clear outcome, evidence, and remaining risk.
-                </p>
               </>
             )}
           </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { Check, ChevronDown, Copy } from "lucide-react";
 import { useState } from "react";
 
 function useCopyText(text: string) {
@@ -80,18 +80,49 @@ export function CopyTextButton({
 }
 
 export function CopyInstallInstructions({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <div className="soft-info-card flex flex-col justify-between gap-5 p-5">
-      <div className="flex flex-col gap-2">
+    <div className="soft-info-card flex flex-col gap-4 p-5">
+      <div className="flex items-center justify-between gap-3">
         <h3 className="text-[15px] font-medium tracking-tight">
           Let your agent install it
         </h3>
-        <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
-          Copy one prompt that includes the Claude Code and Codex install paths,
-          plus the first command to run after setup.
-        </p>
+        <CopyTextButton
+          text={text}
+          label="Copy prompt"
+          className="shrink-0 min-h-8 px-3 py-1.5 text-[12px]"
+        />
       </div>
-      <CopyTextButton text={text} label="Copy prompt" />
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="group flex w-full flex-col items-start gap-2 text-left"
+      >
+        <span
+          className={[
+            "block w-full overflow-hidden whitespace-pre-wrap break-words font-mono text-[12px] leading-6 text-muted-foreground transition-colors group-hover:text-foreground",
+            expanded ? "max-h-none" : "max-h-[4.5rem]",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {text}
+        </span>
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
+          {expanded ? "Show less" : "Show full prompt"}
+          <ChevronDown
+            aria-hidden="true"
+            className={[
+              "size-3.5 transition-transform",
+              expanded ? "rotate-180" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          />
+        </span>
+      </button>
     </div>
   );
 }
