@@ -90,11 +90,6 @@
   --panel: hsl(0 0% 0% / 40%);
   --sticker-light: hsl(0 0% 100%);
   --sticker-shadow: hsl(0 0% 0%);
-  --wordmark-a: hsl(169 100% 50%);
-  --wordmark-b: hsl(334 100% 59%);
-  --wordmark-c: hsl(var(--site-primary-hue-gold) 100% 62%);
-  --wordmark-d: hsl(254 100% 65%);
-  --wordmark-e: hsl(188 100% 42%);
   --flow-explore: hsl(188 100% 42%);
   --flow-explore-accent: hsl(72 100% 62%);
   --flow-build: hsl(21 100% 55%);
@@ -155,55 +150,14 @@
   }
 }
 
-@property --circuit-wordmark-phase {
-  syntax: "<percentage>";
-  inherits: false;
-  initial-value: 0%;
-}
-
+/*
+ * Plain text fallback for the wordmark, shown before the canvas energy
+ * field mounts, when JS is off, and when the operator prefers reduced
+ * motion. The animated streak field lives in the Wordmark canvas component.
+ */
 .circuit-wordmark {
-  --circuit-wordmark-phase: 0%;
   width: fit-content;
-  color: transparent;
-  background-image: repeating-radial-gradient(
-    circle at 52% 136%,
-    var(--wordmark-a) calc(var(--circuit-wordmark-phase) + 0%),
-    var(--wordmark-b) calc(var(--circuit-wordmark-phase) + 16%),
-    var(--wordmark-c) calc(var(--circuit-wordmark-phase) + 32%),
-    var(--wordmark-d) calc(var(--circuit-wordmark-phase) + 48%),
-    var(--wordmark-e) calc(var(--circuit-wordmark-phase) + 64%),
-    var(--wordmark-a) calc(var(--circuit-wordmark-phase) + 80%),
-    var(--wordmark-b) calc(var(--circuit-wordmark-phase) + 96%)
-  );
-  background-position: center;
-  background-size: 100% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  animation:
-    circuit-wordmark-bloom 4.8s linear infinite,
-    circuit-wordmark-hue 9s linear infinite;
-  filter: saturate(1.25) brightness(1.05);
-}
-
-@keyframes circuit-wordmark-bloom {
-  to {
-    --circuit-wordmark-phase: 96%;
-  }
-}
-
-@keyframes circuit-wordmark-hue {
-  from {
-    filter: hue-rotate(0deg) saturate(1.25) brightness(1.05);
-  }
-  to {
-    filter: hue-rotate(360deg) saturate(1.25) brightness(1.05);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .circuit-wordmark {
-    animation: none;
-  }
+  color: var(--foreground);
 }
 
 .run-terminal-stage {
@@ -243,8 +197,12 @@
 
 .soft-cta-primary {
   border-radius: 18px;
-  background: var(--primary);
+  background: color-mix(in oklab, var(--primary) 10%, transparent);
   color: var(--primary-foreground);
+}
+
+.soft-cta-primary:hover {
+  background: var(--primary);
 }
 
 .soft-cta-secondary {
@@ -334,43 +292,153 @@
 }
 
 .flow-picker-button {
-  border-radius: 22px;
+  border-radius: 16px;
   background: color-mix(in oklab, var(--muted) 64%, transparent);
 }
 
-.flow-picker-grid {
+/* The flow composer: one bordered container split into a left flow nav and a
+   right content panel. The flows stack down the left as a single-column nav; the
+   selected flow's diagram and prose fill the panel to its right. A hairline
+   divides the two. Below the lg breakpoint it collapses to one stacked column
+   (nav on top) and the divider turns horizontal. */
+.flow-composer-panel {
   display: grid;
+  grid-template-columns: 1fr;
+  /* Cap and center the panel. It sits one step wider than the standard content
+     column (max-w-5xl / 64rem) that holds the header and lead above it, so the
+     explorer reads as a wider feature element without going edge-to-edge. */
   width: 100%;
-  max-width: 68rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.625rem;
+  max-width: 72rem;
+  margin-inline: auto;
+  border-radius: 24px;
+  background: color-mix(in oklab, var(--muted) 32%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 7%, transparent);
 }
 
-.flow-picker-grid .flow-picker-button {
-  width: 100%;
-  justify-content: flex-start;
+.flow-composer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.85rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
 }
 
-@media (min-width: 800px) {
-  .flow-picker-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
+.flow-nav-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.flow-composer-content {
+  min-width: 0;
+  /* The body container fills the panel's content column; the diagram fills the
+     body, so flows wrap to the full available width rather than a fixed cap. */
+  padding: 1.6rem;
 }
 
 @media (min-width: 1024px) {
-  .flow-composer-panel .flow-picker-grid {
-    max-width: none;
-    grid-template-columns: 1fr;
+  .flow-composer-panel {
+    grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr);
   }
-}
 
-.flow-composer-panel {
-  align-items: start;
+  .flow-composer-nav {
+    border-bottom: none;
+    border-right: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  }
 }
 
 .flow-block-tile {
   border-radius: 20px;
   box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.05);
+}
+
+/* ---- Run command framing -------------------------------------------------- */
+
+/* "/circuit:run" heads the nav: the command that runs whichever flow is picked
+   below it. It is a label, not a button — there is no execute affordance. */
+.flow-run-command {
+  padding: 0.35rem 0.5rem 0.55rem;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+/* ---- Tournament flex toggle ---------------------------------------------- */
+
+/* The one axis that genuinely reshapes a flow: toggling it morphs the diagram
+   into (or out of) the parallel fan-out. The other flex dimensions are stated
+   in prose below the diagram, never faked as block changes. */
+.flow-flex {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.85rem;
+}
+
+.flow-flex-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.75rem 0.4rem 0.6rem;
+  border-radius: 12px;
+  corner-shape: squircle;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background: color-mix(in oklab, var(--muted) 45%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.flow-flex-toggle:hover {
+  color: var(--foreground);
+}
+
+.flow-flex-toggle.is-on {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--flow-color) 22%, var(--muted));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 50%, transparent);
+}
+
+.flow-flex-track {
+  position: relative;
+  display: inline-block;
+  width: 26px;
+  height: 15px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 16%, transparent);
+}
+
+.flow-flex-toggle.is-on .flow-flex-track {
+  background: color-mix(in oklab, var(--flow-color) 70%, var(--muted));
+}
+
+.flow-flex-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: var(--foreground);
+  transition: transform 180ms ease;
+}
+
+.flow-flex-toggle.is-on .flow-flex-thumb {
+  transform: translateX(11px);
+}
+
+.flow-flex-hint {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-flex-toggle,
+  .flow-flex-track,
+  .flow-flex-thumb {
+    transition: none;
+  }
 }
 
 .flow-fanout-cluster,
@@ -391,6 +459,12 @@
 
 .block-internal-card {
   border-radius: 22px;
+}
+
+/* The planned "Custom" slot: lighter fill plus a faint inset outline so it reads
+   as an open, not-yet-shipped block rather than a shipped one. */
+.block-internal-card-planned {
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 8%, transparent);
 }
 
 /* A 3-finger box joint between adjacent cards, cut from the same material. Each

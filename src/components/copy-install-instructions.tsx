@@ -52,7 +52,7 @@ export function CopyTextButton({
       type="button"
       onClick={copyText}
       className={[
-        "soft-cta-primary inline-flex min-h-10 w-fit items-center gap-2 px-3.5 py-1.5 text-[13px] font-medium transition-opacity hover:opacity-90",
+        "soft-cta-primary inline-flex min-h-10 w-fit items-center gap-2 px-3.5 py-1.5 text-[13px] font-medium",
         className,
       ]
         .filter(Boolean)
@@ -91,7 +91,7 @@ export function CopyInstallInstructions({ text }: { text: string }) {
       >
         <span
           className={[
-            "block w-full overflow-hidden whitespace-pre-wrap break-words font-mono text-[12px] leading-6 text-muted-foreground transition-colors group-hover:text-foreground",
+            "block w-full overflow-hidden whitespace-pre-wrap break-words font-mono text-[12px] leading-6 text-muted-foreground group-hover:text-foreground",
             expanded ? "max-h-none" : "max-h-[4.5rem]",
           ]
             .filter(Boolean)
@@ -99,7 +99,7 @@ export function CopyInstallInstructions({ text }: { text: string }) {
         >
           {text}
         </span>
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground transition-colors group-hover:text-foreground">
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground group-hover:text-foreground">
           {expanded ? "Show less" : "Show full prompt"}
           <ChevronDown
             aria-hidden="true"

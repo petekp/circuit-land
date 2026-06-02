@@ -12,8 +12,10 @@ import {
 } from "react";
 import {
   AnimatePresence,
+  LazyMotion,
   LayoutGroup,
-  motion,
+  domMax,
+  m,
   useReducedMotion,
   type MotionProps,
 } from "motion/react";
@@ -320,7 +322,7 @@ function chevron(head: Segment["head"]): string {
 // instant behavior.
 function tileMotionProps(
   reduceMotion: boolean,
-  spring: Parameters<typeof motion.div>[0]["transition"],
+  spring: Parameters<typeof m.div>[0]["transition"],
 ): MotionProps {
   if (reduceMotion) {
     return {
@@ -360,14 +362,17 @@ function connectorGroupProps(reduceMotion: boolean, delay: number): MotionProps 
   if (reduceMotion) {
     return {
       initial: false,
-      animate: { filter: "blur(0px)" },
+      animate: { opacity: 1, filter: "blur(0px)" },
       exit: { opacity: 0, transition: { duration: 0 } },
       transition: { duration: 0 },
     };
   }
+  // opacity rests at 1 through enter/animate (so the group never doubles the
+  // inner paths' own fade) but is declared so exit has a real value to animate
+  // from — without it, Motion warns "animate opacity from undefined to 0".
   return {
-    initial: { filter: "blur(8px)" },
-    animate: { filter: "blur(0px)" },
+    initial: { opacity: 1, filter: "blur(8px)" },
+    animate: { opacity: 1, filter: "blur(0px)" },
     exit: {
       opacity: 0,
       filter: "blur(8px)",
@@ -375,6 +380,88 @@ function connectorGroupProps(reduceMotion: boolean, delay: number): MotionProps 
     },
     transition: { filter: { delay, duration: 0.4, ease: "easeOut" } },
   };
+}
+
+// ---- Flow flexibility data --------------------------------------------------
+
+type Rigor = "lite" | "standard" | "deep";
+
+// What each flow can flex, mirroring the support table in
+// circuit/docs/architecture/run-process.md. Only `tournament` actually reshapes
+// the block diagram (Explore and Prototype fan out into parallel option cases,
+// per their real tournament fixtures). `rigors` and `autonomous` change how a
+// run executes, not which blocks it has — verified against the fixtures: there
+// is no deep.json or autonomous.json, so they are stated, never animated as
+// fake block changes.
+type AxisSupport = {
+  rigors: Rigor[];
+  tournament: boolean;
+  autonomous: boolean;
+};
+
+const AXIS_SUPPORT: Record<Exclude<FlowKey, "custom">, AxisSupport> = {
+  build: { rigors: ["lite", "standard", "deep"], tournament: false, autonomous: true },
+  fix: { rigors: ["lite", "standard", "deep"], tournament: false, autonomous: true },
+  pursue: { rigors: ["standard"], tournament: false, autonomous: true },
+  explore: { rigors: ["lite", "standard", "deep"], tournament: true, autonomous: true },
+  review: { rigors: ["standard"], tournament: false, autonomous: false },
+  prototype: { rigors: ["standard", "deep"], tournament: true, autonomous: true },
+};
+
+function supportFor(key: FlowKey): AxisSupport | null {
+  return key === "custom" ? null : AXIS_SUPPORT[key];
+}
+
+// One honest line on the flow's other flex dimensions (rigor range and
+// autonomy). These are real but not block-shaped, so they are described under
+// the diagram, never drawn as morphing blocks.
+function flexSummary(key: FlowKey): string | null {
+  const s = supportFor(key);
+  if (!s) return null;
+  const parts =
+    s.rigors.length > 1
+      ? [`runs ${s.rigors[0]} to ${s.rigors[s.rigors.length - 1]}`]
+      : [`runs at ${s.rigors[0]} rigor`];
+  if (s.autonomous) {
+    parts.push("can run autonomously with bounded recovery attempts");
+  }
+  const sentence =
+    parts.length === 2 ? `${parts[0]}, and ${parts[1]}` : parts[0];
+  return `${sentence}.`;
+}
+
+// Block sequences. Each flow's `blocks` is its standard shape; the tournament
+// variants add the fan-out machinery, matching the real tournament fixtures for
+// Explore and Prototype. Toggling `tournament` morphs the diagram between them.
+const EXPLORE_STANDARD = [
+  "frame",
+  "diagnose",
+  "plan",
+  "review",
+  "close-with-evidence",
+] as const;
+
+const PROTOTYPE_TOURNAMENT = [
+  "frame",
+  "plan",
+  "fanout",
+  "run-verification",
+  "review",
+  "human-decision",
+  "close-with-evidence",
+] as const;
+
+function sequenceFor(
+  flow: ComposerFlow,
+  tournament: boolean,
+): readonly string[] {
+  if (flow.key === "explore") {
+    return tournament ? EXPLORE_SEQUENCE : EXPLORE_STANDARD;
+  }
+  if (flow.key === "prototype" && tournament) {
+    return PROTOTYPE_TOURNAMENT;
+  }
+  return flow.blocks;
 }
 
 function BlockTile({
@@ -397,19 +484,18 @@ function BlockTile({
     [nodeRef, ref],
   );
   return (
-    <motion.div
+    <m.li
       ref={composedRef}
       layout
       layoutId={block}
       {...motionProps}
-      role="listitem"
-      className="flow-block-tile relative z-10 flex w-full flex-col items-center justify-center gap-2 px-4 py-4 text-center text-foreground sm:w-auto sm:min-w-[108px]"
+      className="flow-block-tile relative z-10 flex w-full list-none flex-col items-center justify-center gap-2 p-4 text-center text-foreground sm:w-auto sm:min-w-[108px]"
       style={{ backgroundColor: TILE_FILL }}
     >
       <span className="text-[15px] font-medium leading-tight tracking-tight">
         {BLOCK_LABEL[block]}
       </span>
-    </motion.div>
+    </m.li>
   );
 }
 
@@ -498,13 +584,12 @@ function FanoutCluster({
   }, [measureFan]);
 
   return (
-    <motion.div
+    <m.li
       ref={setOuterRef}
       layout
       layoutId="fanout"
       {...motionProps}
-      role="listitem"
-      className="relative z-10 flex w-full origin-left justify-start"
+      className="relative z-10 flex w-full list-none origin-left justify-start"
     >
       <div
         ref={setCardRef}
@@ -522,7 +607,7 @@ function FanoutCluster({
           style={{ color: CONNECTOR_STROKE }}
         >
           {fanSegs.map((s, i) => (
-            <motion.path
+            <m.path
               key={s.id}
               d={s.d}
               fill="none"
@@ -554,23 +639,29 @@ function FanoutCluster({
           ))}
         </div>
       </div>
-    </motion.div>
+    </m.li>
   );
 }
 
 function FlowDiagram({
   flow,
+  sequence,
   reduceMotion,
 }: {
   flow: ComposerFlow;
+  sequence: readonly string[];
   reduceMotion: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const nodeRefs = useRef(new Map<string, HTMLElement>());
-  const refCallbacks = useRef(new Map<string, (el: HTMLElement | null) => void>());
+  const nodeRefs = useRef<Map<string, HTMLElement> | null>(null);
+  const refCallbacks = useRef<Map<string, (el: HTMLElement | null) => void> | null>(null);
   const lastSig = useRef("");
   const [segments, setSegments] = useState<Segment[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  if (nodeRefs.current === null) nodeRefs.current = new Map();
+  if (refCallbacks.current === null) refCallbacks.current = new Map();
+  const nodeRefMap = nodeRefs.current;
+  const refCallbackMap = refCallbacks.current;
 
   const spring = reduceMotion
     ? { duration: 0 }
@@ -581,27 +672,25 @@ function FlowDiagram({
 
   // Stable ref callback per node id so the refs map does not churn each render.
   const registerNode = useCallback((id: string) => {
-    let cb = refCallbacks.current.get(id);
+    let cb = refCallbackMap.get(id);
     if (!cb) {
       cb = (el: HTMLElement | null) => {
-        if (el) nodeRefs.current.set(id, el);
-        else nodeRefs.current.delete(id);
+        if (el) nodeRefMap.set(id, el);
+        else nodeRefMap.delete(id);
       };
-      refCallbacks.current.set(id, cb);
+      refCallbackMap.set(id, cb);
     }
     return cb;
-  }, []);
+  }, [nodeRefMap, refCallbackMap]);
 
   const measure = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
     const origin = container.getBoundingClientRect();
-    const sequence: readonly string[] =
-      flow.key === "explore" ? EXPLORE_SEQUENCE : flow.blocks;
     const next: Segment[] = [];
     for (let i = 0; i < sequence.length - 1; i += 1) {
-      const elA = nodeRefs.current.get(sequence[i]);
-      const elB = nodeRefs.current.get(sequence[i + 1]);
+      const elA = nodeRefMap.get(sequence[i]);
+      const elB = nodeRefMap.get(sequence[i + 1]);
       if (!elA || !elB) continue;
       const seg = connectorSegment(toAnchor(elA, origin), toAnchor(elB, origin));
       next.push({ id: `${flow.key}:${sequence[i]}->${sequence[i + 1]}`, ...seg });
@@ -618,7 +707,7 @@ function FlowDiagram({
         ? prev
         : { w: origin.width, h: origin.height },
     );
-  }, [flow]);
+  }, [flow, sequence, nodeRefMap]);
 
   // Measure on mount and on every flow switch. With motion off we measure once
   // at rest; otherwise a short, bounded rAF loop re-measures each frame for the
@@ -662,17 +751,20 @@ function FlowDiagram({
     };
   }, [measure]);
 
-  const ariaLabel =
-    flow.key === "explore"
-      ? "Explore flow with tournament enabled, in order: Frame, Diagnose, Plan, fan out option cases, Review, Human Decision, Close With Evidence"
-      : `${flow.name} flow, in order: ${flow.blocks
-          .map((b) => BLOCK_LABEL[b])
-          .join(", then ")}`;
+  const orderedLabels = sequence
+    .map((id) =>
+      id === "fanout" ? "fan out option cases" : BLOCK_LABEL[id as BlockId],
+    )
+    .join(", then ");
+  const ariaLabel = sequence.includes("fanout")
+    ? `${flow.name} flow with a tournament fan-out, in order: ${orderedLabels}`
+    : `${flow.name} flow, in order: ${orderedLabels}`;
 
-  const renderSequence: readonly string[] =
-    flow.key === "explore" ? EXPLORE_SEQUENCE : flow.blocks;
+  const renderSequence = sequence;
 
   return (
+    // The diagram fills its parent; the explorer body container caps the width
+    // (see .flow-composer-content), so flows wrap there, not at an inner cap here.
     <div ref={containerRef} className="relative">
       <svg
         aria-hidden="true"
@@ -684,8 +776,8 @@ function FlowDiagram({
       >
         <AnimatePresence initial={false}>
           {segments.map((seg, i) => (
-            <motion.g key={seg.id} {...connectorGroupProps(reduceMotion, i * 0.05)}>
-              <motion.path
+            <m.g key={seg.id} {...connectorGroupProps(reduceMotion, i * 0.05)}>
+              <m.path
                 d={seg.d}
                 fill="none"
                 stroke="currentColor"
@@ -700,7 +792,7 @@ function FlowDiagram({
                     : { delay: i * 0.05, duration: 0.45, ease: "easeOut" }
                 }
               />
-              <motion.path
+              <m.path
                 d={chevron(seg.head)}
                 fill="none"
                 stroke="currentColor"
@@ -715,15 +807,14 @@ function FlowDiagram({
                     : { delay: i * 0.05 + 0.32, duration: 0.2 }
                 }
               />
-            </motion.g>
+            </m.g>
           ))}
         </AnimatePresence>
       </svg>
 
-      <div
-        role="list"
+      <ul
         aria-label={ariaLabel}
-        className="relative z-10 flex flex-wrap items-start gap-x-8 gap-y-12 sm:gap-y-16"
+        className="relative z-10 flex flex-wrap items-start gap-x-8 gap-y-12 p-0 sm:gap-y-16"
       >
         <AnimatePresence mode="popLayout" initial={false}>
           {renderSequence.map((id) =>
@@ -744,13 +835,18 @@ function FlowDiagram({
             ),
           )}
         </AnimatePresence>
-      </div>
+      </ul>
     </div>
   );
 }
 
 export function FlowComposer() {
   const [active, setActive] = useState<FlowKey>("build");
+  // Tournament is the one axis that actually reshapes a flow's blocks: Explore
+  // and Prototype fan out into parallel option cases (their real tournament
+  // fixtures). Toggling it morphs the diagram. The other flex dimensions are
+  // real but not block-shaped, so they are stated under the diagram, not drawn.
+  const [tournament, setTournament] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   // useReducedMotion() is null on the server, so deriving animation state from
   // it directly makes the first client render disagree with the SSR markup (a
@@ -768,62 +864,81 @@ export function FlowComposer() {
 
   const flow = FLOWS.find((f) => f.key === active) ?? FLOWS[0];
   const planned = flow.planned === true;
+  const support = supportFor(flow.key);
+  const canTournament = support?.tournament === true;
+  const tournamentOn = canTournament && tournament;
+  const sequence = sequenceFor(flow, tournamentOn);
+  const flex = flexSummary(flow.key);
+
+  // Picking a flow resets the toggle, so each flow opens in its standard shape.
+  const selectFlow = useCallback((key: FlowKey) => {
+    setActive(key);
+    setTournament(false);
+  }, []);
 
   return (
     <div
       className="flex w-full flex-col"
       style={{ "--flow-color": flow.color } as CSSProperties}
     >
-      <LayoutGroup>
-        {/* The selected flow: larger blocks wired by the artifacts they hand forward */}
-        <div className="flow-composer-panel grid gap-8 lg:grid-cols-[minmax(10rem,13rem)_minmax(0,1fr)] lg:gap-10">
-          {/* Flow toggle */}
-          <div role="group" aria-label="Choose a flow" className="flow-picker-grid">
-            {FLOWS.map((f) => {
-              const selected = f.key === active;
-              return (
-                <button
-                  key={f.key}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setActive(f.key)}
-                  className="flow-picker-button inline-flex min-h-12 items-center gap-2.5 px-5 py-3 text-[16px] font-medium transition-colors hover:text-foreground"
-                  style={{
-                    color: selected
-                      ? "var(--foreground)"
-                      : "var(--muted-foreground)",
-                    backgroundColor: selected
-                      ? `color-mix(in oklab, ${f.color} 22%, var(--muted))`
-                      : undefined,
-                  }}
-                >
-                  <FlowGlyph
-                    name={f.name}
-                    color={f.color}
-                    accent={f.accent}
-                    motif={f.motif}
-                    cellSize={24}
-                    className="size-6 shrink-0"
-                  />
-                  {f.name}
-                  {f.planned ? (
-                    <span className="soft-chip px-1.5 py-1 text-[10px] uppercase leading-none tracking-[0.15em] text-muted-foreground">
-                      soon
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
+      <LazyMotion features={domMax}>
+        <LayoutGroup>
+        {/* One container, split by a hairline: the flows stack down the left as
+            a nav under the /circuit:run command they run; the selected flow's
+            diagram and prose fill the panel to the right. */}
+        <div className="flow-composer-panel">
+          <nav className="flow-composer-nav" aria-label="Circuit flows">
+            <span className="flow-run-command font-mono">/circuit:run</span>
+            <fieldset className="flow-nav-options m-0 min-w-0 border-0 p-0">
+              <legend className="sr-only">Choose a flow</legend>
+              {FLOWS.map((f) => {
+                const selected = f.key === active;
+                return (
+                  <button
+                    key={f.key}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => selectFlow(f.key)}
+                    className="flow-picker-button inline-flex min-h-11 w-full items-center justify-start gap-2.5 px-4 py-2.5 text-[15px] font-medium hover:text-foreground"
+                    style={{
+                      color: selected
+                        ? "var(--foreground)"
+                        : "var(--muted-foreground)",
+                      backgroundColor: selected
+                        ? `color-mix(in oklab, ${f.color} 22%, var(--muted))`
+                        : undefined,
+                    }}
+                  >
+                    <FlowGlyph
+                      name={f.name}
+                      color={f.color}
+                      accent={f.accent}
+                      motif={f.motif}
+                      cellSize={20}
+                      className="size-5 shrink-0"
+                    />
+                    {f.name}
+                    {f.planned ? (
+                      <span className="soft-chip ml-auto px-1.5 py-1 text-[10px] uppercase leading-none tracking-[0.15em] text-muted-foreground">
+                        soon
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </fieldset>
+          </nav>
 
-          <div className="min-w-0">
+          {/* The selected flow, how it can fan out, and a plain line on how
+              else it flexes. */}
+          <div className="flow-composer-content min-w-0">
             {planned ? (
               <div className="flex max-w-xl flex-col gap-3 py-2">
                 <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                   Custom · not yet shipped
                 </div>
                 <p className="text-[15px] leading-relaxed text-foreground">
-                  Compose a flow from any block in the catalog — or author new
+                  Compose a flow from any block in the catalog, or author new
                   blocks with their own typed contracts.
                 </p>
                 <p className="text-[13px] leading-relaxed text-muted-foreground">
@@ -831,7 +946,7 @@ export function FlowComposer() {
                   <span className="font-mono text-foreground/80">
                     /circuit:run
                   </span>{" "}
-                  routes to the six built-in flows above.
+                  routes to the six built-in flows listed here.
                 </p>
               </div>
             ) : (
@@ -840,26 +955,48 @@ export function FlowComposer() {
                   {flow.name}
                 </div>
                 {flow.summary ? (
-                  <p className="mb-6 max-w-xl text-[13px] leading-relaxed text-muted-foreground">
-                    {flow.key === "explore" ? (
-                      <>
-                        Compare paths before the agent commits to one. With{" "}
-                        <span className="font-medium text-foreground">
-                          tournament
-                        </span>{" "}
-                        enabled, option cases fan out, then rejoin for review.
-                      </>
-                    ) : (
-                      flow.summary
-                    )}
+                  <p className="mb-5 max-w-xl text-[13px] leading-relaxed text-muted-foreground">
+                    {flow.summary}
                   </p>
                 ) : null}
-                <FlowDiagram flow={flow} reduceMotion={reduceMotion} />
+
+                {canTournament ? (
+                  <div className="flow-flex mb-7">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={tournamentOn}
+                      onClick={() => setTournament((t) => !t)}
+                      className={`flow-flex-toggle ${tournamentOn ? "is-on" : ""}`}
+                    >
+                      <span aria-hidden="true" className="flow-flex-track">
+                        <span className="flow-flex-thumb" />
+                      </span>
+                      Tournament
+                    </button>
+                    <span className="flow-flex-hint">
+                      fan out parallel option cases, then rejoin to compare
+                    </span>
+                  </div>
+                ) : null}
+
+                <FlowDiagram
+                  flow={flow}
+                  sequence={sequence}
+                  reduceMotion={reduceMotion}
+                />
+
+                {flex ? (
+                  <p className="mt-7 max-w-xl text-[12px] leading-relaxed text-muted-foreground">
+                    {flow.name} {flex}
+                  </p>
+                ) : null}
               </>
             )}
           </div>
         </div>
-      </LayoutGroup>
+        </LayoutGroup>
+      </LazyMotion>
     </div>
   );
 }

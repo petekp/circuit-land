@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import {
@@ -30,6 +31,12 @@ type InstallTarget = {
 const runCommand = "/circuit:run build the Circuit landing page from the outline";
 const codexInstallCommand =
   "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.6";
+
+export const metadata: Metadata = {
+  title: "Circuit - repeatable work patterns for coding agents",
+  description:
+    "Circuit gives coding agents clear flows, timely skills, evidence, and checkpoints for everyday software work.",
+};
 
 const installTargets: InstallTarget[] = [
   {
@@ -79,7 +86,7 @@ const runBeats: RunBeat[] = [
   },
   {
     label: "Outcome",
-    note: "A factual, verified result is provided. No gaslighting.",
+    note: "A verified result, with the trace to back it: what changed and the checks that passed. No gaslighting.",
   },
 ];
 
@@ -224,7 +231,7 @@ function Label({
   as?: "div" | "h2";
 }) {
   return (
-    <Tag className="font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
+    <Tag className="font-sans text-[15px] font-semibold tracking-tight text-foreground sm:text-[16px]">
       {children}
     </Tag>
   );
@@ -248,7 +255,7 @@ function ClaudeCodeLogo() {
       focusable="false"
     >
       <path
-        d="M54.375 118.75L56.125 111L58.125 101L59.75 93L61.25 83.125L62.125 79.875L62 79.625L61.375 79.75L53.875 90L42.5 105.375L33.5 114.875L31.375 115.75L27.625 113.875L28 110.375L30.125 107.375L42.5 91.5L50 81.625L54.875 76L54.75 75.25H54.5L21.5 96.75L15.625 97.5L13 95.125L13.375 91.25L14.625 90L24.5 83.125L49.125 69.375L49.5 68.125L49.125 67.5H47.875L43.75 67.25L29.75 66.875L17.625 66.375L5.75 65.75L2.75 65.125L0 61.375L0.25 59.5L2.75 57.875L6.375 58.125L14.25 58.75L26.125 59.5L34.75 60L47.5 61.375H49.5L49.75 60.5L49.125 60L48.625 59.5L36.25 51.25L23 42.5L16 37.375L12.25 34.75L10.375 32.375L9.625 27.125L13 23.375L17.625 23.75L18.75 24L23.375 27.625L33.25 35.25L46.25 44.875L48.125 46.375L49 45.875V45.5L48.125 44.125L41.125 31.375L33.625 18.375L30.25 13L29.375 9.75C29.0417 8.625 28.875 7.375 28.875 6L32.75 0.750006L34.875 0L40.125 0.750006L42.25 2.625L45.5 10L50.625 21.625L58.75 37.375L61.125 42.125L62.375 46.375L62.875 47.75H63.75V47L64.375 38L65.625 27.125L66.875 13.125L67.25 9.125L69.25 4.375L73.125 1.87501L76.125 3.25L78.625 6.875L78.25 9.125L76.875 18.75L73.875 33.875L72 44.125H73.125L74.375 42.75L79.5 36L88.125 25.25L91.875 21L96.375 16.25L99.25 14H104.625L108.5 19.875L106.75 26L101.25 33L96.625 38.875L90 47.75L86 54.875L86.375 55.375H87.25L102.125 52.125L110.25 50.75L119.75 49.125L124.125 51.125L124.625 53.125L122.875 57.375L112.625 59.875L100.625 62.25L82.75 66.5L82.5 66.625L82.75 67L90.75 67.75L94.25 68H102.75L118.5 69.125L122.625 71.875L125 75.125L124.625 77.75L118.25 80.875L109.75 78.875L89.75 74.125L83 72.5H82V73L87.75 78.625L98.125 88L111.25 100.125L111.875 103.125L110.25 105.625L108.5 105.375L97 96.625L92.5 92.75L82.5 84.375H81.875V85.25L84.125 88.625L96.375 107L97 112.625L96.125 114.375L92.875 115.5L89.5 114.875L82.25 104.875L74.875 93.5L68.875 83.375L68.25 83.875L64.625 121.625L63 123.5L59.25 125L56.125 122.625L54.375 118.75Z"
+        d="M54.38 118.75L56.13 111L58.13 101L59.75 93L61.25 83.13L62.13 79.88L62 79.63L61.38 79.75L53.88 90L42.5 105.38L33.5 114.88L31.38 115.75L27.63 113.88L28 110.38L30.13 107.38L42.5 91.5L50 81.63L54.88 76L54.75 75.25H54.5L21.5 96.75L15.63 97.5L13 95.13L13.38 91.25L14.63 90L24.5 83.13L49.13 69.38L49.5 68.13L49.13 67.5H47.88L43.75 67.25L29.75 66.88L17.63 66.38L5.75 65.75L2.75 65.13L0 61.38L0.25 59.5L2.75 57.88L6.38 58.13L14.25 58.75L26.13 59.5L34.75 60L47.5 61.38H49.5L49.75 60.5L49.13 60L48.63 59.5L36.25 51.25L23 42.5L16 37.38L12.25 34.75L10.38 32.38L9.63 27.13L13 23.38L17.63 23.75L18.75 24L23.38 27.63L33.25 35.25L46.25 44.88L48.13 46.38L49 45.88V45.5L48.13 44.13L41.13 31.38L33.63 18.38L30.25 13L29.38 9.75C29.04 8.63 28.88 7.38 28.88 6L32.75 0.75L34.88 0L40.13 0.75L42.25 2.63L45.5 10L50.63 21.63L58.75 37.38L61.13 42.13L62.38 46.38L62.88 47.75H63.75V47L64.38 38L65.63 27.13L66.88 13.13L67.25 9.13L69.25 4.38L73.13 1.88L76.13 3.25L78.63 6.88L78.25 9.13L76.88 18.75L73.88 33.88L72 44.13H73.13L74.38 42.75L79.5 36L88.13 25.25L91.88 21L96.38 16.25L99.25 14H104.63L108.5 19.88L106.75 26L101.25 33L96.63 38.88L90 47.75L86 54.88L86.38 55.38H87.25L102.13 52.13L110.25 50.75L119.75 49.13L124.13 51.13L124.63 53.13L122.88 57.38L112.63 59.88L100.63 62.25L82.75 66.5L82.5 66.63L82.75 67L90.75 67.75L94.25 68H102.75L118.5 69.13L122.63 71.88L125 75.13L124.63 77.75L118.25 80.88L109.75 78.88L89.75 74.13L83 72.5H82V73L87.75 78.63L98.13 88L111.25 100.13L111.88 103.13L110.25 105.63L108.5 105.38L97 96.63L92.5 92.75L82.5 84.38H81.88V85.25L84.13 88.63L96.38 107L97 112.63L96.13 114.38L92.88 115.5L89.5 114.88L82.25 104.88L74.88 93.5L68.88 83.38L68.25 83.88L64.63 121.63L63 123.5L59.25 125L56.13 122.63L54.38 118.75Z"
         fill="currentColor"
       />
     </svg>
@@ -264,7 +271,7 @@ function CodexLogo() {
       focusable="false"
     >
       <path
-        d="M37.5324 16.8707C37.9808 15.5241 38.1363 14.0974 37.9886 12.6859C37.8409 11.2744 37.3934 9.91076 36.676 8.68622C35.6126 6.83404 33.9882 5.3676 32.0373 4.4985C30.0864 3.62941 27.9098 3.40259 25.8215 3.85078C24.8796 2.7893 23.7219 1.94125 22.4257 1.36341C21.1295 0.785575 19.7249 0.491269 18.3058 0.500197C16.1708 0.495044 14.0893 1.16803 12.3614 2.42214C10.6335 3.67624 9.34853 5.44666 8.6917 7.47815C7.30085 7.76286 5.98686 8.3414 4.8377 9.17505C3.68854 10.0087 2.73073 11.0782 2.02839 12.312C0.956464 14.1591 0.498905 16.2988 0.721698 18.4228C0.944492 20.5467 1.83612 22.5449 3.268 24.1293C2.81966 25.4759 2.66413 26.9026 2.81182 28.3141C2.95951 29.7256 3.40701 31.0892 4.12437 32.3138C5.18791 34.1659 6.8123 35.6322 8.76321 36.5013C10.7141 37.3704 12.8907 37.5973 14.9789 37.1492C15.9208 38.2107 17.0786 39.0587 18.3747 39.6366C19.6709 40.2144 21.0755 40.5087 22.4946 40.4998C24.6307 40.5054 26.7133 39.8321 28.4418 38.5772C30.1704 37.3223 31.4556 35.5506 32.1119 33.5179C33.5027 33.2332 34.8167 32.6547 35.9659 31.821C37.115 30.9874 38.0728 29.9178 38.7752 28.684C39.8458 26.8371 40.3023 24.6979 40.0789 22.5748C39.8556 20.4517 38.9639 18.4544 37.5324 16.8707ZM22.4978 37.8849C20.7443 37.8874 19.0459 37.2733 17.6994 36.1501C17.7601 36.117 17.8666 36.0586 17.936 36.0161L25.9004 31.4156C26.1003 31.3019 26.2663 31.137 26.3813 30.9378C26.4964 30.7386 26.5563 30.5124 26.5549 30.2825V19.0542L29.9213 20.998C29.9389 21.0068 29.9541 21.0198 29.9656 21.0359C29.977 21.052 29.9842 21.0707 29.9867 21.0902V30.3889C29.9842 32.375 29.1946 34.2791 27.7909 35.6841C26.3872 37.0892 24.4838 37.8806 22.4978 37.8849ZM6.39227 31.0064C5.51397 29.4888 5.19742 27.7107 5.49804 25.9832C5.55718 26.0187 5.66048 26.0818 5.73461 26.1244L13.699 30.7248C13.8975 30.8408 14.1233 30.902 14.3532 30.902C14.583 30.902 14.8088 30.8408 15.0073 30.7248L24.731 25.1103V28.9979C24.7321 29.0177 24.7283 29.0376 24.7199 29.0556C24.7115 29.0736 24.6988 29.0893 24.6829 29.1012L16.6317 33.7497C14.9096 34.7416 12.8643 35.0097 10.9447 34.4954C9.02506 33.9811 7.38785 32.7263 6.39227 31.0064ZM4.29707 13.6194C5.17156 12.0998 6.55279 10.9364 8.19885 10.3327C8.19885 10.4013 8.19491 10.5228 8.19491 10.6071V19.808C8.19351 20.0378 8.25334 20.2638 8.36823 20.4629C8.48312 20.6619 8.64893 20.8267 8.84863 20.9404L18.5723 26.5542L15.206 28.4979C15.1894 28.5089 15.1703 28.5155 15.1505 28.5173C15.1307 28.5191 15.1107 28.516 15.0924 28.5082L7.04046 23.8557C5.32135 22.8601 4.06716 21.2235 3.55289 19.3046C3.03862 17.3858 3.30624 15.3413 4.29707 13.6194ZM31.955 20.0556L22.2312 14.4411L25.5976 12.4981C25.6142 12.4872 25.6333 12.4805 25.6531 12.4787C25.6729 12.4769 25.6928 12.4801 25.7111 12.4879L33.7631 17.1364C34.9967 17.849 36.0017 18.8982 36.6606 20.1613C37.3194 21.4244 37.6047 22.849 37.4832 24.2684C37.3617 25.6878 36.8382 27.0432 35.9743 28.1759C35.1103 29.3086 33.9415 30.1717 32.6047 30.6641C32.6047 30.5947 32.6047 30.4733 32.6047 30.3889V21.188C32.6066 20.9586 32.5474 20.7328 32.4332 20.5338C32.319 20.3348 32.154 20.1698 31.955 20.0556ZM35.3055 15.0128C35.2464 14.9765 35.1431 14.9142 35.069 14.8717L27.1045 10.2712C26.906 10.1554 26.6803 10.0943 26.4504 10.0943C26.2206 10.0943 25.9948 10.1554 25.7963 10.2712L16.0726 15.8858V11.9982C16.0715 11.9783 16.0753 11.9585 16.0837 11.9405C16.0921 11.9225 16.1048 11.9068 16.1207 11.8949L24.1719 7.25025C25.4053 6.53903 26.8158 6.19376 28.2383 6.25482C29.6608 6.31589 31.0364 6.78077 32.2044 7.59508C33.3723 8.40939 34.2842 9.53945 34.8334 10.8531C35.3826 12.1667 35.5464 13.6095 35.3055 15.0128ZM14.2424 21.9419L10.8752 19.9981C10.8576 19.9893 10.8423 19.9763 10.8309 19.9602C10.8195 19.9441 10.8122 19.9254 10.8098 19.9058V10.6071C10.8107 9.18295 11.2173 7.78848 11.9819 6.58696C12.7466 5.38544 13.8377 4.42659 15.1275 3.82264C16.4173 3.21869 17.8524 2.99464 19.2649 3.1767C20.6775 3.35876 22.0089 3.93941 23.1034 4.85067C23.0427 4.88379 22.937 4.94215 22.8668 4.98473L14.9024 9.58517C14.7025 9.69878 14.5366 9.86356 14.4215 10.0626C14.3065 10.2616 14.2466 10.4877 14.2479 10.7175L14.2424 21.9419ZM16.071 17.9991L20.4018 15.4978L24.7325 17.9975V22.9985L20.4018 25.4983L16.071 22.9985V17.9991Z"
+        d="M37.53 16.87C37.98 15.52 38.14 14.1 37.99 12.69C37.84 11.27 37.39 9.91 36.68 8.69C35.61 6.83 33.99 5.37 32.04 4.5C30.09 3.63 27.91 3.4 25.82 3.85C24.88 2.79 23.72 1.94 22.43 1.36C21.13 0.79 19.72 0.49 18.31 0.5C16.17 0.5 14.09 1.17 12.36 2.42C10.63 3.68 9.35 5.45 8.69 7.48C7.3 7.76 5.99 8.34 4.84 9.18C3.69 10.01 2.73 11.08 2.03 12.31C0.96 14.16 0.5 16.3 0.72 18.42C0.94 20.55 1.84 22.54 3.27 24.13C2.82 25.48 2.66 26.9 2.81 28.31C2.96 29.73 3.41 31.09 4.12 32.31C5.19 34.17 6.81 35.63 8.76 36.5C10.71 37.37 12.89 37.6 14.98 37.15C15.92 38.21 17.08 39.06 18.37 39.64C19.67 40.21 21.08 40.51 22.49 40.5C24.63 40.51 26.71 39.83 28.44 38.58C30.17 37.32 31.46 35.55 32.11 33.52C33.5 33.23 34.82 32.65 35.97 31.82C37.12 30.99 38.07 29.92 38.78 28.68C39.85 26.84 40.3 24.7 40.08 22.57C39.86 20.45 38.96 18.45 37.53 16.87ZM22.5 37.88C20.74 37.89 19.05 37.27 17.7 36.15C17.76 36.12 17.87 36.06 17.94 36.02L25.9 31.42C26.1 31.3 26.27 31.14 26.38 30.94C26.5 30.74 26.56 30.51 26.55 30.28V19.05L29.92 21C29.94 21.01 29.95 21.02 29.97 21.04C29.98 21.05 29.98 21.07 29.99 21.09V30.39C29.98 32.38 29.19 34.28 27.79 35.68C26.39 37.09 24.48 37.88 22.5 37.88ZM6.39 31.01C5.51 29.49 5.2 27.71 5.5 25.98C5.56 26.02 5.66 26.08 5.73 26.12L13.7 30.72C13.9 30.84 14.12 30.9 14.35 30.9C14.58 30.9 14.81 30.84 15.01 30.72L24.73 25.11V29C24.73 29.02 24.73 29.04 24.72 29.06C24.71 29.07 24.7 29.09 24.68 29.1L16.63 33.75C14.91 34.74 12.86 35.01 10.94 34.5C9.03 33.98 7.39 32.73 6.39 31.01ZM4.3 13.62C5.17 12.1 6.55 10.94 8.2 10.33C8.2 10.4 8.19 10.52 8.19 10.61V19.81C8.19 20.04 8.25 20.26 8.37 20.46C8.48 20.66 8.65 20.83 8.85 20.94L18.57 26.55L15.21 28.5C15.19 28.51 15.17 28.52 15.15 28.52C15.13 28.52 15.11 28.52 15.09 28.51L7.04 23.86C5.32 22.86 4.07 21.22 3.55 19.3C3.04 17.39 3.31 15.34 4.3 13.62ZM31.95 20.06L22.23 14.44L25.6 12.5C25.61 12.49 25.63 12.48 25.65 12.48C25.67 12.48 25.69 12.48 25.71 12.49L33.76 17.14C35 17.85 36 18.9 36.66 20.16C37.32 21.42 37.6 22.85 37.48 24.27C37.36 25.69 36.84 27.04 35.97 28.18C35.11 29.31 33.94 30.17 32.6 30.66C32.6 30.59 32.6 30.47 32.6 30.39V21.19C32.61 20.96 32.55 20.73 32.43 20.53C32.32 20.33 32.15 20.17 31.95 20.06ZM35.31 15.01C35.25 14.98 35.14 14.91 35.07 14.87L27.1 10.27C26.91 10.16 26.68 10.09 26.45 10.09C26.22 10.09 25.99 10.16 25.8 10.27L16.07 15.89V12C16.07 11.98 16.08 11.96 16.08 11.94C16.09 11.92 16.1 11.91 16.12 11.89L24.17 7.25C25.41 6.54 26.82 6.19 28.24 6.25C29.66 6.32 31.04 6.78 32.2 7.6C33.37 8.41 34.28 9.54 34.83 10.85C35.38 12.17 35.55 13.61 35.31 15.01ZM14.24 21.94L10.88 20C10.86 19.99 10.84 19.98 10.83 19.96C10.82 19.94 10.81 19.93 10.81 19.91V10.61C10.81 9.18 11.22 7.79 11.98 6.59C12.75 5.39 13.84 4.43 15.13 3.82C16.42 3.22 17.85 2.99 19.26 3.18C20.68 3.36 22.01 3.94 23.1 4.85C23.04 4.88 22.94 4.94 22.87 4.98L14.9 9.59C14.7 9.7 14.54 9.86 14.42 10.06C14.31 10.26 14.25 10.49 14.25 10.72L14.24 21.94ZM16.07 18L20.4 15.5L24.73 18V23L20.4 25.5L16.07 23V18Z"
         fill="currentColor"
       />
     </svg>
@@ -362,11 +369,12 @@ function RunTerminalBody({ echo = false }: { echo?: boolean }) {
 
 function ProcessArtwork() {
   return (
-    <figure className="section-artwork process-artwork relative aspect-[1.45/1] min-h-[21rem] overflow-hidden bg-muted/40 lg:min-h-[25rem]">
+    <figure className="section-artwork process-artwork relative aspect-[1.45/1] min-h-[21rem] w-full max-w-full overflow-hidden bg-muted/40 lg:min-h-[25rem]">
       <Image
         src="/expert-process-illustration.png"
         alt="Expert operator arranging process blocks, route lines, evidence cards, and verification tools."
         fill
+        priority
         sizes="(max-width: 1024px) 100vw, 48vw"
         className="object-cover"
       />
@@ -374,437 +382,504 @@ function ProcessArtwork() {
   );
 }
 
-export default function Home() {
+function MastheadSection() {
   return (
-    <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-16">
-      {/* Section 1: Masthead */}
-      <section
-        className="mt-4 flex flex-col gap-8 sm:mt-6"
-        data-site-hue-stop="0"
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <Wordmark />
-            <p className="text-[11px] leading-none text-muted-foreground">
-              a plugin for Claude Code and Codex
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <a
-              href="https://github.com/petekp/circuit"
-              aria-label="Circuit on GitHub"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <GithubLogo />
-            </a>
-            <a
-              href="https://x.com/petekp"
-              aria-label="Pete Petrash on X"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <XLogo />
-            </a>
-          </div>
-        </div>
-
-        <h1 className="max-w-2xl text-base font-medium leading-tight tracking-tight sm:text-xl">
-          Powerful, repeatable work patterns for coding agents.
-        </h1>
-
-        <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-          Circuit gives agents a finely-tuned process to follow, so instead of
-          micro-managing, you&apos;re handing the work off to a trusted
-          colleague.
-        </p>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <a
-            href="#install"
-            aria-label="Install for Claude Code and Codex"
-            className="soft-cta-primary inline-flex min-h-11 items-center gap-2.5 px-5 py-2 text-[13px] font-medium transition-opacity hover:opacity-90"
-          >
-            <InstallProviderIcons />
-            <span>Install</span>
-          </a>
-          <a
-            href="#see-one-run"
-            className="soft-cta-secondary inline-flex min-h-11 items-center px-5 py-2 text-[13px] font-medium text-foreground transition-colors"
-          >
-            See example
-          </a>
-        </div>
-      </section>
-
-      {/* Section 2: See one run */}
-      <section
-        id="see-one-run"
-        className="mt-28 flex flex-col gap-10"
-        data-site-hue-stop="0.125"
-      >
-        <div className="flex max-w-3xl flex-col gap-3">
-          <Label as="h2">Example Run</Label>
-          <p className="text-balance text-[15px] leading-relaxed text-foreground">
-            Most of us are steering our agents step-by-step in chat.
+    <section
+      className="mt-4 flex flex-col gap-8 sm:mt-6"
+      data-site-hue-stop="0"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <Wordmark />
+          <p className="text-[11px] leading-none text-muted-foreground">
+            a plugin for Claude Code and Codex
           </p>
         </div>
-
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-stretch">
-          <div className="flex min-w-0 flex-col gap-3">
-            <div className="run-terminal-stage flex w-full flex-1 flex-col">
-              {/* Blurred ghost of the same content, masked to bloom only below
-                  the opaque pane — the terminal's text showing through. */}
-              <div
-                aria-hidden="true"
-                className="run-terminal-echo font-mono text-[13px] leading-7"
-              >
-                <RunTerminalBody echo />
-              </div>
-              <div className="run-terminal w-full flex-1 overflow-hidden font-mono text-[13px] leading-7">
-                <RunTerminalBody />
-              </div>
-            </div>
-          </div>
-
-          <ol className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:flex lg:max-w-[18rem] lg:flex-col lg:justify-self-end">
-            {runBeats.map((beat, i) => (
-              <li key={beat.label} className="flex gap-4">
-                <span
-                  aria-hidden="true"
-                  className="mt-px shrink-0 text-[12px] tabular-nums text-muted-foreground"
-                >
-                  {i + 1}
-                </span>
-                <div className="flex flex-col gap-1">
-                  <h3 className="text-balance text-[14px] font-medium tracking-tight">
-                    {beat.label}
-                  </h3>
-                  <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-                    {beat.note}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-      </section>
-
-      {/* Section 3: What Circuit is */}
-      <section
-        className="mt-28 grid gap-8 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)] lg:items-center"
-        data-site-hue-stop="0.25"
-      >
-        <div className="flex max-w-3xl flex-col gap-10">
-          <Label as="h2">Why process</Label>
-
-          <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
-            <div className="flex flex-col gap-3">
-              <p className="text-[18px] font-medium leading-snug tracking-tight text-foreground">
-                Great engineers don&apos;t rely on raw talent.
-              </p>
-              <p>
-                They work through a process they trust, and that process is what
-                lets their judgment do its best work. It frees them to stop
-                re-deciding the basics and spend attention where it matters.
-              </p>
-            </div>
-            <p>
-              Coding agents are surprisingly capable, but like humans, ad-hoc
-              chat isn&apos;t the best way to do effective work. You become the
-              agent&apos;s working memory. This is taxing for you, and a
-              suboptimal experience for the agent that puts it at a disadvantage.
-            </p>
-            <div className="flex flex-col gap-3">
-              <p className="text-[18px] font-medium leading-snug tracking-tight text-foreground">
-                Circuit sets agents up for success.
-              </p>
-              <p>
-                You describe the task, and Circuit supplies the process that
-                fits it: the right moves, in the right order, with the checks
-                that prove the work. You hand off more and keep your confidence,
-                because the result comes with evidence, not just a claim that
-                it&apos;s done.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <ProcessArtwork />
-      </section>
-
-      {/* Section 4: Flows and blocks */}
-      <section
-        className="relative left-1/2 mt-28 flex w-screen -translate-x-1/2 flex-col gap-10 px-6"
-        data-site-hue-stop="0.375"
-      >
-        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
-          <div className="flex max-w-3xl flex-col gap-3">
-            <Label as="h2">Routed, not chosen</Label>
-            <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-              <span className="font-mono font-medium text-foreground">
-                /circuit:run
-              </span>{" "}
-              interprets your intent and routes it to the appropriate flow,
-              automatically. Each flow is a specialized set of typed blocks. Each
-              block does one job. The flow makes these jobs compound, passing
-              structured handoff forward until the agent can deliver a clear
-              outcome with evidence.
-            </p>
-          </div>
-
-          <FlowComposer />
-        </div>
-      </section>
-
-      {/* Section 5: Block internals */}
-      <section
-        className="block-internals-section relative left-1/2 mt-28 flex w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-10 overflow-hidden bg-muted/20 px-6 py-14 sm:w-[calc(100vw-3rem)] sm:px-8 lg:w-[calc(100vw-4rem)]"
-        data-site-hue-stop="0.5"
-      >
-        <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
-          <div className="flex max-w-3xl flex-col gap-3">
-            <Label as="h2">Inside a block</Label>
-            <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-              Blocks are the power units inside every flow. Each one has a
-              typed input, a typed output, and a clear job, so flows can combine
-              them without losing track of what the agent knows.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 overflow-hidden sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {blockInternals.map((block) => (
-              <article
-                key={block.name}
-                className="block-internal-card relative flex flex-col gap-4 bg-muted/70 p-5"
-              >
-                <span aria-hidden="true" className="block-edge block-edge-t">
-                  <i />
-                  <i />
-                  <i />
-                </span>
-                <span aria-hidden="true" className="block-edge block-edge-l">
-                  <i />
-                  <i />
-                  <i />
-                </span>
-                <h3 className="text-balance text-[15px] font-medium leading-tight tracking-tight">
-                  {block.name}
-                </h3>
-                <dl className="flex flex-col gap-1.5 text-[11px] leading-snug">
-                  <div className="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-3">
-                    <dt className="uppercase tracking-[0.18em] text-muted-foreground">
-                      Input
-                    </dt>
-                    <dd className="text-balance text-[12px] text-foreground">
-                      {block.input}
-                    </dd>
-                  </div>
-                  <div className="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-3">
-                    <dt className="uppercase tracking-[0.18em] text-muted-foreground">
-                      Output
-                    </dt>
-                    <dd className="text-balance text-[12px] text-foreground">
-                      {block.output}
-                    </dd>
-                  </div>
-                </dl>
-                <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
-                  {block.detail}
-                </p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Section 6: What you can trust */}
-      <section
-        className="mt-28 flex flex-col gap-10"
-        data-site-hue-stop="0.625"
-      >
-        <Label as="h2">Why you can trust it</Label>
-
-        <div className="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex min-w-0 flex-col gap-2">
-            <h3 className="text-[15px] font-medium tracking-tight">Evidence</h3>
-            <p className="text-[13px] leading-relaxed text-muted-foreground">
-              Circuit keeps checks and results attached to the work. The agent
-              evaluates its own work against that evidence instead of asking you
-              to take it on faith.
-            </p>
-          </div>
-          <div className="flex min-w-0 flex-col gap-2">
-            <h3 className="text-[15px] font-medium tracking-tight">
-              Checkpoints
-            </h3>
-            <p className="text-[13px] leading-relaxed text-muted-foreground">
-              Circuit pauses when your judgment changes the outcome: a risky
-              direction, an ambiguous goal, a visual choice. Otherwise it keeps
-              moving.
-            </p>
-          </div>
-          <div className="flex min-w-0 flex-col gap-2">
-            <h3 className="text-[15px] font-medium tracking-tight">
-              Confidence
-            </h3>
-            <p className="text-[13px] leading-relaxed text-muted-foreground">
-              The point is confidence while you delegate more: Circuit keeps
-              the process explicit, the evidence attached, and the outcome
-              honest.
-            </p>
-          </div>
-          <div className="flex min-w-0 flex-col gap-2">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-[15px] font-medium tracking-tight">Memory</h3>
-              <span className="soft-chip shrink-0 px-1.5 py-1 text-[10px] uppercase leading-none tracking-[0.15em] text-muted-foreground">
-                soon
-              </span>
-            </div>
-            <p className="text-[13px] leading-relaxed text-muted-foreground">
-              Every run generates structured, CLI-queryable records: choices,
-              checks, evidence, and what happened next. These form a powerful
-              substrate for longitudinal memory.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Section 7: How Circuit compares */}
-      <section
-        className="mt-28 flex flex-col gap-10"
-        data-site-hue-stop="0.75"
-      >
-        <div className="flex max-w-3xl flex-col gap-3">
-          <Label as="h2">Where it fits</Label>
-          <p className="text-[15px] leading-relaxed text-foreground">
-            Circuit overlaps with tools and approaches you already use, but it
-            solves a different problem. Those tools shape what the agent can do;
-            Circuit shapes how the work moves from request to evidence-backed
-            outcome.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-          {comparison.map((c) => (
-            <div
-              key={c.name}
-              className="soft-info-card flex flex-col gap-5 p-5"
-            >
-              <h3 className="text-[15px] font-medium tracking-tight">
-                {c.name}
-              </h3>
-              <div className="flex flex-col gap-2">
-                <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-                  {c.approach}
-                </p>
-              </div>
-              <div className="flex flex-col gap-2">
-                <p className="font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                  How Circuit differs
-                </p>
-                <p className="text-balance text-[13px] leading-relaxed text-foreground">
-                  {c.circuit}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-      </section>
-
-      {/* Section 8: Install and use */}
-      <section
-        id="install"
-        className="mt-28 flex flex-col gap-7"
-        data-site-hue-stop="0.875"
-      >
-        <div className="flex max-w-3xl flex-col gap-3">
-          <Label as="h2">Get started</Label>
-          <p className="text-balance text-[15px] leading-relaxed text-foreground">
-            Install Circuit once for the agent you use.
-          </p>
-        </div>
-
-        <div className="w-full">
-          <CopyInstallInstructions text={agentInstallInstructions} />
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
-          {installTargets.map((target) => (
-            <article
-              key={target.name}
-              className={[
-                "install-terminal-card flex flex-col overflow-hidden",
-                target.comingSoon ? "md:col-span-2 lg:col-span-1" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              <div className="install-terminal-header flex items-center justify-between gap-3 px-5 py-4">
-                <h3 className="install-terminal-title text-[15px] font-medium tracking-tight">
-                  {target.name === "Claude Code" ? <ClaudeCodeLogo /> : null}
-                  {target.name === "Codex" ? <CodexLogo /> : null}
-                  {target.name === "OpenCode" ? <OpenCodeLogo /> : null}
-                  {target.name}
-                </h3>
-                {target.commands ? (
-                  <CopyTextButton
-                    text={target.commands.join("\n")}
-                    className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
-                  />
-                ) : target.comingSoon ? (
-                  <span className="soft-chip inline-flex min-h-8 shrink-0 items-center justify-center px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    Soon
-                  </span>
-                ) : null}
-              </div>
-
-              {target.commands ? (
-                <pre className="whitespace-pre-wrap break-words px-5 py-4 text-[13px] leading-7 text-foreground">
-                  <code>
-                    {target.commands
-                      .map((command) => `› ${command}`)
-                      .join("\n")}
-                  </code>
-                </pre>
-              ) : (
-                <div className="flex flex-1 items-center justify-center px-5 py-4 text-center text-[13px] leading-7 text-muted-foreground">
-                  OpenCode support coming soon.
-                </div>
-              )}
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* Section 9: Footer */}
-      <footer
-        className="mt-28 flex items-center justify-between gap-3 pt-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground"
-        data-site-hue-stop="1"
-      >
         <div className="flex items-center gap-4">
           <a
             href="https://github.com/petekp/circuit"
             aria-label="Circuit on GitHub"
-            className="transition-colors hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
           >
             <GithubLogo />
           </a>
           <a
             href="https://x.com/petekp"
             aria-label="Pete Petrash on X"
-            className="transition-colors hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
           >
             <XLogo />
           </a>
         </div>
+      </div>
+
+      <h1 className="max-w-2xl text-base font-medium leading-tight tracking-tight sm:text-xl">
+        Disciplined autonomy for coding agents.
+      </h1>
+
+      <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+        Your agent follows a process instead of improvising on the spot. Less
+        micro-managing, more working with a colleague you can trust.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3">
         <a
-          href="https://github.com/petekp/circuit/blob/main/LICENSE"
-          className="transition-colors hover:text-foreground"
+          href="#install"
+          aria-label="Install for Claude Code and Codex"
+          className="soft-cta-primary inline-flex min-h-11 items-center gap-2.5 px-5 py-2 text-[13px] font-medium"
         >
-          Open Source
+          <InstallProviderIcons />
+          <span>Install</span>
         </a>
-      </footer>
+        <a
+          href="#see-one-run"
+          className="soft-cta-secondary inline-flex min-h-11 items-center px-5 py-2 text-[13px] font-medium text-foreground"
+        >
+          See example
+        </a>
+      </div>
+    </section>
+  );
+}
+
+function ExampleRunSection() {
+  return (
+    <section
+      id="see-one-run"
+      className="mt-28 flex flex-col gap-10"
+      data-site-hue-stop="0.125"
+    >
+      <div className="flex max-w-3xl flex-col gap-3">
+        <Label as="h2">Example Run</Label>
+        <p className="text-balance text-[15px] leading-relaxed text-foreground">
+          Most of us are steering our agents step-by-step in chat.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-stretch">
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="run-terminal-stage flex w-full flex-1 flex-col">
+            {/* Blurred ghost of the same content, masked to bloom only below
+                the opaque pane — the terminal's text showing through. */}
+            <div
+              aria-hidden="true"
+              className="run-terminal-echo font-mono text-[13px] leading-7"
+            >
+              <RunTerminalBody echo />
+            </div>
+            <div className="run-terminal w-full flex-1 overflow-hidden font-mono text-[13px] leading-7">
+              <RunTerminalBody />
+            </div>
+          </div>
+        </div>
+
+        <ol className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:flex lg:max-w-[18rem] lg:flex-col lg:justify-self-end">
+          {runBeats.map((beat, i) => (
+            <li key={beat.label} className="flex gap-4">
+              <span
+                aria-hidden="true"
+                className="mt-px shrink-0 text-[12px] tabular-nums text-muted-foreground"
+              >
+                {i + 1}
+              </span>
+              <div className="flex flex-col gap-1">
+                <h3 className="text-balance text-[14px] font-medium tracking-tight">
+                  {beat.label}
+                </h3>
+                <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
+                  {beat.note}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+    </section>
+  );
+}
+
+function ProcessSection() {
+  return (
+    <section
+      className="mt-28 grid gap-8 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)] lg:items-center"
+      data-site-hue-stop="0.25"
+    >
+      <div className="flex max-w-3xl flex-col gap-10">
+        <Label as="h2">Why Process</Label>
+
+        <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
+          <div className="flex flex-col gap-3">
+            <p className="text-[18px] font-medium leading-snug tracking-tight text-foreground">
+              Great engineers don&apos;t rely on raw talent.
+            </p>
+            <p>
+              They work through a process they trust, and that process is what
+              lets their judgment do its best work. It frees them to stop
+              re-deciding the basics and spend attention where it matters.
+            </p>
+          </div>
+          <p>
+            Coding agents are surprisingly capable, but like humans, ad-hoc
+            chat isn&apos;t the best way to do effective work. You become the
+            agent&apos;s working memory. This is taxing for you, and a
+            suboptimal experience for the agent that puts it at a disadvantage.
+          </p>
+          <div className="flex flex-col gap-3">
+            <p className="text-[18px] font-medium leading-snug tracking-tight text-foreground">
+              Circuit sets agents up for success.
+            </p>
+            <p>
+              The agent is the capable part. Circuit is the path it runs
+              along. You describe the task, and Circuit supplies the process
+              that fits it: the right moves, in the right order, with the
+              checks that prove the work. You hand off more and keep your
+              confidence, because the result comes with evidence, not just a
+              claim that it&apos;s done.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <ProcessArtwork />
+    </section>
+  );
+}
+
+function FlowFlexSection() {
+  return (
+    <section
+      className="mt-28 flex flex-col gap-10"
+      data-site-hue-stop="0.375"
+    >
+      {/* Header and lead live in the standard content column, aligned with the
+          rest of the page. */}
+      <div className="flex max-w-3xl flex-col gap-3">
+        <Label as="h2">Flexible, Not Rigid</Label>
+        <p className="text-balance text-[15px] leading-relaxed text-muted-foreground">
+          <span className="font-mono font-medium text-foreground">
+            /circuit:run
+          </span>{" "}
+          starts with the flow that fits the task, but a flow is not a rigid
+          script. When the work calls for it, supported flows can change rigor,
+          continue autonomously with bounded recovery, or fan out into
+          tournament mode. The blocks stay typed, so flexibility stays
+          visible.
+        </p>
+      </div>
+
+      {/* The flow explorer breaks out of the standard column so it can sit
+          wider than the prose above it; the panel caps and centers itself. */}
+      <div className="relative left-1/2 w-screen -translate-x-1/2 px-6">
+        <FlowComposer />
+      </div>
+    </section>
+  );
+}
+
+function BlockInternalsSection() {
+  return (
+    <section
+      className="block-internals-section relative left-1/2 mt-28 flex w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-10 overflow-hidden bg-muted/20 px-6 py-14 sm:w-[calc(100vw-3rem)] sm:px-8 lg:w-[calc(100vw-4rem)]"
+      data-site-hue-stop="0.5"
+    >
+      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
+        <div className="flex max-w-3xl flex-col gap-3">
+          <Label as="h2">Inside a Block</Label>
+          <p className="text-balance text-[15px] leading-relaxed text-muted-foreground">
+            Blocks are the power units inside every flow. Each one has a
+            typed input, a typed output, and a clear job, so flows can combine
+            them without losing track of what the agent knows.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 overflow-hidden sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {blockInternals.map((block) => (
+            <article
+              key={block.name}
+              className="block-internal-card relative flex flex-col gap-4 bg-muted/70 p-5"
+            >
+              <span aria-hidden="true" className="block-edge block-edge-t">
+                <i />
+                <i />
+                <i />
+              </span>
+              <span aria-hidden="true" className="block-edge block-edge-l">
+                <i />
+                <i />
+                <i />
+              </span>
+              <h3 className="text-balance text-[15px] font-medium leading-tight tracking-tight">
+                {block.name}
+              </h3>
+              <dl className="flex flex-col gap-1.5 text-[11px] leading-snug">
+                <div className="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-3">
+                  <dt className="uppercase tracking-[0.18em] text-muted-foreground">
+                    Input
+                  </dt>
+                  <dd className="text-balance text-[12px] text-foreground">
+                    {block.input}
+                  </dd>
+                </div>
+                <div className="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-3">
+                  <dt className="uppercase tracking-[0.18em] text-muted-foreground">
+                    Output
+                  </dt>
+                  <dd className="text-balance text-[12px] text-foreground">
+                    {block.output}
+                  </dd>
+                </div>
+              </dl>
+              <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
+                {block.detail}
+              </p>
+            </article>
+          ))}
+          <article className="block-internal-card block-internal-card-planned relative flex flex-col gap-4 bg-muted/40 p-5">
+            <span aria-hidden="true" className="block-edge block-edge-t">
+              <i />
+              <i />
+              <i />
+            </span>
+            <span aria-hidden="true" className="block-edge block-edge-l">
+              <i />
+              <i />
+              <i />
+            </span>
+            <div className="flex items-center gap-2">
+              <h3 className="text-[15px] font-medium tracking-tight">
+                Custom
+              </h3>
+              <span className="soft-chip shrink-0 px-1.5 py-1 text-[10px] uppercase leading-none tracking-[0.15em] text-muted-foreground">
+                soon
+              </span>
+            </div>
+            <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
+              Author your own blocks with typed inputs and outputs, then
+              compose them into new flows. Block and flow authoring is on the
+              way.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TrustSection() {
+  return (
+    <section
+      className="mt-28 flex flex-col gap-10"
+      data-site-hue-stop="0.625"
+    >
+      <Label as="h2">Why You Can Trust It</Label>
+
+      <div className="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex min-w-0 flex-col gap-2">
+          <h3 className="text-[15px] font-medium tracking-tight">Evidence</h3>
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            Circuit keeps checks and results attached to the work. The agent
+            evaluates its own work against that evidence instead of asking you
+            to take it on faith.
+          </p>
+        </div>
+        <div className="flex min-w-0 flex-col gap-2">
+          <h3 className="text-[15px] font-medium tracking-tight">
+            Checkpoints
+          </h3>
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            Circuit pauses when your judgment changes the outcome: a risky
+            direction, an ambiguous goal, a visual choice. The pause is part
+            of the flow, not the agent&apos;s discretion. Otherwise it keeps
+            moving.
+          </p>
+        </div>
+        <div className="flex min-w-0 flex-col gap-2">
+          <h3 className="text-[15px] font-medium tracking-tight">
+            Confidence
+          </h3>
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            The point is confidence while you delegate more: Circuit keeps
+            the process explicit, the evidence attached, and the outcome
+            honest.
+          </p>
+        </div>
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-[15px] font-medium tracking-tight">Memory</h3>
+            <span className="soft-chip shrink-0 px-1.5 py-1 text-[10px] uppercase leading-none tracking-[0.15em] text-muted-foreground">
+              soon
+            </span>
+          </div>
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            Every run generates structured, CLI-queryable records: choices,
+            checks, evidence, and what happened next. These form a powerful
+            substrate for longitudinal memory.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ComparisonSection() {
+  return (
+    <section
+      className="mt-28 flex flex-col gap-10"
+      data-site-hue-stop="0.75"
+    >
+      <div className="flex max-w-3xl flex-col gap-3">
+        <Label as="h2">Where It Fits</Label>
+        <p className="text-[15px] leading-relaxed text-foreground">
+          Circuit overlaps with tools and approaches you already use, but it
+          solves a different problem. Those tools shape what the agent can do;
+          Circuit shapes how the work moves from request to evidence-backed
+          outcome.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+        {comparison.map((c) => (
+          <div
+            key={c.name}
+            className="soft-info-card flex flex-col gap-5 p-5"
+          >
+            <h3 className="text-[15px] font-medium tracking-tight">
+              {c.name}
+            </h3>
+            <div className="flex flex-col gap-2">
+              <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
+                {c.approach}
+              </p>
+            </div>
+            <div className="mt-auto flex flex-col gap-2">
+              <p className="font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                How Circuit differs
+              </p>
+              <p className="text-balance text-[13px] leading-relaxed text-foreground">
+                {c.circuit}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+    </section>
+  );
+}
+
+function InstallSection() {
+  return (
+    <section
+      id="install"
+      className="mt-28 flex flex-col gap-7"
+      data-site-hue-stop="0.875"
+    >
+      <div className="flex max-w-3xl flex-col gap-3">
+        <Label as="h2">Get Started</Label>
+        <p className="text-balance text-[15px] leading-relaxed text-foreground">
+          Install Circuit once for the agent you use.
+        </p>
+      </div>
+
+      <div className="w-full">
+        <CopyInstallInstructions text={agentInstallInstructions} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+        {installTargets.map((target) => (
+          <article
+            key={target.name}
+            className={[
+              "install-terminal-card flex flex-col overflow-hidden",
+              target.comingSoon ? "md:col-span-2 lg:col-span-1" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <div className="install-terminal-header flex items-center justify-between gap-3 px-5 py-4">
+              <h3 className="install-terminal-title text-[15px] font-medium tracking-tight">
+                {target.name === "Claude Code" ? <ClaudeCodeLogo /> : null}
+                {target.name === "Codex" ? <CodexLogo /> : null}
+                {target.name === "OpenCode" ? <OpenCodeLogo /> : null}
+                {target.name}
+              </h3>
+              {target.commands ? (
+                <CopyTextButton
+                  text={target.commands.join("\n")}
+                  className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
+                />
+              ) : target.comingSoon ? (
+                <span className="soft-chip inline-flex min-h-8 shrink-0 items-center justify-center px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  Soon
+                </span>
+              ) : null}
+            </div>
+
+            {target.commands ? (
+              <pre className="whitespace-pre-wrap break-words px-5 py-4 text-[13px] leading-7 text-foreground">
+                <code>
+                  {target.commands
+                    .map((command) => `› ${command}`)
+                    .join("\n")}
+                </code>
+              </pre>
+            ) : (
+              <div className="flex flex-1 items-center justify-center px-5 py-4 text-center text-[13px] leading-7 text-muted-foreground">
+                OpenCode support coming soon.
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer
+      className="mt-28 flex items-center justify-between gap-3 pt-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground"
+      data-site-hue-stop="1"
+    >
+      <div className="flex items-center gap-4">
+        <a
+          href="https://github.com/petekp/circuit"
+          aria-label="Circuit on GitHub"
+          className="hover:text-foreground"
+        >
+          <GithubLogo />
+        </a>
+        <a
+          href="https://x.com/petekp"
+          aria-label="Pete Petrash on X"
+          className="hover:text-foreground"
+        >
+          <XLogo />
+        </a>
+      </div>
+      <a
+        href="https://github.com/petekp/circuit/blob/main/LICENSE"
+        className="hover:text-foreground"
+      >
+        Open Source
+      </a>
+    </footer>
+  );
+}
+
+export default function Home() {
+  return (
+    <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-16">
+      <MastheadSection />
+      <ExampleRunSection />
+      <ProcessSection />
+      <FlowFlexSection />
+      <BlockInternalsSection />
+      <TrustSection />
+      <ComparisonSection />
+      <InstallSection />
+      <SiteFooter />
     </main>
   );
 }
