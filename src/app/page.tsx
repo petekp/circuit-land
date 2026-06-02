@@ -5,18 +5,9 @@ import {
   CopyInstallInstructions,
   CopyTextButton,
 } from "@/components/copy-install-instructions";
+import { ExampleRunSection } from "@/components/example-run-toggle";
 import { FlowComposer } from "@/components/flow-composer";
 import { Wordmark } from "@/components/wordmark";
-
-type SurfaceLine = {
-  text: string;
-  emphasis?: boolean;
-};
-
-type RunBeat = {
-  label: string;
-  note: string;
-};
 
 type InstallTarget = {
   name: "Claude Code" | "Codex" | "OpenCode";
@@ -24,11 +15,6 @@ type InstallTarget = {
   comingSoon?: boolean;
 };
 
-// Faithful reconstruction of a live Circuit Build surface, assembled from the
-// exact progress strings Circuit streams (circuit/src/flows/build/data.ts). The
-// final line is verbatim from this run's captured summary
-// (.circuit/runs/21c71c1e-.../reports/operator-summary.md).
-const runCommand = "/circuit:run build the Circuit landing page from the outline";
 const codexInstallCommand =
   "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.6";
 
@@ -57,44 +43,11 @@ const installTargets: InstallTarget[] = [
   },
 ];
 
-const runSurface: SurfaceLine[] = [
-  { text: "CIRCUIT", emphasis: true },
-  { text: "⎿ Chose build." },
-  { text: "⎿ Framing the work..." },
-  { text: "⎿ Planning the work..." },
-  { text: "⎿ Asking the specialist to make the change..." },
-  { text: "⎿ Finished the specialist pass." },
-  { text: "⎿ Checking the work..." },
-  {
-    text: "⎿ Build complete. Verification passed, review accepted.",
-    emphasis: true,
-  },
-];
-
-const runBeats: RunBeat[] = [
-  {
-    label: "You describe the task",
-    note: "You can focus on the goal rather than the precise means.",
-  },
-  {
-    label: "Circuit selects the flow",
-    note: "The right process is inferred based on your prompt. You can optionally specify, too.",
-  },
-  {
-    label: "It follows a process",
-    note: "Plan → change → check → review.",
-  },
-  {
-    label: "Outcome",
-    note: "A verified result, with the trace to back it: what changed and the checks that passed. No gaslighting.",
-  },
-];
-
 const comparison = [
   {
     name: "Prompting + Skills",
     approach:
-      "Skills give the agent stronger moves: read a trace, write a test, inspect a browser, review a diff. You still decide which move to call, when to call it, and when enough proof exists.",
+      "Skills give the agent stronger moves: read a trace, write a test, inspect a browser, review a diff. You still decide which move to call, when to call it, and when enough evidence exists.",
     circuit:
       "Circuit uses those moves inside a flow. It routes the task, chooses the next block, carries context forward, and asks for your judgment only when the result depends on it.",
   },
@@ -183,7 +136,7 @@ const blockInternals = [
     input: "Plan strategy",
     output: "Changed work",
     detail:
-      "Makes the change and records what moved, why it moved, and what proof the next block needs.",
+      "Makes the change and records what moved, why it moved, and what evidence the next block needs.",
   },
   {
     name: "Run Verification",
@@ -197,7 +150,7 @@ const blockInternals = [
     input: "Change plus evidence",
     output: "Review verdict",
     detail:
-      "Checks behavior, scope, and proof from a separate review posture before the run calls itself done.",
+      "Checks behavior, scope, and evidence from a separate review posture before the run calls itself done.",
   },
   {
     name: "Close With Evidence",
@@ -323,50 +276,6 @@ function XLogo() {
   );
 }
 
-// Shared body for the run terminal. The real pane and its blurred under-echo
-// render the same rows, so their padding and leading can only be defined once
-// (the echo just drops the per-line coloring and the prompt divider).
-function RunTerminalBody({ echo = false }: { echo?: boolean }) {
-  return (
-    <>
-      <div
-        className={
-          echo ? "px-5 py-3" : "run-terminal-divider px-5 py-3 text-foreground"
-        }
-      >
-        <span className={echo ? undefined : "text-muted-foreground"}>$ </span>
-        {echo ? (
-          runCommand
-        ) : (
-          <>
-            <span className="font-medium text-foreground">/circuit:run</span>
-            <span className="text-muted-foreground">
-              {" "}
-              build the Circuit landing page from the outline
-            </span>
-          </>
-        )}
-      </div>
-      <div className="flex flex-col px-5 py-4">
-        {runSurface.map((line) => (
-          <span
-            key={line.text}
-            className={
-              echo
-                ? undefined
-                : line.emphasis
-                  ? "text-foreground"
-                  : "text-muted-foreground"
-            }
-          >
-            {line.text}
-          </span>
-        ))}
-      </div>
-    </>
-  );
-}
-
 function ProcessArtwork() {
   return (
     <figure className="section-artwork process-artwork relative aspect-[1.45/1] min-h-[21rem] w-full max-w-full overflow-hidden bg-muted/40 lg:min-h-[25rem]">
@@ -438,63 +347,6 @@ function MastheadSection() {
           See example
         </a>
       </div>
-    </section>
-  );
-}
-
-function ExampleRunSection() {
-  return (
-    <section
-      id="see-one-run"
-      className="mt-28 flex flex-col gap-10"
-      data-site-hue-stop="0.125"
-    >
-      <div className="flex max-w-3xl flex-col gap-3">
-        <Label as="h2">Example Run</Label>
-        <p className="text-balance text-[15px] leading-relaxed text-foreground">
-          Most of us are steering our agents step-by-step in chat.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-stretch">
-        <div className="flex min-w-0 flex-col gap-3">
-          <div className="run-terminal-stage flex w-full flex-1 flex-col">
-            {/* Blurred ghost of the same content, masked to bloom only below
-                the opaque pane — the terminal's text showing through. */}
-            <div
-              aria-hidden="true"
-              className="run-terminal-echo font-mono text-[13px] leading-7"
-            >
-              <RunTerminalBody echo />
-            </div>
-            <div className="run-terminal w-full flex-1 overflow-hidden font-mono text-[13px] leading-7">
-              <RunTerminalBody />
-            </div>
-          </div>
-        </div>
-
-        <ol className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:flex lg:max-w-[18rem] lg:flex-col lg:justify-self-end">
-          {runBeats.map((beat, i) => (
-            <li key={beat.label} className="flex gap-4">
-              <span
-                aria-hidden="true"
-                className="mt-px shrink-0 text-[12px] tabular-nums text-muted-foreground"
-              >
-                {i + 1}
-              </span>
-              <div className="flex flex-col gap-1">
-                <h3 className="text-balance text-[14px] font-medium tracking-tight">
-                  {beat.label}
-                </h3>
-                <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-                  {beat.note}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </div>
-
     </section>
   );
 }
