@@ -12,15 +12,13 @@ type ExampleRunBeat = {
 type ExampleRunSurfaceLine = {
   text: string;
   emphasis?: boolean;
+  kind?: "agent" | "user";
 };
 
 type ExampleRunContent = {
   mode: ExampleRunMode;
   toggleLabel: string;
   summary: string;
-  command: string;
-  commandEmphasis?: string;
-  commandRest?: string;
   surfaceLines: ExampleRunSurfaceLine[];
   beats: ExampleRunBeat[];
 };
@@ -29,15 +27,34 @@ const exampleRunModes: Record<ExampleRunMode, ExampleRunContent> = {
   without: {
     mode: "without",
     toggleLabel: "Without Circuit",
-    summary: "Same capable agent. More process left for you to hold.",
-    command: "build the Circuit landing page from the outline",
+    summary: "Same capable agent. The process is negotiated in chat.",
     surfaceLines: [
-      { text: "AGENT", emphasis: true },
-      { text: "⎿ I can do that. Where should I start?" },
-      { text: "⎿ Should I make a plan first?" },
-      { text: "⎿ I updated the page." },
-      { text: "⎿ Tests should probably pass." },
-      { text: "⎿ Want me to review it too?" },
+      { kind: "user", text: "build the circuit landing page from the outline" },
+      { text: "I’ll take a pass and keep the existing visual language intact." },
+      { text: "First pass is in:" },
+      { text: "- updated the hero copy" },
+      { text: "- added the example run section" },
+      { text: "- revised the flow section" },
+      { text: "- tightened spacing and type" },
+      { kind: "user", text: "that wording doesn't sound like me" },
+      { text: "Got it. I’ll make it plainer and less formal." },
+      { text: "Updated the copy." },
+      { kind: "user", text: "can you spec the example run update first?" },
+      { text: "Created a spec for a With Circuit / Without Circuit toggle." },
+      { kind: "user", text: "implement it" },
+      { text: "Implemented the toggle." },
+      { kind: "user", text: "/react-doctor" },
+      { text: "React Doctor found a few issues in the changed React code:" },
+      { text: "- state used only to trigger rerenders" },
+      { text: "- an accessibility issue on the toggle" },
+      { text: "- the section component was doing too much" },
+      { kind: "user", text: "address all findings" },
+      { text: "Refactored the section and reran checks:" },
+      { text: "- npm run lint passed" },
+      { text: "- npm run build passed" },
+      { text: "- React Doctor 100 / 100" },
+      { kind: "user", text: "commit and push" },
+      { text: "Committed and pushed." },
     ],
     beats: [
       {
@@ -62,12 +79,13 @@ const exampleRunModes: Record<ExampleRunMode, ExampleRunContent> = {
     mode: "with",
     toggleLabel: "With Circuit",
     summary: "Circuit carries the process through the run.",
-    command: "/circuit:run build the Circuit landing page from the outline",
-    commandEmphasis: "/circuit:run",
-    commandRest: "build the Circuit landing page from the outline",
     surfaceLines: [
+      {
+        kind: "user",
+        text: "/circuit:run build the circuit landing page from the outline",
+      },
       { text: "CIRCUIT", emphasis: true },
-      { text: "⎿ Chose build." },
+      { text: "⎿ Chose the Build flow." },
       { text: "⎿ Framing the work..." },
       { text: "⎿ Planning the work..." },
       { text: "⎿ Asking the specialist to make the change..." },
@@ -101,54 +119,23 @@ const exampleRunModes: Record<ExampleRunMode, ExampleRunContent> = {
 
 const exampleRunOrder: ExampleRunMode[] = ["without", "with"];
 
-function RunTerminalBody({
-  content,
-  echo = false,
-}: {
-  content: ExampleRunContent;
-  echo?: boolean;
-}) {
+function getSurfaceLineClass(line: ExampleRunSurfaceLine) {
+  if (line.kind === "user") {
+    return "example-run-user-row text-foreground";
+  }
+
+  return line.emphasis ? "text-foreground" : "text-muted-foreground";
+}
+
+function RunTerminalBody({ content }: { content: ExampleRunContent }) {
   return (
-    <>
-      <div
-        className={
-          echo ? "px-5 py-3" : "run-terminal-divider px-5 py-3 text-foreground"
-        }
-      >
-        <span className={echo ? undefined : "text-muted-foreground"}>$ </span>
-        {echo || !content.commandEmphasis ? (
-          content.command
-        ) : (
-          <>
-            <span className="font-medium text-foreground">
-              {content.commandEmphasis}
-            </span>
-            {content.commandRest ? (
-              <span className="text-muted-foreground">
-                {" "}
-                {content.commandRest}
-              </span>
-            ) : null}
-          </>
-        )}
-      </div>
-      <div className="example-run-terminal-body flex flex-col px-5 py-4">
-        {content.surfaceLines.map((line) => (
-          <span
-            key={line.text}
-            className={
-              echo
-                ? undefined
-                : line.emphasis
-                  ? "text-foreground"
-                  : "text-muted-foreground"
-            }
-          >
-            {line.text}
-          </span>
-        ))}
-      </div>
-    </>
+    <div className="example-run-terminal-body flex flex-col px-5 py-4">
+      {content.surfaceLines.map((line) => (
+        <span key={line.text} className={getSurfaceLineClass(line)}>
+          {line.text}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -160,11 +147,8 @@ function ExampleRunToggle({
   setMode: (mode: ExampleRunMode) => void;
 }) {
   return (
-    <div
-      className="example-run-toggle"
-      role="group"
-      aria-label="Example run mode"
-    >
+    <fieldset className="example-run-toggle m-0 min-w-0 border-0">
+      <legend className="sr-only">Example run mode</legend>
       {exampleRunOrder.map((option) => {
         const selected = mode === option;
         const content = exampleRunModes[option];
@@ -181,7 +165,7 @@ function ExampleRunToggle({
           </button>
         );
       })}
-    </div>
+    </fieldset>
   );
 }
 
@@ -196,32 +180,21 @@ export function ExampleRunSection() {
       data-site-hue-stop="0.125"
     >
       <div className="flex max-w-3xl flex-col gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-col gap-3">
-            <h2 className="font-sans text-[15px] font-semibold tracking-tight text-foreground sm:text-[16px]">
-              Example Run
-            </h2>
-            <p className="text-balance text-[15px] leading-relaxed text-foreground">
-              Most of us are steering our agents step-by-step in chat.
-            </p>
-          </div>
+        <div className="flex flex-col gap-3">
+          <h2 className="font-sans text-[15px] font-semibold tracking-tight text-foreground sm:text-[16px]">
+            Example Run
+          </h2>
+          <p className="text-balance text-[15px] leading-relaxed text-foreground">
+            Most of us are steering our agents step-by-step in chat.
+          </p>
           <ExampleRunToggle mode={mode} setMode={setMode} />
         </div>
-        <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-          {content.summary}
-        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-stretch">
         <div className="flex min-w-0 flex-col gap-3">
           <div className="run-terminal-stage flex w-full flex-col">
-            <div
-              aria-hidden="true"
-              className="run-terminal-echo font-mono text-[13px] leading-7"
-            >
-              <RunTerminalBody content={content} echo />
-            </div>
-            <div className="example-run-terminal run-terminal w-full overflow-hidden font-mono text-[13px] leading-7">
+            <div className="example-run-terminal run-terminal w-full overflow-x-hidden overflow-y-auto font-mono text-[13px] leading-7">
               <RunTerminalBody content={content} />
             </div>
           </div>

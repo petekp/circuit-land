@@ -412,22 +412,66 @@ function supportFor(key: FlowKey): AxisSupport | null {
   return key === "custom" ? null : AXIS_SUPPORT[key];
 }
 
-// One honest line on the flow's other flex dimensions (rigor range and
-// autonomy). These are real but not block-shaped, so they are described under
-// the diagram, never drawn as morphing blocks.
-function flexSummary(key: FlowKey): string | null {
-  const s = supportFor(key);
-  if (!s) return null;
-  const parts =
-    s.rigors.length > 1
-      ? [`runs ${s.rigors[0]} to ${s.rigors[s.rigors.length - 1]}`]
-      : [`runs at ${s.rigors[0]} rigor`];
-  if (s.autonomous) {
-    parts.push("can run autonomously with bounded recovery attempts");
-  }
-  const sentence =
-    parts.length === 2 ? `${parts[0]}, and ${parts[1]}` : parts[0];
-  return `${sentence}.`;
+// A glance-level badge of what the active flow supports, shown opposite the
+// flow title. Rigor is always present (every flow has a rigor range); autonomy
+// and tournament appear only when the flow actually supports them, so the badge
+// reads as a quick answer to "what can this flow do."
+function FlowSupportIndicator({ support }: { support: AxisSupport }) {
+  const rigorRange =
+    support.rigors.length > 1
+      ? `${support.rigors[0]}–${support.rigors[support.rigors.length - 1]}`
+      : support.rigors[0];
+  const chipClass =
+    "soft-chip px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em]";
+  return (
+    <ul
+      aria-label="Supported options"
+      className="flex flex-wrap items-center justify-end gap-1.5"
+    >
+      <li className={`${chipClass} flex items-center gap-1 text-muted-foreground`}>
+        Rigor <span className="text-foreground">{rigorRange}</span>
+      </li>
+      {support.autonomous ? (
+        <li className={`${chipClass} text-foreground`}>Autonomous</li>
+      ) : null}
+      {support.tournament ? (
+        <li className={`${chipClass} text-foreground`}>Tournament</li>
+      ) : null}
+    </ul>
+  );
+}
+
+// An illustrative, not-yet-real flow rendered as gray nodes, to show how blocks
+// could be composed into a custom flow. Deliberately gray and label-only (not
+// the typed BlockTile catalog) so it never reads as a shipped flow.
+const HYPOTHETICAL_FLOW = [
+  "Grill me",
+  "Proposal",
+  "Generate HTML preview",
+  "Human Decision",
+  "Build",
+  "Adversarial Review (2)",
+  "Fix",
+  "Open PR",
+] as const;
+
+function HypotheticalFlowPreview() {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {HYPOTHETICAL_FLOW.map((node, index) => (
+        <span key={node} className="inline-flex items-center gap-2">
+          <span className="rounded-xl border border-muted-foreground/20 bg-muted/50 px-3 py-2 text-[12px] font-medium text-muted-foreground">
+            {node}
+          </span>
+          {index < HYPOTHETICAL_FLOW.length - 1 ? (
+            <span aria-hidden="true" className="text-muted-foreground/40">
+              →
+            </span>
+          ) : null}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 // Block sequences. Each flow's `blocks` is its standard shape; the tournament
@@ -868,7 +912,6 @@ export function FlowComposer() {
   const canTournament = support?.tournament === true;
   const tournamentOn = canTournament && tournament;
   const sequence = sequenceFor(flow, tournamentOn);
-  const flex = flexSummary(flow.key);
 
   // Picking a flow resets the toggle, so each flow opens in its standard shape.
   const selectFlow = useCallback((key: FlowKey) => {
@@ -899,7 +942,7 @@ export function FlowComposer() {
                     type="button"
                     aria-pressed={selected}
                     onClick={() => selectFlow(f.key)}
-                    className="flow-picker-button inline-flex min-h-11 w-full items-center justify-start gap-2.5 px-4 py-2.5 text-[15px] font-medium hover:text-foreground"
+                    className="flow-picker-button inline-flex min-h-11 w-full items-center justify-start gap-2.5 px-4 py-2.5 text-[15px] font-medium transition-colors hover:text-foreground"
                     style={{
                       color: selected
                         ? "var(--foreground)"
@@ -933,15 +976,21 @@ export function FlowComposer() {
               else it flexes. */}
           <div className="flow-composer-content min-w-0">
             {planned ? (
-              <div className="flex max-w-xl flex-col gap-3 py-2">
+              <div className="flex flex-col gap-5 py-2">
                 <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                   Custom · not yet shipped
                 </div>
-                <p className="text-[15px] leading-relaxed text-foreground">
+                <p className="max-w-xl text-[15px] leading-relaxed text-foreground">
                   Compose a flow from any block in the catalog, or author new
                   blocks with their own typed contracts.
                 </p>
-                <p className="text-[13px] leading-relaxed text-muted-foreground">
+                <div className="flex flex-col gap-3">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground/70">
+                    For example, a flow you could compose
+                  </div>
+                  <HypotheticalFlowPreview />
+                </div>
+                <p className="max-w-xl text-[13px] leading-relaxed text-muted-foreground">
                   Flow and block authoring is in the works. Today{" "}
                   <span className="font-mono text-foreground/80">
                     /circuit:run
@@ -951,11 +1000,14 @@ export function FlowComposer() {
               </div>
             ) : (
               <>
-                <div className="mb-2 text-[18px] font-medium leading-tight tracking-tight text-foreground">
-                  {flow.name}
+                <div className="mb-2 flex items-start justify-between gap-4">
+                  <div className="text-[18px] font-medium leading-tight tracking-tight text-foreground">
+                    {flow.name}
+                  </div>
+                  {support ? <FlowSupportIndicator support={support} /> : null}
                 </div>
                 {flow.summary ? (
-                  <p className="mb-5 max-w-xl text-[13px] leading-relaxed text-muted-foreground">
+                  <p className="mb-5 max-w-xl text-[16px] leading-relaxed text-muted-foreground">
                     {flow.summary}
                   </p>
                 ) : null}
@@ -974,9 +1026,6 @@ export function FlowComposer() {
                       </span>
                       Tournament
                     </button>
-                    <span className="flow-flex-hint">
-                      fan out parallel option cases, then rejoin to compare
-                    </span>
                   </div>
                 ) : null}
 
@@ -985,12 +1034,6 @@ export function FlowComposer() {
                   sequence={sequence}
                   reduceMotion={reduceMotion}
                 />
-
-                {flex ? (
-                  <p className="mt-7 max-w-xl text-[12px] leading-relaxed text-muted-foreground">
-                    {flow.name} {flex}
-                  </p>
-                ) : null}
               </>
             )}
           </div>

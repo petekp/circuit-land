@@ -220,13 +220,31 @@ function CodexLogo() {
     <svg
       aria-hidden="true"
       className="codex-logo"
-      viewBox="0 0 41 41"
+      viewBox="0 0 24 24"
       focusable="false"
     >
       <path
-        d="M37.53 16.87C37.98 15.52 38.14 14.1 37.99 12.69C37.84 11.27 37.39 9.91 36.68 8.69C35.61 6.83 33.99 5.37 32.04 4.5C30.09 3.63 27.91 3.4 25.82 3.85C24.88 2.79 23.72 1.94 22.43 1.36C21.13 0.79 19.72 0.49 18.31 0.5C16.17 0.5 14.09 1.17 12.36 2.42C10.63 3.68 9.35 5.45 8.69 7.48C7.3 7.76 5.99 8.34 4.84 9.18C3.69 10.01 2.73 11.08 2.03 12.31C0.96 14.16 0.5 16.3 0.72 18.42C0.94 20.55 1.84 22.54 3.27 24.13C2.82 25.48 2.66 26.9 2.81 28.31C2.96 29.73 3.41 31.09 4.12 32.31C5.19 34.17 6.81 35.63 8.76 36.5C10.71 37.37 12.89 37.6 14.98 37.15C15.92 38.21 17.08 39.06 18.37 39.64C19.67 40.21 21.08 40.51 22.49 40.5C24.63 40.51 26.71 39.83 28.44 38.58C30.17 37.32 31.46 35.55 32.11 33.52C33.5 33.23 34.82 32.65 35.97 31.82C37.12 30.99 38.07 29.92 38.78 28.68C39.85 26.84 40.3 24.7 40.08 22.57C39.86 20.45 38.96 18.45 37.53 16.87ZM22.5 37.88C20.74 37.89 19.05 37.27 17.7 36.15C17.76 36.12 17.87 36.06 17.94 36.02L25.9 31.42C26.1 31.3 26.27 31.14 26.38 30.94C26.5 30.74 26.56 30.51 26.55 30.28V19.05L29.92 21C29.94 21.01 29.95 21.02 29.97 21.04C29.98 21.05 29.98 21.07 29.99 21.09V30.39C29.98 32.38 29.19 34.28 27.79 35.68C26.39 37.09 24.48 37.88 22.5 37.88ZM6.39 31.01C5.51 29.49 5.2 27.71 5.5 25.98C5.56 26.02 5.66 26.08 5.73 26.12L13.7 30.72C13.9 30.84 14.12 30.9 14.35 30.9C14.58 30.9 14.81 30.84 15.01 30.72L24.73 25.11V29C24.73 29.02 24.73 29.04 24.72 29.06C24.71 29.07 24.7 29.09 24.68 29.1L16.63 33.75C14.91 34.74 12.86 35.01 10.94 34.5C9.03 33.98 7.39 32.73 6.39 31.01ZM4.3 13.62C5.17 12.1 6.55 10.94 8.2 10.33C8.2 10.4 8.19 10.52 8.19 10.61V19.81C8.19 20.04 8.25 20.26 8.37 20.46C8.48 20.66 8.65 20.83 8.85 20.94L18.57 26.55L15.21 28.5C15.19 28.51 15.17 28.52 15.15 28.52C15.13 28.52 15.11 28.52 15.09 28.51L7.04 23.86C5.32 22.86 4.07 21.22 3.55 19.3C3.04 17.39 3.31 15.34 4.3 13.62ZM31.95 20.06L22.23 14.44L25.6 12.5C25.61 12.49 25.63 12.48 25.65 12.48C25.67 12.48 25.69 12.48 25.71 12.49L33.76 17.14C35 17.85 36 18.9 36.66 20.16C37.32 21.42 37.6 22.85 37.48 24.27C37.36 25.69 36.84 27.04 35.97 28.18C35.11 29.31 33.94 30.17 32.6 30.66C32.6 30.59 32.6 30.47 32.6 30.39V21.19C32.61 20.96 32.55 20.73 32.43 20.53C32.32 20.33 32.15 20.17 31.95 20.06ZM35.31 15.01C35.25 14.98 35.14 14.91 35.07 14.87L27.1 10.27C26.91 10.16 26.68 10.09 26.45 10.09C26.22 10.09 25.99 10.16 25.8 10.27L16.07 15.89V12C16.07 11.98 16.08 11.96 16.08 11.94C16.09 11.92 16.1 11.91 16.12 11.89L24.17 7.25C25.41 6.54 26.82 6.19 28.24 6.25C29.66 6.32 31.04 6.78 32.2 7.6C33.37 8.41 34.28 9.54 34.83 10.85C35.38 12.17 35.55 13.61 35.31 15.01ZM14.24 21.94L10.88 20C10.86 19.99 10.84 19.98 10.83 19.96C10.82 19.94 10.81 19.93 10.81 19.91V10.61C10.81 9.18 11.22 7.79 11.98 6.59C12.75 5.39 13.84 4.43 15.13 3.82C16.42 3.22 17.85 2.99 19.26 3.18C20.68 3.36 22.01 3.94 23.1 4.85C23.04 4.88 22.94 4.94 22.87 4.98L14.9 9.59C14.7 9.7 14.54 9.86 14.42 10.06C14.31 10.26 14.25 10.49 14.25 10.72L14.24 21.94ZM16.07 18L20.4 15.5L24.73 18V23L20.4 25.5L16.07 23V18Z"
-        fill="currentColor"
+        d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z"
+        fill="#fff"
       />
+      <path
+        d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z"
+        fill="url(#codex-logo-gradient)"
+      />
+      <defs>
+        <linearGradient
+          gradientUnits="userSpaceOnUse"
+          id="codex-logo-gradient"
+          x1="12"
+          x2="12"
+          y1="3"
+          y2="21"
+        >
+          <stop stopColor="#B1A7FF" />
+          <stop offset=".5" stopColor="#7A9DFF" />
+          <stop offset="1" stopColor="#3941FF" />
+        </linearGradient>
+      </defs>
     </svg>
   );
 }
@@ -240,10 +258,7 @@ function OpenCodeLogo() {
       focusable="false"
     >
       <path d="M18 30H6V18H18V30Z" fill="#4B4646" />
-      <path
-        d="M18 12H6V30H18V12ZM24 36H0V6H24V36Z"
-        fill="#B7B1B1"
-      />
+      <path d="M18 12H6V30H18V12ZM24 36H0V6H24V36Z" fill="#B7B1B1" />
     </svg>
   );
 }
@@ -254,7 +269,7 @@ function GithubLogo() {
       aria-hidden="true"
       viewBox="0 0 24 24"
       fill="currentColor"
-      className="size-[18px]"
+      className="size-[27px]"
       focusable="false"
     >
       <path d="M12 .5C5.37.5 0 5.78 0 12.292c0 5.211 3.438 9.63 8.205 11.188.6.111.82-.254.82-.567 0-.28-.01-1.022-.015-2.005-3.338.711-4.042-1.582-4.042-1.582-.546-1.361-1.335-1.725-1.335-1.725-1.087-.731.084-.716.084-.716 1.205.082 1.838 1.215 1.838 1.215 1.07 1.803 2.809 1.282 3.495.981.108-.763.417-1.282.76-1.577-2.665-.295-5.466-1.309-5.466-5.827 0-1.287.465-2.339 1.235-3.164-.135-.295-.54-1.494.105-3.117 0 0 1.005-.315 3.3 1.209.96-.262 1.98-.392 3-.398 1.02.006 2.04.136 3 .398 2.28-1.524 3.285-1.209 3.285-1.209.645 1.623.24 2.822.12 3.117.765.825 1.23 1.877 1.23 3.164 0 4.53-2.805 5.527-5.475 5.817.42.354.81 1.077.81 2.182 0 1.578-.015 2.846-.015 3.229 0 .309.21.678.825.561C20.565 21.917 24 17.495 24 12.292 24 5.78 18.627.5 12 .5z" />
@@ -268,7 +283,7 @@ function XLogo() {
       aria-hidden="true"
       viewBox="0 0 24 24"
       fill="currentColor"
-      className="size-4"
+      className="size-6"
       focusable="false"
     >
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -322,13 +337,14 @@ function MastheadSection() {
         </div>
       </div>
 
-      <h1 className="max-w-2xl text-base font-medium leading-tight tracking-tight sm:text-xl">
+      <h1 className="max-w-2xl text-pretty text-base font-medium leading-tight tracking-tight sm:text-xl">
         Disciplined autonomy for coding agents.
       </h1>
 
       <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-        Your agent follows a process instead of improvising on the spot. Less
-        micro-managing, more working with a colleague you can trust.
+        Agents are great at improvisation but require a lot of steering to keep
+        on task. Circuit lends the process and structure agents need to do their
+        best work.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -337,8 +353,8 @@ function MastheadSection() {
           aria-label="Install for Claude Code and Codex"
           className="soft-cta-primary inline-flex min-h-11 items-center gap-2.5 px-5 py-2 text-[13px] font-medium"
         >
-          <InstallProviderIcons />
           <span>Install</span>
+          <InstallProviderIcons />
         </a>
         <a
           href="#see-one-run"
@@ -372,8 +388,8 @@ function ProcessSection() {
             </p>
           </div>
           <p>
-            Coding agents are surprisingly capable, but like humans, ad-hoc
-            chat isn&apos;t the best way to do effective work. You become the
+            Coding agents are surprisingly capable, but like humans, ad-hoc chat
+            isn&apos;t the best way to do effective work. You become the
             agent&apos;s working memory. This is taxing for you, and a
             suboptimal experience for the agent that puts it at a disadvantage.
           </p>
@@ -382,12 +398,12 @@ function ProcessSection() {
               Circuit sets agents up for success.
             </p>
             <p>
-              The agent is the capable part. Circuit is the path it runs
-              along. You describe the task, and Circuit supplies the process
-              that fits it: the right moves, in the right order, with the
-              checks that prove the work. You hand off more and keep your
-              confidence, because the result comes with evidence, not just a
-              claim that it&apos;s done.
+              The agent is the capable part. Circuit is the path it runs along.
+              You describe the task, and Circuit supplies the process that fits
+              it: the right moves, in the right order, with the checks that
+              prove the work. You hand off more and keep your confidence,
+              because the result comes with evidence, not just a claim that
+              it&apos;s done.
             </p>
           </div>
         </div>
@@ -400,52 +416,46 @@ function ProcessSection() {
 
 function FlowFlexSection() {
   return (
-    <section
-      className="mt-28 flex flex-col gap-10"
-      data-site-hue-stop="0.375"
-    >
+    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.375">
       {/* Header and lead live in the standard content column, aligned with the
           rest of the page. */}
       <div className="flex max-w-3xl flex-col gap-3">
-        <Label as="h2">Flexible, Not Rigid</Label>
+        <Label as="h2">A flexible set of workflows</Label>
         <p className="text-balance text-[15px] leading-relaxed text-muted-foreground">
+          Just invoke{" "}
           <span className="font-mono font-medium text-foreground">
             /circuit:run
           </span>{" "}
-          starts with the flow that fits the task, but a flow is not a rigid
-          script. When the work calls for it, supported flows can change rigor,
-          continue autonomously with bounded recovery, or fan out into
-          tournament mode. The blocks stay typed, so flexibility stays
-          visible.
+          with a task and it will automatically pick the appropriate flow. Flows
+          have varying levels of rigor depending on the task; high for big jobs,
+          low for quick changes. Tournament mode generates multiple competing
+          solutions in parallel. All steps are typed with deterministic handoff,
+          ensuring no steps are skipped.
         </p>
       </div>
 
       {/* The flow explorer breaks out of the standard column so it can sit
           wider than the prose above it; the panel caps and centers itself. */}
-      <div className="relative left-1/2 w-screen -translate-x-1/2 px-6">
-        <FlowComposer />
-      </div>
+
+      <FlowComposer />
     </section>
   );
 }
 
 function BlockInternalsSection() {
   return (
-    <section
-      className="block-internals-section relative left-1/2 mt-28 flex w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-10 overflow-hidden bg-muted/20 px-6 py-14 sm:w-[calc(100vw-3rem)] sm:px-8 lg:w-[calc(100vw-4rem)]"
-      data-site-hue-stop="0.5"
-    >
-      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10">
+    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.5">
+      <div className="flex flex-col gap-10">
         <div className="flex max-w-3xl flex-col gap-3">
           <Label as="h2">Inside a Block</Label>
           <p className="text-balance text-[15px] leading-relaxed text-muted-foreground">
-            Blocks are the power units inside every flow. Each one has a
-            typed input, a typed output, and a clear job, so flows can combine
-            them without losing track of what the agent knows.
+            Blocks are the power units inside every flow. Each one has a typed
+            input, a typed output, and a clear job, so flows can combine them
+            without losing track of what the agent knows.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 overflow-hidden sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 overflow-hidden sm:grid-cols-2 lg:grid-cols-3">
           {blockInternals.map((block) => (
             <article
               key={block.name}
@@ -499,17 +509,14 @@ function BlockInternalsSection() {
               <i />
             </span>
             <div className="flex items-center gap-2">
-              <h3 className="text-[15px] font-medium tracking-tight">
-                Custom
-              </h3>
+              <h3 className="text-[15px] font-medium tracking-tight">Custom</h3>
               <span className="soft-chip shrink-0 px-1.5 py-1 text-[10px] uppercase leading-none tracking-[0.15em] text-muted-foreground">
                 soon
               </span>
             </div>
             <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
-              Author your own blocks with typed inputs and outputs, then
-              compose them into new flows. Block and flow authoring is on the
-              way.
+              Author your own blocks with typed inputs and outputs, then compose
+              them into new flows. Coming soon.
             </p>
           </article>
         </div>
@@ -520,10 +527,7 @@ function BlockInternalsSection() {
 
 function TrustSection() {
   return (
-    <section
-      className="mt-28 flex flex-col gap-10"
-      data-site-hue-stop="0.625"
-    >
+    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.625">
       <Label as="h2">Why You Can Trust It</Label>
 
       <div className="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
@@ -541,19 +545,16 @@ function TrustSection() {
           </h3>
           <p className="text-[13px] leading-relaxed text-muted-foreground">
             Circuit pauses when your judgment changes the outcome: a risky
-            direction, an ambiguous goal, a visual choice. The pause is part
-            of the flow, not the agent&apos;s discretion. Otherwise it keeps
+            direction, an ambiguous goal, a visual choice. The pause is part of
+            the flow, not the agent&apos;s discretion. Otherwise it keeps
             moving.
           </p>
         </div>
         <div className="flex min-w-0 flex-col gap-2">
-          <h3 className="text-[15px] font-medium tracking-tight">
-            Confidence
-          </h3>
+          <h3 className="text-[15px] font-medium tracking-tight">Confidence</h3>
           <p className="text-[13px] leading-relaxed text-muted-foreground">
-            The point is confidence while you delegate more: Circuit keeps
-            the process explicit, the evidence attached, and the outcome
-            honest.
+            The point is confidence while you delegate more: Circuit keeps the
+            process explicit, the evidence attached, and the outcome honest.
           </p>
         </div>
         <div className="flex min-w-0 flex-col gap-2">
@@ -576,10 +577,7 @@ function TrustSection() {
 
 function ComparisonSection() {
   return (
-    <section
-      className="mt-28 flex flex-col gap-10"
-      data-site-hue-stop="0.75"
-    >
+    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.75">
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">Where It Fits</Label>
         <p className="text-[15px] leading-relaxed text-foreground">
@@ -592,13 +590,8 @@ function ComparisonSection() {
 
       <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
         {comparison.map((c) => (
-          <div
-            key={c.name}
-            className="soft-info-card flex flex-col gap-5 p-5"
-          >
-            <h3 className="text-[15px] font-medium tracking-tight">
-              {c.name}
-            </h3>
+          <div key={c.name} className="soft-info-card flex flex-col gap-5 p-5">
+            <h3 className="text-[15px] font-medium tracking-tight">{c.name}</h3>
             <div className="flex flex-col gap-2">
               <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
                 {c.approach}
@@ -615,7 +608,6 @@ function ComparisonSection() {
           </div>
         ))}
       </div>
-
     </section>
   );
 }
@@ -662,18 +654,16 @@ function InstallSection() {
                   className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
                 />
               ) : target.comingSoon ? (
-                <span className="soft-chip inline-flex min-h-8 shrink-0 items-center justify-center px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                <span className="soft-chip inline-flex shrink-0 items-center justify-center px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
                   Soon
                 </span>
               ) : null}
             </div>
 
             {target.commands ? (
-              <pre className="whitespace-pre-wrap break-words px-5 py-4 text-[13px] leading-7 text-foreground">
+              <pre className="whitespace-pre-wrap break-words px-5 pb-4 text-[13px] leading-7 text-foreground">
                 <code>
-                  {target.commands
-                    .map((command) => `› ${command}`)
-                    .join("\n")}
+                  {target.commands.map((command) => `› ${command}`).join("\n")}
                 </code>
               </pre>
             ) : (
@@ -724,9 +714,9 @@ export default function Home() {
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-16">
       <MastheadSection />
+      <FlowFlexSection />
       <ExampleRunSection />
       <ProcessSection />
-      <FlowFlexSection />
       <BlockInternalsSection />
       <TrustSection />
       <ComparisonSection />

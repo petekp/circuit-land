@@ -164,10 +164,6 @@
   position: relative;
 }
 
-.run-terminal-echo {
-  display: none;
-}
-
 .run-terminal {
   position: relative;
   border-radius: 24px;
@@ -176,16 +172,22 @@
   box-shadow: none;
 }
 
-.run-terminal-divider {
-  border-bottom: 1px solid hsl(var(--site-primary-hue) 14% 18% / 0.52);
-}
-
 .example-run-terminal-body {
-  min-height: 14rem;
+  min-height: 100%;
 }
 
 .example-run-terminal {
   height: 25rem;
+  overflow-y: auto;
+}
+
+.example-run-user-row {
+  display: block;
+  width: calc(100% + 2.5rem);
+  margin: 0.45rem -1.25rem 0.25rem;
+  padding: 0.45rem 1.25rem;
+  background: color-mix(in oklab, var(--muted) 40%, transparent);
+  color: var(--foreground);
 }
 
 .example-run-beats {
@@ -196,18 +198,18 @@
   display: inline-flex;
   width: fit-content;
   flex: 0 0 auto;
-  gap: 0.25rem;
-  border-radius: 16px;
+  gap: 0.2rem;
+  border-radius: 14px;
   background: color-mix(in oklab, var(--muted) 62%, transparent);
-  padding: 0.25rem;
+  padding: 0.2rem;
 }
 
 .example-run-toggle-button {
-  min-height: 2.25rem;
-  border-radius: 12px;
-  padding: 0.4rem 0.75rem;
+  min-height: 1.85rem;
+  border-radius: 10px;
+  padding: 0.3rem 0.6rem;
   color: var(--muted-foreground);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   line-height: 1;
   transition:
@@ -250,7 +252,7 @@
 
 .soft-cta-primary {
   border-radius: 18px;
-  background: color-mix(in oklab, var(--primary) 10%, transparent);
+  background: color-mix(in oklab, var(--primary) 90%, transparent);
   color: var(--primary-foreground);
 }
 
@@ -297,8 +299,7 @@
 }
 
 .install-terminal-header {
-  border-bottom: 1px solid hsl(var(--site-primary-hue) 14% 18% / 0.52);
-  background: hsl(var(--site-primary-hue) 12% 8% / 0.62);
+  background: hsl(var(--site-primary-hue) 18% 6.5%);
 }
 
 .install-terminal-title {

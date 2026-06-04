@@ -74,7 +74,7 @@ export function CopyInstallInstructions({ text }: { text: string }) {
   return (
     <div className="soft-info-card flex flex-col gap-4 p-5">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[15px] font-medium tracking-tight">
+        <h3 className="text-[26px] font-medium leading-tight tracking-tight">
           Let your agent install it
         </h3>
         <CopyTextButton
@@ -91,7 +91,7 @@ export function CopyInstallInstructions({ text }: { text: string }) {
       >
         <span
           className={[
-            "block w-full overflow-hidden whitespace-pre-wrap break-words font-mono text-[12px] leading-6 text-muted-foreground group-hover:text-foreground",
+            "block w-full overflow-hidden whitespace-pre-wrap break-words font-mono text-[13px] leading-6 text-muted-foreground group-hover:text-foreground",
             expanded ? "max-h-none" : "max-h-[4.5rem]",
           ]
             .filter(Boolean)
