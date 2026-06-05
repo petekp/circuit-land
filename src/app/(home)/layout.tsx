@@ -5,7 +5,7 @@ import { SiteThemeController } from "@/components/site-theme-controller";
 import { SiteThemeDials } from "@/components/site-theme-dials";
 import { siteUrl } from "@/lib/site-url";
 import "dialkit/styles.css";
-import "./globals.css";
+import "../globals.css";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
