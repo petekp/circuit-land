@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   CopyInstallInstructions,
   CopyTextButton,
@@ -91,73 +92,50 @@ const comparison = [
 const blockInternals = [
   {
     name: "Frame",
-    input: "Your raw task",
-    output: "Scoped brief",
     detail:
-      "Turns a loose request into scope, goal, constraints, and a concrete done condition before work starts.",
+      "Turns a loose request into scope, goal, constraints, and a done condition.",
   },
   {
     name: "Gather Context",
-    input: "Brief plus repo signals",
-    output: "Relevant context",
     detail:
-      "Finds the files, docs, errors, prior decisions, and live state that should shape the next move.",
+      "Finds the files, errors, prior decisions, and live state that shape the next move.",
   },
   {
     name: "Diagnose",
-    input: "Context packet",
-    output: "Cause and confidence",
-    detail:
-      "Separates symptoms from cause, names the likely failure mode, and keeps uncertainty visible.",
+    detail: "Separates symptom from cause and keeps uncertainty visible.",
   },
   {
     name: "Human Decision",
-    input: "A real fork in the work",
-    output: "User decision",
     detail:
-      "Pauses only when judgment changes the result: tradeoffs, taste calls, risky scope, or missing intent.",
+      "Pauses only when judgment changes the result: a tradeoff, a taste call, risky scope.",
   },
   {
     name: "Plan",
-    input: "Brief and context",
-    output: "Work strategy",
     detail:
-      "Chooses the path, order, verification points, and handoffs before the agent starts changing things.",
+      "Chooses the path, order, and verification points before anything changes.",
   },
   {
     name: "Coordinate",
-    input: "Several related goals",
-    output: "Dependency map",
     detail:
-      "Keeps multi-part work legible by tracking dependencies, parallelizable chunks, and shared evidence.",
+      "Tracks dependencies and parallelizable chunks across multi-part work.",
   },
   {
     name: "Act",
-    input: "Plan strategy",
-    output: "Changed work",
-    detail:
-      "Makes the change and records what moved, why it moved, and what evidence the next block needs.",
+    detail: "Makes the change and records what moved and why.",
   },
   {
     name: "Run Verification",
-    input: "Change evidence",
-    output: "Check results",
-    detail:
-      "Runs the checks that fit the work and reports the command, result, and any remaining risk.",
+    detail: "Runs the checks that fit the work and reports the result.",
   },
   {
     name: "Review",
-    input: "Change plus evidence",
-    output: "Review verdict",
     detail:
-      "Checks behavior, scope, and evidence from a separate review posture before the run calls itself done.",
+      "Checks behavior, scope, and evidence from a separate review posture.",
   },
   {
     name: "Close With Evidence",
-    input: "The final verdict",
-    output: "Final report",
     detail:
-      "Leaves a short outcome with evidence pointers, decisions, residual risks, and the final status.",
+      "Leaves an outcome with evidence pointers, decisions, and residual risks.",
   },
 ];
 
@@ -356,12 +334,12 @@ function MastheadSection() {
           <span>Install</span>
           <InstallProviderIcons />
         </a>
-        <a
-          href="#see-one-run"
+        <Link
+          href="/docs"
           className="soft-cta-secondary inline-flex min-h-11 items-center px-5 py-2 text-[13px] font-medium text-foreground"
         >
-          See example
-        </a>
+          View Docs
+        </Link>
       </div>
     </section>
   );
@@ -474,24 +452,6 @@ function BlockInternalsSection() {
               <h3 className="text-balance text-[15px] font-medium leading-tight tracking-tight">
                 {block.name}
               </h3>
-              <dl className="flex flex-col gap-1.5 text-[11px] leading-snug">
-                <div className="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-3">
-                  <dt className="uppercase tracking-[0.18em] text-muted-foreground">
-                    Input
-                  </dt>
-                  <dd className="text-balance text-[12px] text-foreground">
-                    {block.input}
-                  </dd>
-                </div>
-                <div className="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-3">
-                  <dt className="uppercase tracking-[0.18em] text-muted-foreground">
-                    Output
-                  </dt>
-                  <dd className="text-balance text-[12px] text-foreground">
-                    {block.output}
-                  </dd>
-                </div>
-              </dl>
               <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
                 {block.detail}
               </p>
@@ -520,6 +480,13 @@ function BlockInternalsSection() {
             </p>
           </article>
         </div>
+
+        <Link
+          href="/docs/concepts/how-it-works"
+          className="text-[13px] font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          See how blocks compose into stages and flows →
+        </Link>
       </div>
     </section>
   );
@@ -532,7 +499,14 @@ function TrustSection() {
 
       <div className="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
         <div className="flex min-w-0 flex-col gap-2">
-          <h3 className="text-[15px] font-medium tracking-tight">Evidence</h3>
+          <h3 className="text-[15px] font-medium tracking-tight">
+            <Link
+              href="/docs/concepts/evidence-and-runs"
+              className="underline-offset-4 hover:underline"
+            >
+              Evidence
+            </Link>
+          </h3>
           <p className="text-[13px] leading-relaxed text-muted-foreground">
             Circuit keeps checks and results attached to the work. The agent
             evaluates its own work against that evidence instead of asking you
@@ -541,7 +515,12 @@ function TrustSection() {
         </div>
         <div className="flex min-w-0 flex-col gap-2">
           <h3 className="text-[15px] font-medium tracking-tight">
-            Checkpoints
+            <Link
+              href="/docs/concepts/checkpoints"
+              className="underline-offset-4 hover:underline"
+            >
+              Checkpoints
+            </Link>
           </h3>
           <p className="text-[13px] leading-relaxed text-muted-foreground">
             Circuit pauses when your judgment changes the outcome: a risky
