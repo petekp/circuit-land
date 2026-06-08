@@ -13,6 +13,16 @@ Explore builds understanding without changing code.
 
 ## What it does
 
+<Mermaid
+  label="Explore splits into findings or a decision tournament"
+  chart={`
+flowchart TD
+  Frame --> Analyze --> Split{"findings or tournament"}
+  Split -->|findings| Plan --> Close
+  Split -->|"--tournament"| Decision["Decision · checkpoint"] --> Close
+`}
+/>
+
 Explore frames the investigation, then analyzes the subject. From there it
 splits two ways:
 

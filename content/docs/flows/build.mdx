@@ -14,6 +14,14 @@ review it, and close with evidence.
 
 ## What it does
 
+<Mermaid
+  label="Build stages, in order"
+  chart={`
+flowchart LR
+  Frame["Frame · checkpoint"] --> Analyze --> Plan --> Act --> Verify --> Review --> Close
+`}
+/>
+
 Build runs seven stages, carrying each report forward to the next:
 
 - **Frame** — confirms the Build brief: scope, constraints, and how the change

@@ -14,6 +14,14 @@ before deciding whether it deserves a real Build.
 
 ## What it does
 
+<Mermaid
+  label="Prototype stages, in order"
+  chart={`
+flowchart LR
+  Frame --> Plan --> Act --> Verify --> Review["Review · checkpoint"] --> Close
+`}
+/>
+
 Prototype runs Frame, Plan, Act, Verify, Review, Close. (Analyze is omitted;
 research-first work belongs in [Explore](/docs/flows/explore).)
 

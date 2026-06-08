@@ -21,6 +21,16 @@ A checkpoint pauses for an operator at deep rigor and in tournament runs. At
 lighter rigor and under [autonomous](/docs/flows/modes) mode, it auto-resolves
 with its declared default instead of waiting.
 
+<Mermaid
+  label="How a checkpoint resolves by rigor and mode"
+  chart={`
+flowchart TD
+  CP["Checkpoint reached"] --> Q{"Deep rigor or tournament?"}
+  Q -->|yes| Wait["Wait for operator choice"]
+  Q -->|no| Default["Auto-resolve with safe default"]
+`}
+/>
+
 You resolve a paused run by passing one of the allowed choices back:
 
 ```bash

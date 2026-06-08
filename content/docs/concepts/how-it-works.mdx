@@ -11,6 +11,14 @@ compiles it to the runtime graph a run follows.
 A flow is organized into stages: Frame, Analyze, Plan, Act, Verify, Review, and
 Close. Each stage holds steps, and each step is one use of a block.
 
+<Mermaid
+  label="Circuit's canonical stage order"
+  chart={`
+flowchart LR
+  Frame --> Analyze --> Plan --> Act --> Verify --> Review --> Close
+`}
+/>
+
 A step has a kind that decides what it does:
 
 - **Relay** — delegate work to a worker through a connector.
@@ -26,6 +34,18 @@ Steps connect through routes — named outcome paths that decide what happens ne
 A route either points to the next step or to a terminal target. The terminal
 targets are `@complete`, `@stop`, `@handoff`, and `@escalate`, and each closes
 the run with the matching outcome.
+
+<Mermaid
+  label="A step's route points to the next step or a terminal target"
+  chart={`
+flowchart LR
+  S[Step] -->|route| N[Next step]
+  S -->|route| C["@complete"]
+  S -->|route| St["@stop"]
+  S -->|route| H["@handoff"]
+  S -->|route| E["@escalate"]
+`}
+/>
 
 ## The run folder
 

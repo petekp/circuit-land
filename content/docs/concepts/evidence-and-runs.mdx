@@ -17,6 +17,18 @@ Relay steps can carry **acceptance criteria**: deterministic checks a step's
 result must pass before the run advances. When a check fails, the step either
 retries with the failure passed back as feedback, or stops the run.
 
+<Mermaid
+  label="Acceptance criteria gate a relay step before the run advances"
+  chart={`
+flowchart TD
+  Result["Relay step result"] --> Check{"Checks pass?"}
+  Check -->|yes| Advance["Advance the run"]
+  Check -->|no| Decide{"Retry or stop"}
+  Decide -->|"retry with feedback"| Result
+  Decide -->|stop| Stop["Stop the run"]
+`}
+/>
+
 ## Inspecting a run
 
 Project a run's status from its folder:

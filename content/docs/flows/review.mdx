@@ -14,6 +14,14 @@ independent review, and closes with a verdict.
 
 ## What it does
 
+<Mermaid
+  label="Review stages, in order"
+  chart={`
+flowchart LR
+  Intake --> Audit["Independent Audit"] --> Verdict
+`}
+/>
+
 Review runs three stages.
 
 - **Intake** frames the audit scope — working tree status and the diff under

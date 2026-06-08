@@ -1,109 +1,71 @@
 # Circuit docs — build report
 
-Status as of the overnight run. Branch: `feat/docs-site`. Commit: `d2b576d`
-(docs) + this report.
+Branch: `feat/docs-site`. Final state after the overnight build, the accuracy
+audit, and the Mermaid diagram pass.
 
 ## Result
 
-- **30 pages** written across 6 sections, covering Circuit's full user-facing
-  surface area, each drafted from the canonical source and adversarially
-  re-verified against it by a separate agent.
-- **`npm run build`: green.** All 30 doc routes prerender. (One unrelated
-  pre-existing warning: `metadataBase` not set for OG images.)
-- **`npm run check`: green.** `tsc --noEmit && eslint` clean.
-- **Internal links: all 27 resolve.** Banned words / AI-tells / meta-copy /
-  emoji: none.
+- **30 pages** across 6 sections cover Circuit's full user-facing surface,
+  drafted from canonical source and adversarially re-verified against it.
+- **12 Mermaid diagrams** render the load-bearing mental models (stage pipeline,
+  routes/terminals, flow shapes, continuity resolution, acceptance-criteria
+  loop, checkpoint resolution) as static, theme-aware SVG.
+- **`npm run build`: green** (39 routes). **`npm run check`: green**
+  (`tsc --noEmit && eslint`). **Internal links: 82, 0 broken.** No banned
+  words / AI-tells / meta-copy / emoji.
 
-## How it was built
+## Accuracy audit (post-build)
 
-1. Inventory — 6 parallel readers mapped CLI, plugin commands, config/schemas,
-   concepts/flows, install, and existing docs from `/Users/petepetrash/Code/circuit`
-   (working tree), capturing live `--help`. The README was treated as stale and
-   not used.
-2. Fill + verify — one agent per page drafted full MDX against `docs-style.md`;
-   a fresh agent then re-checked every flag/command/term against source and
-   fixed issues in place (25 of 30 pages had at least one fix; 0 unresolved).
-3. Integration — build, type/lint check, link integrity, banned-word sweep.
+An 8-agent audit re-checked every flag, subcommand, flow step, config key, and
+glossary term against `~/Code/circuit` @ `main`. Each finding was re-verified by
+an independent agent before action.
 
-## Information architecture
+- **2 findings, 1 confirmed, 1 rejected** (false positive).
+- **Confirmed (critical):** `installation.mdx` told users to
+  `npm install -g @petekp/circuit`, but the package is `private`, named
+  `circuit`, and unpublished — that command 404s. Fixed: from-checkout build is
+  the working path; `@petekp/circuit` is named as the future published target.
+- **Rejected:** "clear" wording in `cli/overview` — the verifier proved it
+  matches the handoff page's own language (`done` = "Clear the saved record")
+  and the table's effect-verb convention. No change.
 
-```
-Getting Started   installation · quickstart
-Concepts          how-it-works · checkpoints · evidence-and-runs · memory-and-history · continuity
-Flows             overview · build · fix · explore · review · prototype · pursue · modes
-CLI               overview · run · resume · handoff · history · memory · create · runs · version
-Configuration     config-file · connectors · selection · skills
-Reference         glossary
-```
+## Diagrams
 
-## What verification caught and fixed (high-value)
+Rendered with [`beautiful-mermaid`](https://github.com/lukilabs/beautiful-mermaid),
+a synchronous SVG renderer. `src/components/mermaid.tsx` renders each chart to
+SVG at build time in a server component (no client JS, no hydration); colors map
+to Fumadocs CSS variables so diagrams follow light/dark automatically. Used via
+`<Mermaid chart={...} />`, registered globally in `src/components/mdx.tsx`.
 
-- Routing is **agent-driven, not Circuit-driven** — the agent recommends a flow;
-  Circuit records and runs it. Corrected on quickstart; index/overview left in
-  the looser "Circuit routes" framing (see open item E).
-- `Goal` is an **internal** flow (not user-runnable) — removed from the
-  autonomous-mode list; the six public flows stand.
-- **Invented surface removed:** a non-existent `--query` flag (it's a positional
-  arg), a fake `--checkpoint-choice approve` (→ `continue`), a fabricated
-  run-folder format (→ `.circuit/runs/<uuid>`), a phantom `npm >= 11.13.0`
-  requirement.
-- **Accuracy:** acceptance criteria are relay-step-only; checkpoint pausing is
-  depth-gated (pauses at deep rigor / tournaments, auto-resolves otherwise);
-  only 4 skill hooks actually dispatch; harvest hooks include `PreCompact`;
-  custom connectors are `read-only` only.
-- **Build-breaker:** the glossary used pandoc definition-list syntax Fumadocs
-  doesn't support — would have rendered as broken literal text. Converted to
-  bullets; recompiles clean.
+| Page | Diagram |
+| --- | --- |
+| `concepts/how-it-works` | stage pipeline; step → route → terminal targets |
+| `concepts/continuity` | active-record resolution (manual outranks snapshot) |
+| `concepts/evidence-and-runs` | acceptance-criteria gate/retry/stop loop |
+| `concepts/checkpoints` | resolution by rigor/mode |
+| `flows/overview` | agent selects the flow (fan-out) |
+| `flows/{build,fix,explore,review,prototype,pursue}` | per-flow stage shape |
 
-## Decisions made (assumed; reversible)
+## Ground truth
 
-- **Ground truth = the `circuit` working tree** (branch
-  `fix/continuity-clear-ambient-resurrection` + uncommitted handoff edits), not
-  `main`. `main` is behind on the handoff surface under active development
-  (e.g. `handoff done --clear-ambient`). See open item A.
-- Documented the **six public flows**; `Goal` covered only as autonomous mode.
-- `circuit create` labeled **experimental**.
-- Kept terms matched to the **actual tool surface** where canon and surface
-  disagree (see item D).
+`~/Code/circuit` @ `main` is canonical. PR #47
+(`fix/continuity-clear-ambient-resurrection`) merged the full continuity /
+`--clear-ambient` surface into `main`, so the docs' branch-tracking decision is
+now vindicated and `main` is authoritative. The README is stale and was not
+used.
 
-## Open — needs your call
+## Editorial pass (D–J)
 
-Launch-sensitive (factual):
+- **Applied:** E (routing is agent-driven — index/overview), F (intro names the
+  CLI alongside the plugins), I (Prototype `--tournament` config prereq inline).
+- **Left as residuals (recommended):** D `artifact` term (matches the live
+  surface; changing canon/tool is out of docs scope), G checkpoint highest-score
+  nuance (autonomous-only edge case; "declared default" is the right
+  simplification), H Review "Verdict" stage name (matches the live stage title),
+  J inert config surface (`detection.disabled_patterns` / strict-mode documented
+  accurately as parsed).
 
-- **A. Canonical branch.** Confirm docs should reflect the working tree (latest
-  handoff surface) vs. `main`. If `main`, the handoff page needs the
-  `--clear-ambient` and recent continuity surface trimmed.
-- **B. Marketplace path.** `petekp/circuit` is documented as written but
-  unverified — confirm it's live.
-- **C. npm package name.** Package is `private`/unpublished (v0.0.1); `circuit`
-  may be taken on npm. Confirm the public name (possibly `@scope/circuit`); the
-  install page hedges with "When published".
+## Next
 
-Refinements (wording / scope):
-
-- **D. `artifact`.** Deprecated in `UBIQUITOUS_LANGUAGE.md` (→ Report/Evidence)
-  but used by the live surface (memory's "citable artifact", Prototype's
-  "disposable artifact"). Left matched to the tool. Decide: update canon, tool,
-  or docs.
-- **E. Routing phrasing.** Align index/flows-overview to the precise "the agent
-  recommends a flow, Circuit runs it"? (quickstart already uses it.)
-- **F. Intro framing.** index opens "a plugin for coding agents"; Circuit also
-  ships as a standalone CLI. Broaden?
-- **G. Checkpoints nuance.** Under autonomous, Explore/Prototype variant
-  checkpoints resolve via a "highest-score" policy, not the static default.
-  Docs say "declared default" (simplification). Surface the distinction?
-- **H. Review stage name.** Docs use "Verdict" (live stage title); the draft
-  contract says product prose should say "Decision." Pick one.
-- **I. Prototype example.** `--tournament` needs `circuits.prototype.variant_models`
-  configured or it exits non-zero. Prereq is stated above the example; add an
-  inline reminder?
-- **J. Inert config.** `detection.disabled_patterns` and strict-mode are parsed
-  but not yet wired to behavior. Documented accurately; keep in a canonical
-  reference or omit until wired?
-
-## Suggested next steps
-
-1. Answer A/B/C — I can patch the install + handoff pages immediately.
-2. Skim the 30 pages; I can batch-apply D–J in one pass.
-3. Optional visual pass: `npm start` and review rendering (designer eye).
-4. Derive the README from these docs (the stated downstream goal).
+1. Push `feat/docs-site` and open the PR.
+2. Derive the README from these docs (the stated downstream goal).

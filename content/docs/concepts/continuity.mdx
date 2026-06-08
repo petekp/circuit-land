@@ -37,6 +37,16 @@ automatic snapshot:
 - An automatic snapshot is framed as context, not a plan; resume it only when
   asked.
 
+<Mermaid
+  label="How the index resolves the active continuity record"
+  chart={`
+flowchart TD
+  Start["Records exist"] --> Q{"Manual save pending?"}
+  Q -->|yes| Manual["Resume the manual save · explicit"]
+  Q -->|no| Auto["Automatic snapshot · context only"]
+`}
+/>
+
 ## Codex setup
 
 Claude Code ships the hooks. On Codex, install them once per machine:

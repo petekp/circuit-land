@@ -10,6 +10,20 @@ You rarely pick a flow by hand. Run `/circuit:run <task>` and the agent picks
 the flow that fits, then Circuit runs it. You can also name a flow when you
 already know which one you want.
 
+<Mermaid
+  label="The agent selects the flow that fits the task"
+  chart={`
+flowchart TD
+  Task["Run a task"] --> Pick{"Agent selects the flow"}
+  Pick --> Build
+  Pick --> Fix
+  Pick --> Explore
+  Pick --> Review
+  Pick --> Prototype
+  Pick --> Pursue
+`}
+/>
+
 Every flow routes through its own steps and produces evidence the run records
 and reuses. Some flows also pause at a checkpoint for your call; others run
 straight through.
