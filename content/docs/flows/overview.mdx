@@ -6,9 +6,9 @@ description: What flows are and how Circuit picks one.
 A flow is a repeatable work pattern. It runs the right steps in order, carries
 context forward, and checks its own work.
 
-You rarely pick a flow by hand. Run `/circuit:run <task>` and Circuit routes the
-task to the flow that fits. You can also name a flow when you already know which
-one you want.
+You rarely pick a flow by hand. Run `/circuit:run <task>` and the agent picks
+the flow that fits, then Circuit runs it. You can also name a flow when you
+already know which one you want.
 
 Every flow routes through its own steps and produces evidence the run records
 and reuses. Some flows also pause at a checkpoint for your call; others run
