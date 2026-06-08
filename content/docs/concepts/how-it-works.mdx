@@ -28,6 +28,35 @@ A step has a kind that decides what it does:
 - **Fanout** — run branches and join their outputs.
 - **Sub-run** — run a child flow.
 
+## Typed inputs and outputs
+
+Every block declares a typed input and a typed output. Each one is a named,
+versioned contract — `flow.brief@v1`, `plan.strategy@v1`, `change.evidence@v1`.
+A step is one use of a block, so it carries that contract: it reads inputs of the
+shapes it names and writes one typed output, a
+[report](/docs/concepts/evidence-and-runs).
+
+A step's output is itself a contract, so it becomes the input a later step reads.
+Those contracts are how a flow wires together — a step is placed only where the
+inputs it names are already produced upstream.
+
+<Mermaid
+  label="Each step's typed output is the next step's typed input"
+  chart={`
+flowchart LR
+  Frame -->|flow.brief| Diagnose
+  Diagnose -->|diagnosis.result| Plan
+  Plan -->|plan.strategy| Act
+  Act -->|change.evidence| Verify
+  Verify -->|verification.result| Review
+  Review -->|review.verdict| Close
+`}
+/>
+
+So context is not skipped or lost between steps, and a step never hands forward a
+result the next step cannot read. Each output is a known shape: you and the next
+step read structure, not loose prose.
+
 ## Routes
 
 Steps connect through routes — named outcome paths that decide what happens next.
