@@ -33,17 +33,16 @@ codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.6
 
 ## CLI
 
-```bash
-npm install -g @petekp/circuit
-```
-
-This installs the `circuit` command. From a checkout instead:
+Build the `circuit` command from a checkout:
 
 ```bash
 npm install
 npm run build
 ./bin/circuit
 ```
+
+Run a task with `./bin/circuit run --goal '<your task>'`. A published
+`@petekp/circuit` package will follow.
 
 ## Optional: Codex as a worker
 
