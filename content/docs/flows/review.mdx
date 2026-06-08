@@ -1,0 +1,37 @@
+---
+title: Review
+description: Check existing work.
+---
+
+Review audits code that already exists. It frames the scope, relays an
+independent review, and closes with a verdict.
+
+## When to use
+
+- Auditing a diff or a branch.
+- Checking work before you merge it.
+- Getting a second read that didn't write the code.
+
+## What it does
+
+Review runs three stages.
+
+- **Intake** frames the audit scope — working tree status and the diff under
+  review.
+- **Independent Audit** relays the scope to a reviewer and collects findings,
+  confidence, and required fixes.
+- **Verdict** closes with the outcome, evidence pointers, residual risks, and
+  follow-ups.
+
+Review only audits. It does not plan, implement, or verify a change, so it has
+no [checkpoints](/docs/concepts/checkpoints).
+
+## Example
+
+```text
+/circuit:run review the changes on this branch
+```
+
+```bash
+circuit run review --goal 'audit the diff on this branch'
+```

@@ -1,0 +1,56 @@
+---
+title: circuit create
+description: Create a custom flow.
+---
+
+Experimental. CLI only.
+
+```bash
+circuit create --description '<flow idea>' [options]
+```
+
+Create a new custom flow from the Build template, validate it, and optionally publish it. Each create writes a draft alongside a custom-flow descriptor; `--publish --yes` promotes the draft into a runnable flow, skill, and slash command.
+
+## Flags
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--description <flow idea>` | What the flow is for. Required. | |
+| `--name <slug>` | Lowercase kebab-case name. Derived from the description if omitted. Reserved names are rejected. | |
+| `--home <path>` | Where drafts and published flows live. | `~/.config/circuit/custom` |
+| `--template-flow-root <path>` | Root containing the `build/circuit.json` template to start from. | |
+| `--created-at <iso>` | Publish timestamp. | current time |
+| `--publish` | Publish immediately. Requires `--yes`. | |
+| `--yes` | Confirm publication. | |
+| `--progress <jsonl>` | Stream progress events as JSONL. | |
+
+## Examples
+
+Draft a flow:
+
+```bash
+circuit create --description 'tighten flaky integration tests'
+```
+
+Name it explicitly:
+
+```bash
+circuit create --name flake-hunter --description 'tighten flaky integration tests'
+```
+
+Publish in one step:
+
+```bash
+circuit create --description 'tighten flaky integration tests' --publish --yes
+```
+
+Run a published custom flow:
+
+```bash
+circuit run flake-hunter --flow-root ~/.config/circuit/custom/flows --goal '<task>'
+```
+
+## Related
+
+- [circuit run](/docs/cli/run)
+- [Flows](/docs/flows/overview)

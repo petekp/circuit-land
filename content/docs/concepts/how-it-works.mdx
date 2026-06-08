@@ -1,0 +1,41 @@
+---
+title: How Circuit works
+description: Flows, stages, steps, routes, and the run folder.
+---
+
+A flow is a repeatable work pattern. You author it as a schematic, and Circuit
+compiles it to the runtime graph a run follows.
+
+## Stages and steps
+
+A flow is organized into stages: Frame, Analyze, Plan, Act, Verify, Review, and
+Close. Each stage holds steps, and each step is one use of a block.
+
+A step has a kind that decides what it does:
+
+- **Relay** — delegate work to a worker through a connector.
+- **Compose** — the orchestrator writes a report.
+- **Verification** — run checks against the work.
+- **Checkpoint** — pause for a decision.
+- **Fanout** — run branches and join their outputs.
+- **Sub-run** — run a child flow.
+
+## Routes
+
+Steps connect through routes — named outcome paths that decide what happens next.
+A route either points to the next step or to a terminal target. The terminal
+targets are `@complete`, `@stop`, `@handoff`, and `@escalate`, and each closes
+the run with the matching outcome.
+
+## The run folder
+
+A run is one execution of a flow. It records a trace, the reports its steps
+write, and the supporting evidence in its run folder, along with the state needed
+to resume.
+
+## Related
+
+- [Evidence and runs](/docs/concepts/evidence-and-runs)
+- [Checkpoints](/docs/concepts/checkpoints)
+- [Flows](/docs/flows/overview)
+- [Connectors](/docs/configuration/connectors)

@@ -1,0 +1,44 @@
+---
+title: Quickstart
+description: Run your first task and respond to a checkpoint.
+---
+
+Start a task with one command. The agent recommends a flow, Circuit runs it, and
+it stops for your call when the result depends on it.
+
+## Run a task
+
+In your coding agent, describe the task:
+
+```text
+/circuit:run add a rate limit to the login endpoint
+```
+
+The agent reads the task and recommends a flow — Build, Fix, Explore, Review,
+Prototype, or Pursue. You do not pick it; Circuit records the selected flow when
+the run starts, then runs it step by step.
+
+## Respond to a checkpoint
+
+A flow may pause at a [checkpoint](/docs/concepts/checkpoints) when it needs your
+decision — for example, to confirm the brief before it starts changing code.
+Circuit shows the prompt and the choices. Pick one to continue.
+
+If you do nothing, a checkpoint can fall back to its declared safe default.
+
+## From the CLI
+
+The equivalent runs through the `circuit` binary. Name the flow and pass the
+task as `--goal`:
+
+```bash
+circuit run fix --goal 'login fails when the email has a plus sign'
+```
+
+The CLI requires an explicit flow name. Routing is model-only, so the agent
+front door is what chooses a flow for you.
+
+## Next
+
+- [Flows](/docs/flows/overview) — the six flows and when each one fits.
+- [Checkpoints](/docs/concepts/checkpoints) — how pauses and choices work.

@@ -1,0 +1,33 @@
+---
+title: Evidence and runs
+description: Run folders, traces, reports, and evidence.
+---
+
+A run is one execution of a flow. Each run owns a run folder that holds
+everything the run produced: its trace, reports, evidence, and resume state.
+
+The default location is `.circuit/runs/<run-id>`. Inside it, the **trace** is
+the ordered record of what happened: step entry, relay requests, checkpoints,
+and completion. A **report** is a typed output written by a step or the close
+stage, such as `fix.brief`, `build.plan`, or `explore.analysis`. **Evidence**
+is the supporting files, checks, and reports a run produces or consumes, used to
+verify the work and to recover if the run is interrupted.
+
+Relay steps can carry **acceptance criteria**: deterministic checks a step's
+result must pass before the run advances. When a check fails, the step either
+retries with the failure passed back as feedback, or stops the run.
+
+## Inspecting a run
+
+Project a run's status from its folder:
+
+```bash
+circuit runs show --run-folder .circuit/runs/<run-id> --json
+```
+
+The command requires `--json` and prints the projected status.
+
+## Related
+
+- [circuit runs](/docs/cli/runs)
+- [Memory and history](/docs/concepts/memory-and-history)

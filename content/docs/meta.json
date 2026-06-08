@@ -1,4 +1,12 @@
 {
   "title": "Documentation",
-  "pages": ["index", "getting-started", "flows"]
+  "pages": [
+    "index",
+    "getting-started",
+    "concepts",
+    "flows",
+    "cli",
+    "configuration",
+    "reference"
+  ]
 }

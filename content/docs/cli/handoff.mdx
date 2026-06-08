@@ -1,0 +1,160 @@
+---
+title: circuit handoff
+description: Save, resume, and clear continuity across sessions.
+---
+
+```bash
+circuit handoff <save|resume|done|brief|hook|harvest|hooks> [options]
+```
+
+Manage the continuity record for a repo: the goal, next action, state, and debt
+that carry a session into the next one. Records live under the control plane
+(`.circuit/continuity` by default).
+
+`hook`, `harvest`, and the `hooks` subcommands are mainly invoked by the host,
+not run by hand. `hooks` is Codex-only.
+
+## save
+
+```bash
+circuit handoff save --goal <text> --next <text> [options]
+```
+
+Write a continuity record and point the index at it. Pass `--run-folder` to back
+the record with a run.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--goal <text>` | Goal of the work. Required. | |
+| `--next <text>` | Next action to take. Required. | |
+| `--state-markdown <md>` | Session state to carry forward. | |
+| `--debt-markdown <md>` | Open constraints or debt. | |
+| `--run-folder <path>` | Back the record with this run. | |
+| `--control-plane <path>` | Control-plane directory. | `.circuit` |
+| `--project-root <path>` | Project root. | cwd |
+| `--record-id <stem>` | Record id. | generated |
+| `--created-at <iso>` | Record timestamp. | now |
+| `--progress <jsonl>` | Emit JSONL progress. | |
+| `--json` | Print the result as JSON. | |
+
+```bash
+circuit handoff save --goal 'Wire the retry path' --next 'Add a test for the 429 case'
+```
+
+## resume
+
+```bash
+circuit handoff resume [options]
+```
+
+Load the saved record and write an operator summary. Reports `not_found` when
+nothing is pending.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--control-plane <path>` | Control-plane directory. | `.circuit` |
+| `--project-root <path>` | Project root. | cwd |
+| `--progress <jsonl>` | Emit JSONL progress. | |
+| `--json` | Print the result as JSON. | |
+
+## done
+
+```bash
+circuit handoff done [options]
+```
+
+Clear the saved record. The automatic snapshot is kept by default;
+`--clear-ambient` removes it too.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--clear-ambient` | Also remove the automatic snapshot. | off |
+| `--control-plane <path>` | Control-plane directory. | `.circuit` |
+| `--project-root <path>` | Project root. | cwd |
+| `--progress <jsonl>` | Emit JSONL progress. | |
+| `--json` | Print the result as JSON. | |
+
+## brief
+
+```bash
+circuit handoff brief --json [options]
+```
+
+Emit a machine-readable brief for injection into the host. `--json` is required.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--control-plane <path>` | Control-plane directory. | `.circuit` |
+| `--project-root <path>` | Project root. | cwd |
+| `--json` | Required. Print the brief as JSON. | |
+
+## hook
+
+```bash
+circuit handoff hook --host codex [options]
+```
+
+Invoked by the host on session start or resume to inject the brief.
+
+| Flag | Description |
+| --- | --- |
+| `--host codex` | Host the hook runs under. |
+| `--project-root <path>` | Project root. |
+
+## harvest
+
+```bash
+circuit handoff harvest [options]
+```
+
+Capture an automatic snapshot from a live transcript. Driven by a host Stop or
+session-end hook.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--transcript-path <path>` | Transcript to read. | |
+| `--project-root <path>` | Project root. | |
+| `--session-id <id>` | Host session id. | |
+| `--control-plane <path>` | Control-plane directory. | `.circuit` |
+| `--record-id <stem>` | Record id. | per-session |
+| `--created-at <iso>` | Record timestamp. | now |
+| `--source <stop\|session-end\|pre-compact>` | What triggered the harvest. | `stop` |
+
+## hooks
+
+```bash
+circuit handoff hooks <install|uninstall|doctor> --host codex [options]
+```
+
+Manage the Codex session-start hook that injects the brief.
+
+### hooks install
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--host codex` | Host to install for. | |
+| `--hooks-file <path>` | Hooks config to edit. | `~/.codex/hooks.json` |
+| `--launcher <path>` | Launcher path written into the hook. | resolved |
+
+### hooks uninstall
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--host codex` | Host to uninstall from. | |
+| `--hooks-file <path>` | Hooks config to edit. | `~/.codex/hooks.json` |
+
+### hooks doctor
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--host codex` | Host to check. | |
+| `--hooks-file <path>` | Hooks config to inspect. | `~/.codex/hooks.json` |
+
+```bash
+circuit handoff hooks install --host codex
+```
+
+## Related
+
+- [Continuity](/docs/concepts/continuity)
+- [circuit resume](/docs/cli/resume)

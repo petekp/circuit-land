@@ -1,0 +1,81 @@
+---
+title: Skills
+description: Bind local skills to flow slots and configure skill hooks.
+---
+
+A skill is a discoverable capability with trigger metadata. A skill slot is a placeholder a flow author declares; you bind it to one of your local skills. Skill hooks inject skills at lifecycle points during a run.
+
+## Where it lives
+
+Skills are configured under two top-level keys in the config file: `skills` for slot bindings and `skill_hooks` for lifecycle injection. Both parse strictly — unknown keys are rejected.
+
+## Bindings
+
+Bind a slot to a skill under `skills.bindings`, keyed by slot id:
+
+```yaml
+skills:
+  bindings:
+    review-checklist: my-review-skill
+```
+
+Both the slot id and skill id are kebab-case slugs. The skill id must resolve to a local skill.
+
+### Local skill discovery
+
+Local skills are discovered from two roots, in order:
+
+1. `~/.agents/skills/<id>/SKILL.md`
+2. `~/.claude/skills/<id>/SKILL.md`
+
+The first root with a matching `<id>/SKILL.md` wins. Only flat ids are discovered; namespaced plugin skills are not. If a bound skill id is not found in either root, the run fails with the searched paths.
+
+## Skill hooks
+
+Skill hooks fire at lifecycle points and inject the skills you assign into the next implementer (write) relay step. Configure them under `skill_hooks`, which has two keys:
+
+| Key | What it controls |
+| --- | --- |
+| `policy` | Per-hook injection rules, keyed by hook name. |
+| `detection` | Per-hook glob lists under `disabled_patterns`. |
+
+### Policy
+
+Each entry maps a hook name to a rule:
+
+| Field | Value | Default |
+| --- | --- | --- |
+| `mode` | `auto` injects the listed skills; `mute` records the event and injects nothing. | `auto` |
+| `skills` | Skill ids to inject. Required for `auto`; forbidden for `mute`. | — |
+| `strict` | When a listed skill is unavailable, record a decision packet and inject nothing for that event. The run still proceeds. | `false` |
+
+```yaml
+skill_hooks:
+  policy:
+    before:edit-files:
+      skills: [coding-standards]
+    after:edit-files:
+      mode: mute
+    after:verification-failed:
+      skills: [debugging-playbook]
+  detection:
+    disabled_patterns:
+      before:edit-files: ['**/*.generated.ts']
+```
+
+### Hooks
+
+The hooks the runtime dispatches:
+
+| Hook | Fires |
+| --- | --- |
+| `before:edit-files` | Before a step's edits, from the predicted file surface in its plan report. |
+| `after:edit-files` | After a step's edits, from the actual touched files in its change report. |
+| `after:verification-failed` | When a verification check fails. |
+| `after:evidence-gap` | When a required claim is still unproven after verification. |
+
+The `before:edit-files` and `after:edit-files` hooks also take an extension suffix, so `after:edit-files:.tsx` matches only edits to `.tsx` files.
+
+## Related
+
+- [Selection](/docs/configuration/selection)

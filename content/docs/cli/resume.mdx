@@ -1,0 +1,34 @@
+---
+title: circuit resume
+description: Resume a paused run at a checkpoint.
+---
+
+```bash
+circuit resume --run-folder <path> --checkpoint-choice <choice> [--progress jsonl]
+```
+
+Resumes a run that paused at a [checkpoint](/docs/concepts/checkpoints). Point it
+at the run folder and pass the choice the checkpoint asked for. Resume reuses the
+saved flow, goal, and axes, so the run picks up where it stopped.
+
+The choice must be one the checkpoint allows. An unrecognized or stale choice is
+rejected.
+
+## Flags
+
+| Flag | Description |
+| --- | --- |
+| `--run-folder <path>` | The paused run to resume. Required. |
+| `--checkpoint-choice <choice>` | The choice to apply at the checkpoint. Required. |
+| `--progress <jsonl>` | Stream progress events as JSONL on stderr. |
+
+## Example
+
+```bash
+circuit resume --run-folder .circuit/runs/3f8a9b2c-1d4e-4a6f-8c2b-9e1f0a3b5c7d --checkpoint-choice continue
+```
+
+## Related
+
+- [Checkpoints](/docs/concepts/checkpoints)
+- [circuit run](/docs/cli/run)

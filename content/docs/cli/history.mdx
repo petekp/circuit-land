@@ -1,0 +1,137 @@
+---
+title: circuit history
+description: Index and query evidence from past runs.
+---
+
+```bash
+circuit history <subcommand> [options] --json
+```
+
+Build and query the history index over your run folders. Every subcommand requires `--json`.
+
+All subcommands accept `--runs-base <path>` (where runs live, default `.circuit/runs`) and `--index-dir <path>` (where the index lives, default `.circuit/history`).
+
+## rebuild
+
+```bash
+circuit history rebuild --json
+```
+
+Rebuild the index from the run folders and print its manifest.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--json` | Required. JSON output. | |
+| `--runs-base <path>` | Run folders to index. | `.circuit/runs` |
+| `--index-dir <path>` | Index location. | `.circuit/history` |
+
+## query
+
+```bash
+circuit history query <query...> --json
+```
+
+Search the index and print matching evidence. Pass the search text as the positional argument.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--format <json\|memory-input>` | Output shape. | `json` |
+| `--limit <n>` | Cap total results. | |
+| `--per-run-limit <n>` | Cap results per run. | |
+| `--flow <flow-id>` | Restrict to one flow. | |
+| `--kind <run\|report\|trace\|checkpoint>` | Restrict to one document kind. | |
+| `--rebuild-if-stale` | Rebuild before querying if the index is stale. | |
+| `--runs-base <path>` | Run folders to index. | `.circuit/runs` |
+| `--index-dir <path>` | Index location. | `.circuit/history` |
+| `--json` | Required. JSON output. | |
+
+## pull
+
+```bash
+circuit history pull <query...> --flow <flow-id> --decision-point <label> --run-folder <path> --json
+```
+
+Recall flow-scoped evidence at a decision point, suppress measured-negative results, and append an audit entry to the run folder's pull log. Pass the search text as the positional argument. Results are hints only.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--flow <flow-id>` | Required. Flow to recall and suppress on. | |
+| `--decision-point <label>` | Required. Label for the audit entry. | |
+| `--run-folder <path>` | Required. Run folder to log into. | |
+| `--limit <n>` | Cap total results. | |
+| `--per-run-limit <n>` | Cap results per run. | |
+| `--rebuild-if-stale` | Rebuild before querying if the index is stale. | |
+| `--runs-base <path>` | Run folders to index. | `.circuit/runs` |
+| `--index-dir <path>` | Index location. | `.circuit/history` |
+| `--json` | Required. JSON output. | |
+
+## status
+
+```bash
+circuit history status --json
+```
+
+Print the index state without rebuilding.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--json` | Required. JSON output. | |
+| `--runs-base <path>` | Run folders to index. | `.circuit/runs` |
+| `--index-dir <path>` | Index location. | `.circuit/history` |
+
+## memory-merge
+
+```bash
+circuit history memory-merge --json
+```
+
+Build the memory-merge report from indexed runs.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--json` | Required. JSON output. | |
+| `--write` | Persist the report under `<index-dir>/memory-merge.v1.json`. | |
+| `--runs-base <path>` | Run folders to index. | `.circuit/runs` |
+| `--index-dir <path>` | Index location. | `.circuit/history` |
+
+## memory-effect
+
+```bash
+circuit history memory-effect --json
+```
+
+Build the memory-effect report, scoring whether recalled memory correlated with run outcomes.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--json` | Required. JSON output. | |
+| `--write` | Persist the report under `<index-dir>/memory-effect.v1.json`. | |
+| `--min-arm-size <n>` | Minimum runs per arm before a verdict is eligible. | `2` |
+| `--margin <0..1>` | Separation margin for a correlated verdict. | `0.5` |
+| `--runs-base <path>` | Run folders to index. | `.circuit/runs` |
+| `--index-dir <path>` | Index location. | `.circuit/history` |
+
+## Examples
+
+Rebuild the index, then check its state:
+
+```bash
+circuit history rebuild --json
+circuit history status --json
+```
+
+Search past runs:
+
+```bash
+circuit history query pagination off-by-one --json
+```
+
+Pull flow-scoped evidence at a decision point and log it:
+
+```bash
+circuit history pull caching strategy --flow explore --decision-point plan --run-folder .circuit/runs/<run-id> --json
+```
+
+## Related
+
+- [Memory and history](/docs/concepts/memory-and-history)

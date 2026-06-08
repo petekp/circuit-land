@@ -1,0 +1,62 @@
+---
+title: Installation
+description: Install Circuit in Claude Code, Codex, or as a CLI.
+---
+
+Circuit runs three ways: as a Claude Code plugin, as a Codex plugin, or as a
+standalone `circuit` CLI. Pick the one that matches how you work.
+
+## Requirements
+
+- Node >= 22.18.0
+
+No API keys go in Circuit. The host agent (Claude Code or Codex) handles auth.
+Configuration is optional.
+
+## Claude Code
+
+Run these in the agent:
+
+```text
+/plugin marketplace add petekp/circuit
+/plugin install circuit@circuit
+/reload-plugins
+```
+
+## Codex
+
+Run this in your shell:
+
+```bash
+codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.6
+```
+
+## CLI
+
+When published:
+
+```bash
+npm install -g circuit
+```
+
+From a checkout:
+
+```bash
+npm install
+npm run build
+./bin/circuit
+```
+
+## Optional: Codex as a worker
+
+Circuit can route work to the Codex CLI through the `codex` connector. Install it
+only if you use that connector:
+
+```bash
+npm install -g @openai/codex
+```
+
+## Next
+
+- [Quickstart](/docs/getting-started/quickstart) runs your first task.
+- [Flows overview](/docs/flows/overview) covers the six flows.

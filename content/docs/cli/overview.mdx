@@ -1,0 +1,35 @@
+---
+title: CLI overview
+description: Invoke Circuit from the command line.
+---
+
+```bash
+circuit <command> [options]
+```
+
+The `circuit` binary is the command-line entry point. `run` executes a flow
+against a goal; you pass the flow id explicitly. The other commands resume,
+inspect, and manage runs.
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| [run](/docs/cli/run) | Execute a flow against a goal. |
+| [resume](/docs/cli/resume) | Resume a paused run at a checkpoint. |
+| [handoff](/docs/cli/handoff) | Save, resume, or clear a continuity record. |
+| [history](/docs/cli/history) | Index and query evidence from past runs. |
+| [memory](/docs/cli/memory) | Record, list, and forget operator notes. |
+| [create](/docs/cli/create) | Scaffold a custom flow from a description. |
+| [runs](/docs/cli/runs) | Inspect the status of a run. |
+| [version](/docs/cli/version) | Print the Circuit version. |
+
+## Conventions
+
+Many commands accept `--json` for machine-readable output.
+
+`--progress jsonl` streams progress events as they happen. `jsonl` is the only
+supported format.
+
+Run folders default to `.circuit/runs/<run-id>`. Pass `--run-folder <path>` to
+set your own.

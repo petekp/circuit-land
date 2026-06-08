@@ -1,0 +1,14 @@
+{
+  "title": "CLI",
+  "pages": [
+    "overview",
+    "run",
+    "resume",
+    "handoff",
+    "history",
+    "memory",
+    "create",
+    "runs",
+    "version"
+  ]
+}

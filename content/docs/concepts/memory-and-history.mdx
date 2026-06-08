@@ -1,0 +1,66 @@
+---
+title: Memory and history
+description: How Circuit reuses what past runs learned.
+---
+
+Every run leaves evidence behind in its run folder. Circuit indexes those past
+runs into a history index so a later run can recall the evidence and decisions
+that earlier runs produced, instead of starting cold.
+
+## How it works
+
+Recall comes from two stores. The **history index** is built from past run
+folders; query it to surface prior evidence, reports, traces, and checkpoints.
+**Project memory** is a local store of durable notes an operator files about a
+flow, each one citing a real run artifact.
+
+Recalled memory is hint-only. It orients the next run; it never overrides the
+flow's own checks.
+
+## Querying history
+
+Search the index for prior work:
+
+```bash
+circuit history query 'flaky auth test' --json
+```
+
+During a flow, pull memory scoped to a single decision point. The pull narrows
+to one flow, suppresses hints that past runs measured as unhelpful, and logs
+what it surfaced to the run folder:
+
+```bash
+circuit history pull 'auth retry' --flow fix --decision-point plan --run-folder .circuit/runs/<run> --json
+```
+
+Check or rebuild the index:
+
+```bash
+circuit history status --json
+circuit history rebuild --json
+```
+
+History commands print JSON and require `--json`.
+
+## Operator notes
+
+Record a durable note about a flow, citing the latest run:
+
+```bash
+circuit memory note 'prefer the retry helper over a raw loop' --flow fix
+```
+
+Review or remove notes with `circuit memory list` and `circuit memory forget
+<memory-id>`.
+
+## Analysis reports
+
+The history command also builds analysis reports: `memory-merge` consolidates
+recalled memory, and `memory-effect` measures whether recalled hints changed run
+outcomes. Pass `--write` to persist either report under the index directory.
+
+## Related
+
+- [circuit history](/docs/cli/history)
+- [circuit memory](/docs/cli/memory)
+- [Evidence and runs](/docs/concepts/evidence-and-runs)

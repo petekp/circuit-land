@@ -1,0 +1,68 @@
+---
+title: circuit memory
+description: Record and manage operator notes.
+---
+
+```bash
+circuit memory <subcommand> [options]
+```
+
+File operator notes that cite a run artifact, list them, and forget them. Notes are stored per project and are hint-only: they inform later runs but never force an outcome.
+
+## note
+
+```bash
+circuit memory note <text...> --flow <flow-id>
+```
+
+Record a note for a flow, citing a run. By default it cites the latest run under the runs base; pass `--run-folder` to cite a specific run. The note must cite a real artifact (run envelope, result, or trace), or it fails.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--flow <flow-id>` | Required. Flow the note applies to. | |
+| `--applies-to <kind>` | Hint category: `context`, `verification`, `preference`, `prior_failure`, `repo_convention`, `operator_note`. | `operator_note` |
+| `--run-folder <path>` | Cite a specific run instead of the latest. | |
+| `--json` | JSON output. | |
+| `--runs-base <path>` | Where runs live. | `.circuit/runs` |
+| `--memory-dir <path>` | Where notes are stored. | `.circuit/memory` |
+
+## list
+
+```bash
+circuit memory list
+```
+
+List recorded notes. Pass `--flow` to show only one flow's notes.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--flow <flow-id>` | Restrict to one flow. | |
+| `--json` | JSON output. | |
+| `--runs-base <path>` | Where runs live. | `.circuit/runs` |
+| `--memory-dir <path>` | Where notes are stored. | `.circuit/memory` |
+
+## forget
+
+```bash
+circuit memory forget <memory-id>
+```
+
+Remove a note by id. Exits non-zero when no note matches.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--json` | JSON output. | |
+| `--runs-base <path>` | Where runs live. | `.circuit/runs` |
+| `--memory-dir <path>` | Where notes are stored. | `.circuit/memory` |
+
+## Examples
+
+```bash
+circuit memory note "Prefer the existing logger over console.log" --flow build
+circuit memory list --flow build
+circuit memory forget project-note-1a2b3c4d5e6f7a8b
+```
+
+## Related
+
+- [Memory and history](/docs/concepts/memory-and-history)

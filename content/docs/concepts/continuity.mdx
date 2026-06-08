@@ -1,0 +1,51 @@
+---
+title: Continuity
+description: Carry work across sessions.
+---
+
+Continuity lets a new session pick up where an earlier one left off. A
+**continuity record** holds the goal, next action, and the intent to resume —
+plus the run state when it is saved against a live run. A **continuity index**
+picks which record is active.
+
+## How it works
+
+Save, resume, or clear continuity with `circuit handoff`:
+
+```bash
+circuit handoff save --goal '<goal>' --next '<next action>'
+circuit handoff resume
+circuit handoff done
+```
+
+Each record carries a **resume contract** — the declared posture for how the
+next session resumes. A manual save always requires an explicit resume, so a
+new session never picks the work back up on its own.
+
+In Claude Code and Codex this is automatic. A `SessionStart` hook injects the
+saved brief into a fresh session. In Claude Code, `Stop`, `SessionEnd`, and
+`PreCompact` hooks also harvest the live transcript into an automatic snapshot.
+Codex runs the `SessionStart` hook only.
+
+## Resolving the active record
+
+When several records exist, the index prefers a deliberate save over an
+automatic snapshot:
+
+- A manual save (`pending_record`) outranks an automatic snapshot.
+- The automatic snapshot is the fallback when nothing manual is pending.
+- An automatic snapshot is framed as context, not a plan; resume it only when
+  asked.
+
+## Codex setup
+
+Claude Code ships the hooks. On Codex, install them once per machine:
+
+```bash
+circuit handoff hooks install --host codex
+```
+
+## Related
+
+- [circuit handoff](/docs/cli/handoff)
+- [Evidence and runs](/docs/concepts/evidence-and-runs)

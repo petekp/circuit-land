@@ -1,0 +1,44 @@
+---
+title: Build
+description: Add a new capability.
+---
+
+Build adds a new capability: frame the change, plan it, implement it, verify it,
+review it, and close with evidence.
+
+## When to use
+
+- Implementing a feature or new behavior.
+- A change you want planned and reviewed, not just typed in.
+- Work where verification commands should run before you call it done.
+
+## What it does
+
+Build runs seven stages, carrying each report forward to the next:
+
+- **Frame** — confirms the Build brief: scope, constraints, and how the change
+  will be proven. This is a [checkpoint](/docs/concepts/checkpoints).
+- **Analyze** — a read-only relay reads the codebase so the plan is grounded in
+  the real source, not the brief alone.
+- **Plan** — produces an ordered plan plus the verification commands to run.
+- **Act** — relays the implementation to a worker.
+- **Verify** — runs the planned verification commands and records exit status
+  and output.
+- **Review** — relays the change to a separate worker for an independent review.
+- **Close** — writes the Build result file and the chain of
+  [evidence](/docs/concepts/evidence-and-runs).
+
+## Checkpoints
+
+Build stops once, at Frame, to confirm the brief before implementation starts.
+The safe default is to continue.
+
+## Example
+
+```text
+/circuit:run add a CSV export button
+```
+
+```bash
+circuit run build --goal 'add a CSV export button'
+```

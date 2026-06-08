@@ -1,0 +1,55 @@
+---
+title: Modes and rigor
+description: Tune care, tournaments, and autonomy.
+---
+
+Three axes tune a run. You set them as flags on [run](/docs/cli/run); the flow
+rejects any axis it does not support.
+
+## Rigor
+
+Rigor controls how much care a flow takes.
+
+```bash
+circuit run build --goal "..." --rigor deep
+```
+
+| Value | Description |
+| --- | --- |
+| `lite` | Less care, fewer stages. |
+| `standard` | The default. |
+| `deep` | More care. |
+
+## Tournament
+
+Tournament fans out multiple candidates and selects one. Supported by Explore
+and Prototype.
+
+```bash
+circuit run explore --goal "..." --tournament --tournament-n 3
+```
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--tournament` | Fan out candidates and select one. | off |
+| `--tournament-n <2\|3\|4>` | How many candidates to fan out. Requires `--tournament`. | `3` |
+
+## Autonomous
+
+Autonomous enables a bounded continuation loop that routes recovery flows when a
+run does not complete. Supported by Build, Fix, Explore, Prototype, and Pursue.
+
+```bash
+circuit run fix --goal "..." --autonomous
+```
+
+## Depth
+
+Depth is the thoroughness value Circuit compiles from these axes. Autonomous and
+tournament each resolve to their own depth; otherwise depth is the rigor. A flow
+falls back to its default axes when you pass none.
+
+## Related
+
+- [run](/docs/cli/run)
+- [Selection](/docs/configuration/selection)

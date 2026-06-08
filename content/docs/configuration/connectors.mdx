@@ -1,0 +1,83 @@
+---
+title: Connectors
+description: Route relayed work to builtin or custom connectors.
+---
+
+A connector is the backend that runs a relay step. Three are builtin:
+
+| Connector | Provider |
+| --- | --- |
+| `claude-code` | anthropic |
+| `codex` | openai |
+| `cursor-agent` | gemini |
+
+You can also register custom connectors that run your own command.
+
+## Where it lives
+
+Connectors are configured under `relay` in the config file. The block has four keys:
+
+| Key | What it controls |
+| --- | --- |
+| `default` | The connector used when nothing more specific matches. A builtin name, the `auto` sentinel, or a custom name. Defaults to `auto`. |
+| `roles` | Per-role overrides. Keys are `researcher`, `implementer`, `reviewer`. |
+| `circuits` | Per-flow overrides, keyed by flow id. |
+| `connectors` | The custom connector registry. |
+
+`roles` and `circuits` reference a connector by `kind` (`builtin` or `named`). A `named` reference must point at a connector registered under `connectors`.
+
+## Example
+
+```yaml
+relay:
+  default: auto
+  roles:
+    researcher:
+      kind: builtin
+      name: codex
+    implementer:
+      kind: builtin
+      name: claude-code
+  circuits:
+    review:
+      kind: named
+      name: my-linter
+  connectors:
+    my-linter:
+      kind: custom
+      name: my-linter # must match the registry key
+      command: [my-linter, --json] # argv list, no empty elements
+      prompt_transport: prompt-file
+      output:
+        kind: output-file
+      capabilities:
+        filesystem: read-only
+        structured_output: json
+```
+
+## Custom connectors
+
+A custom connector descriptor takes these fields:
+
+| Field | Value |
+| --- | --- |
+| `kind` | `custom` |
+| `name` | kebab-case (`^[a-z][a-z0-9-]*$`); cannot reuse a builtin name or `auto` |
+| `command` | argv list, at least one element, no empty strings |
+| `prompt_transport` | `prompt-file` |
+| `output` | `{ kind: output-file }` |
+| `capabilities.filesystem` | `read-only` (the only value accepted for a custom connector) |
+| `capabilities.structured_output` | `json` |
+
+Two rules are enforced at parse time:
+
+- Custom connectors must declare `filesystem: read-only`. Writable custom workers are not yet supported.
+- The registry key and the descriptor `name` must match.
+
+Because a custom connector is read-only, it cannot fill the `implementer` role — that role writes. Use a builtin for `implementer`; use custom connectors for `researcher` and `reviewer`.
+
+The `relay` block parses strictly: unknown keys are rejected.
+
+## Related
+
+- [Selection](/docs/configuration/selection)

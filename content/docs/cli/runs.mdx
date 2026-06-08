@@ -1,0 +1,35 @@
+---
+title: circuit runs
+description: Inspect run status.
+---
+
+```bash
+circuit runs show --run-folder <path> --json
+```
+
+Inspect the status of a run.
+
+## show
+
+```bash
+circuit runs show --run-folder <path> --json
+```
+
+Read the run folder and print its status as JSON: the engine state (open,
+waiting on a checkpoint, completed, or aborted), the current step where the run
+is active, and the terminal outcome once it closes.
+
+| Flag | Description |
+| --- | --- |
+| `--run-folder <path>` | Required. Run folder to read. |
+| `--json` | Required. JSON output. |
+
+## Examples
+
+```bash
+circuit runs show --run-folder .circuit/runs/<run-id> --json
+```
+
+## Related
+
+- [Evidence and runs](/docs/concepts/evidence-and-runs)

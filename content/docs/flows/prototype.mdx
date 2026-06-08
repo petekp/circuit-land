@@ -1,0 +1,64 @@
+---
+title: Prototype
+description: Try an idea quickly.
+---
+
+Prototype builds a disposable, project-local artifact so you can inspect an idea
+before deciding whether it deserves a real Build.
+
+## When to use
+
+- You want to test whether an approach is worth pursuing.
+- You need something to look at, not something to ship.
+- You want to compare how different models tackle the same sketch.
+
+## What it does
+
+Prototype runs Frame, Plan, Act, Verify, Review, Close. (Analyze is omitted;
+research-first work belongs in [Explore](/docs/flows/explore).)
+
+- **Frame** defines the artifact and its claim limits, and fixes a
+  `prototype_root` that all files stay under.
+- **Plan** chooses the disposable files to create.
+- **Act** relays the work to an implementer, who writes the artifact.
+- **Verify** runs an artifact-integrity check against the reported files.
+- **Review** asks what to do with the result.
+- **Close** emits the result with evidence links.
+
+Prototype only creates files under `prototype_root`. It never edits production
+code, and it never claims deployment, branch previews, screenshots, or
+production readiness.
+
+## Variants
+
+With `--tournament`, Act fans out one implementer per configured model variant.
+Each variant writes its own artifact under its own root; Circuit verifies them,
+relays a comparison to a reviewer, and ranks them. This needs
+`circuits.prototype.variant_models` in your config, one model per branch.
+
+## Checkpoints
+
+After the artifact is verified, Circuit stops for your call:
+
+- **Keep Prototype** — save it as evidence and stop.
+- **Save Build Input** — close with a Build-ready follow-up prompt, without
+  running Build.
+- **Discard Prototype** — mark it discarded, keep the evidence trail.
+
+In a tournament run, the checkpoint instead asks which verified variant to keep.
+
+## Example
+
+```text
+/circuit:run prototype a command palette
+```
+
+```bash
+circuit run prototype --goal 'sketch a custom flow builder UI'
+```
+
+Fan out across variant models:
+
+```bash
+circuit run prototype --goal 'compare command palette layouts' --tournament --tournament-n 3
+```

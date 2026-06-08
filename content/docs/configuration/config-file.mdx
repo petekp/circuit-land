@@ -1,0 +1,90 @@
+---
+title: Configuration file
+description: Where Circuit config lives and how layers combine.
+---
+
+Config is optional. With no config file, Circuit runs on built-in defaults. A file lets you pin connectors, selection, skills, and per-flow overrides.
+
+## Where it lives
+
+Circuit reads two files:
+
+| Path | Layer |
+| --- | --- |
+| `~/.config/circuit/config.yaml` | user-global |
+| `.circuit/config.yaml` (project root) | project |
+
+Either can be absent. A missing file is skipped, not an error.
+
+## How layers combine
+
+Four layers compose in precedence order, later wins:
+
+```text
+default < user-global < project < invocation
+```
+
+`default` is the built-in baseline. `invocation` is what a single run passes in. Each layer overrides the one before it for the keys it sets.
+
+## Schema versions
+
+The first key is `schema_version`.
+
+- `1` — selection config (the keys below).
+- `2` — a policy envelope (advanced): `policy.rules`, `policy.limits`, `policy.preferences`, `policy.defaults`.
+
+Most projects want version 1.
+
+## Example (version 1)
+
+```yaml
+schema_version: 1
+
+# Stable identity for project memory across worktrees and clones.
+project_id: my-app
+
+# Host the agent runs under: generic-shell | claude-code | codex.
+host:
+  kind: claude-code
+
+# Relay routing to connectors. See Connectors.
+relay:
+  default: auto
+
+# Skill slot bindings. See Skills.
+skills:
+  bindings:
+    reviewer: code-review
+
+# Per-flow overrides, keyed by flow id.
+circuits:
+  fix:
+    selection:
+      depth: deep
+
+# Baseline selection applied to every run. See Selection.
+defaults:
+  selection:
+    effort: high
+```
+
+Parsing is strict. Unknown keys are rejected at parse time, so a typo like `defuults:` fails loudly instead of being silently ignored.
+
+## Version 1 keys
+
+| Key | Description |
+| --- | --- |
+| `schema_version` | `1`. Required. |
+| `project_id` | Stable id for project memory. Inferred from the git remote when omitted. |
+| `host` | `kind`: `generic-shell`, `claude-code`, or `codex`. |
+| `relay` | Relay routing to connectors. See [Connectors](/docs/configuration/connectors). |
+| `skills` | Skill slot bindings. See [Skills](/docs/configuration/skills). |
+| `skill_hooks` | Skill-hook policy and detection. |
+| `circuits` | Per-flow overrides, keyed by flow id. |
+| `defaults` | Baseline selection for every run. See [Selection](/docs/configuration/selection). |
+
+## Related
+
+- [Connectors](/docs/configuration/connectors)
+- [Selection](/docs/configuration/selection)
+- [Skills](/docs/configuration/skills)

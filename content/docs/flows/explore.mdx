@@ -1,0 +1,46 @@
+---
+title: Explore
+description: Build understanding or compare options.
+---
+
+Explore builds understanding without changing code.
+
+## When to use
+
+- You need to know how something works ("how does auth refresh work").
+- You're mapping a subsystem before touching it.
+- You're choosing between options and want them compared.
+
+## What it does
+
+Explore frames the investigation, then analyzes the subject. From there it
+splits two ways:
+
+- **Findings.** It synthesizes what it found, critiques that synthesis
+  adversarially, then closes with findings plus evidence.
+- **Decision tournament** (`--tournament`). It drafts the candidate options,
+  builds a case for each in parallel, stress-tests them, and closes with the
+  selected option.
+
+The stages are Frame, Analyze, Plan or Decision, and Close.
+
+## Checkpoints
+
+A decision tournament pauses at one checkpoint: choose the option Circuit
+should close with. It lists the options that completed, with a case summary
+for each.
+
+## Example
+
+```text
+/circuit:run how does auth refresh work
+```
+
+```bash
+circuit run explore --goal "pick a state library" --tournament
+```
+
+## Related
+
+- [Flows](/docs/flows/overview)
+- [Modes](/docs/flows/modes)

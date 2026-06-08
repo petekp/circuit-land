@@ -1,0 +1,61 @@
+---
+title: circuit run
+description: Execute a flow against a goal.
+---
+
+```bash
+circuit run [flow-id] --goal '<task>' [options]
+```
+
+Runs a [flow](/docs/flows/overview) against a goal and writes the run folder.
+Pass the flow id as the first argument: `build`, `fix`, `explore`, `review`,
+`prototype`, or `pursue`. When you invoke Circuit through an agent with
+`/circuit:run`, the agent picks the flow and calls this command for you.
+
+`--goal` is required unless you are resuming a checkpoint with
+[`circuit resume`](/docs/cli/resume).
+
+## Flags
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--goal <goal>` | The task to run. Required. | |
+| `--rigor <lite\|standard\|deep>` | Thoroughness of the flow. | flow default |
+| `--tournament` | Run candidates in parallel and pick a winner. | off |
+| `--tournament-n <2\|3\|4>` | Number of tournament candidates. Requires `--tournament`. | `3` |
+| `--autonomous` | Drive the continuation loop instead of a single pass. | off |
+| `--run-folder <path>` | Where to write the run. | `.circuit/runs/<run-id>` |
+| `--fixture <path>` | Use a specific compiled flow file instead of the resolved one. | |
+| `--flow-root <path>` | Directory of compiled flows. | `generated/flows` |
+| `--progress <jsonl>` | Stream progress events as JSONL on stderr. | off |
+| `--include-untracked-content` | Include untracked file content in evidence. | off |
+
+Not every flow supports every axis. `--rigor`, `--tournament`, and
+`--autonomous` are rejected when the flow does not declare them. See
+[Modes](/docs/flows/modes).
+
+## Examples
+
+Run a named flow:
+
+```bash
+circuit run fix --goal 'fix the off-by-one in pagination'
+```
+
+Set rigor:
+
+```bash
+circuit run build --goal 'add a rate limiter to the API' --rigor deep
+```
+
+Run a tournament with three candidates:
+
+```bash
+circuit run explore --goal 'compare caching strategies' --tournament --tournament-n 3
+```
+
+## Related
+
+- [Flows](/docs/flows/overview)
+- [Modes](/docs/flows/modes)
+- [circuit resume](/docs/cli/resume)

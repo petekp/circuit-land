@@ -1,0 +1,74 @@
+---
+title: Selection
+description: Choose model, effort, depth, and skills per layer.
+---
+
+A selection override sets what runs a step: which model, how much effort, what
+depth, which skills, and any connector-specific invocation options. Every field
+is optional. An override that sets nothing contributes nothing.
+
+## Layers
+
+Overrides apply at four layers. Later layers win.
+
+| Layer | Where it lives |
+| --- | --- |
+| `default` | Circuit's built-in baseline. |
+| `user-global` | `~/.config/circuit/config.yaml`. |
+| `project` | `.circuit/config.yaml`. |
+| `invocation` | Passed on a single run. |
+
+In a config file, a selection override lives at `defaults.selection` (applies to
+every run) or under `circuits.<flow>.selection` (applies to one flow).
+
+## Example
+
+```yaml
+schema_version: 1
+defaults:
+  selection:
+    model:
+      provider: anthropic
+      model: claude-opus-4-7
+    effort: high
+    depth: standard
+circuits:
+  fix:
+    selection:
+      effort: max
+      skills:
+        mode: append
+        skills: [tdd]
+      invocation_options:
+        temperature: 0
+```
+
+Config files parse with `.strict()`: an unknown key is rejected, so a typo fails
+at parse time instead of silently dropping your override.
+
+## Fields
+
+| Field | Description |
+| --- | --- |
+| `model` | A `provider` (`openai`, `anthropic`, `gemini`, or `custom`) and a `model` string. |
+| `effort` | One of `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`. |
+| `depth` | One of `lite`, `standard`, `deep`, `tournament`, `autonomous`. |
+| `skills` | A skill operation (see below). |
+| `invocation_options` | A JSON object passed to the connector. Merged right-biased by layer. |
+
+### Skills
+
+`skills` is a typed operation, not a plain list. Set `mode`, and for any mode but
+`inherit`, a `skills` list. Lists must not contain duplicates.
+
+| Mode | Effect |
+| --- | --- |
+| `inherit` | Keep the prior layer's skills. The default. |
+| `replace` | Use this list. `[]` clears the set. |
+| `append` | Add these to the prior set. |
+| `remove` | Drop these from the prior set. |
+
+## Related
+
+- [Skills](/docs/configuration/skills)
+- [Modes and rigor](/docs/flows/modes)
