@@ -28,11 +28,12 @@ If you do nothing, a checkpoint can fall back to its declared safe default.
 
 ## From the CLI
 
-The equivalent runs through the `circuit` binary. Name the flow and pass the
-task as `--goal`:
+The equivalent runs through the CLI from a checkout (see
+[Installation](/docs/getting-started/installation#cli)). Name the flow and pass
+the task as `--goal`:
 
 ```bash
-circuit run fix --goal 'login fails when the email has a plus sign'
+./bin/circuit run fix --goal 'login fails when the email has a plus sign'
 ```
 
 The CLI requires an explicit flow name. Routing is model-only, so the agent
