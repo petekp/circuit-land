@@ -316,13 +316,13 @@ function MastheadSection() {
       </div>
 
       <h1 className="max-w-2xl text-pretty text-base font-medium leading-tight tracking-tight sm:text-xl">
-        Disciplined autonomy for coding agents.
+        Set your agent up to do its best work.
       </h1>
 
       <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-        Agents are great at improvisation but require a lot of steering to keep
-        on task. Circuit lends the process and structure agents need to do their
-        best work.
+        Circuit gives it a process to run, a memory that carries across
+        sessions, and a record that proves the work. For the agent, not over
+        it.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
