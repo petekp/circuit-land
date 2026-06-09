@@ -1,0 +1,81 @@
+---
+title: Troubleshooting
+description: Stuck checkpoints, connector errors, and inspecting a past run.
+---
+
+Three situations cover most of what goes wrong. Each one leaves evidence in the
+run folder, so the first move is always the same: find the run under
+`.circuit/runs/<run-id>` and read what it recorded.
+
+## A run is stuck at a checkpoint
+
+A run that stops mid-flow is usually not stuck — it is waiting. Check its state:
+
+```bash
+circuit runs show --run-folder .circuit/runs/<run-id> --json
+```
+
+If the state is `checkpoint_waiting`, the run paused at a
+[checkpoint](/docs/concepts/checkpoints) and wants a decision. The run folder
+records the checkpoint request: the context to review and the allowed choices.
+Answer it by resuming with one of those choices:
+
+```bash
+circuit resume --run-folder .circuit/runs/<run-id> --checkpoint-choice <choice>
+```
+
+Two things to know:
+
+- The choice must be one the checkpoint allows. An unrecognized or stale choice
+  is rejected — reread the recorded request rather than guessing.
+- Some checkpoints declare a safe default. At lighter rigor and under
+  [autonomous](/docs/flows/modes) mode they auto-resolve with it; a pause that
+  waits indefinitely means the run is at deep rigor or in a tournament, where
+  your judgment is deliberately required.
+
+## A relay step fails with a connector error
+
+A [connector](/docs/configuration/connectors) is the backend that runs a relay
+step. When one fails, check these in order:
+
+1. **Is the backend installed?** The builtin `codex` connector shells out to
+   the Codex CLI. If it is missing, install it: `npm install -g @openai/codex`.
+2. **Does the config parse?** The `relay` block parses strictly — unknown keys
+   are rejected, and a `named` reference must point at a connector registered
+   under `connectors`. A typo in either fails before any work runs.
+3. **Is a custom connector in a role it cannot fill?** Custom connectors are
+   read-only, so they cannot take the `implementer` role. Use a builtin for
+   `implementer`; use custom connectors for `researcher` and `reviewer`.
+
+The failed relay's request and result are saved in the run folder, so you can
+see exactly what the connector was asked and what came back.
+
+## Inspecting a past run
+
+Every run keeps its full record in its [run
+folder](/docs/concepts/evidence-and-runs) — trace, reports, and evidence stay
+on disk after the run closes.
+
+Project a run's status — engine state, current step, terminal outcome:
+
+```bash
+circuit runs show --run-folder .circuit/runs/<run-id> --json
+```
+
+Inside the folder, the **trace** is the ordered record of what happened (step
+entry, relay requests, checkpoints, completion), and each **report** is a typed
+output a step wrote. Reading the trace top to bottom is the fastest way to see
+where a run went sideways.
+
+To search across many past runs instead of one folder, use the
+[history index](/docs/cli/history):
+
+```bash
+circuit history query <search text> --json
+```
+
+## Related
+
+- [Checkpoints](/docs/concepts/checkpoints)
+- [Evidence and runs](/docs/concepts/evidence-and-runs)
+- [Connectors](/docs/configuration/connectors)

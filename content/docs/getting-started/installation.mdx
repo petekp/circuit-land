@@ -28,7 +28,7 @@ Run these in the agent:
 Run this in your shell:
 
 ```bash
-codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.6
+codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.7
 ```
 
 ## CLI
@@ -41,8 +41,9 @@ npm run build
 ./bin/circuit
 ```
 
-Run a task with `./bin/circuit run --goal '<your task>'`. A published
-`@petekp/circuit` package will follow.
+Run a task with `./bin/circuit run <flow> --goal '<your task>'`. The CLI
+requires an explicit flow name — `build`, `fix`, `explore`, `review`,
+`prototype`, or `pursue`. A published `@petekp/circuit` package will follow.
 
 ## Optional: Codex as a worker
 

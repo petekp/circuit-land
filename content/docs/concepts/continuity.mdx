@@ -8,6 +8,10 @@ Continuity lets a new session pick up where an earlier one left off. A
 plus the run state when it is saved against a live run. A **continuity index**
 picks which record is active.
 
+Continuity is an ambient layer, not a new workflow. Flows stay the spine of how
+work gets done; continuity keeps their context from evaporating when a session
+ends.
+
 ## How it works
 
 Save, resume, or clear continuity with `circuit handoff`:
@@ -22,10 +26,12 @@ Each record carries a **resume contract** — the declared posture for how the
 next session resumes. A manual save always requires an explicit resume, so a
 new session never picks the work back up on its own.
 
-In Claude Code and Codex this is automatic. A `SessionStart` hook injects the
-saved brief into a fresh session. In Claude Code, `Stop`, `SessionEnd`, and
-`PreCompact` hooks also harvest the live transcript into an automatic snapshot.
-Codex runs the `SessionStart` hook only.
+In Claude Code this works with zero setup — the plugin ships the hooks. A
+`SessionStart` hook injects the saved brief into a fresh session, and `Stop`,
+`SessionEnd`, and `PreCompact` hooks harvest the live transcript into an
+automatic snapshot, so recent state is captured ambiently even when nothing was
+saved. Codex runs the `SessionStart` hook only, after a one-time install
+(below).
 
 ## Resolving the active record
 
