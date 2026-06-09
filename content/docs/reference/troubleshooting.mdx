@@ -15,7 +15,7 @@ A run that stops mid-flow is usually not stuck — it is waiting. Check its stat
 circuit runs show --run-folder .circuit/runs/<run-id> --json
 ```
 
-If the state is `checkpoint_waiting`, the run paused at a
+If the engine state is `waiting_checkpoint`, the run paused at a
 [checkpoint](/docs/concepts/checkpoints) and wants a decision. The run folder
 records the checkpoint request: the context to review and the allowed choices.
 Answer it by resuming with one of those choices:
