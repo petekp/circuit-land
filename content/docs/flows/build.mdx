@@ -27,35 +27,36 @@ Build runs seven stages, carrying each report forward to the next:
 - **Frame** — confirms the Build brief: scope, constraints, and how the change
   will be proven. This is a [checkpoint](/docs/concepts/checkpoints).
 - **Analyze** — a read-only relay reads the codebase so the plan is grounded in
-  the real source, not the brief alone. It also proposes the change's boundaries
-  from what it reads.
+  the real source, not the brief alone. It also proposes the change's limits from
+  what it reads.
 - **Plan** — produces an ordered plan plus the verification commands to run, and
-  carries the change's boundaries forward.
+  carries the change's limits forward.
 - **Act** — relays the implementation to a worker.
 - **Verify** — runs the planned verification commands and records exit status
   and output.
 - **Review** — relays the change to a separate worker for an independent review,
-  which also checks that the change stayed in scope.
+  which also checks that the change stayed inside its limits.
 - **Close** — writes the Build result file and the chain of
   [evidence](/docs/concepts/evidence-and-runs). It will not mark the build
-  complete if the change went outside its scope.
+  complete if the change went outside its limits.
 
 ## Checkpoints
 
 Build stops once, at Frame, to confirm the brief before implementation starts.
 The safe default is to continue.
 
-## Staying in scope
+## Limits
 
 Build records what the change should not do alongside what it should. During
-Analyze, Circuit proposes the change's boundaries: what it must not do, taken
-from your goal; what must stay true, grounded in the code it reads; and an
-optional set of files it is allowed to touch, also from that read. You are never
-asked to list off-limits files.
+Analyze, Circuit proposes the change's limits: what it must not do, taken from
+your goal; what must keep working, grounded in the code it reads; and an optional
+set of files it is allowed to touch, also from that read. You are never asked to
+list off-limits files.
 
-Review judges the change against those boundaries. Close enforces them. The
-build is not marked complete if it went outside its scope, broke a stated
-boundary, or left one of them unchecked.
+Review judges the change against those limits, and Close enforces them. The build
+is not marked complete if it went beyond what was asked, did something it was
+told not to do, broke something that had to keep working, or left one of those
+limits unchecked.
 
 When Analyze sets an allowed set of files, Close also checks it against git. It
 compares the files the change actually touched against that set; anything
