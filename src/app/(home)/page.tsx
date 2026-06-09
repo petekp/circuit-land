@@ -17,7 +17,7 @@ type InstallTarget = {
 };
 
 const codexInstallCommand =
-  "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.6";
+  "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.7";
 
 export const metadata: Metadata = {
   title: "Circuit - repeatable work patterns for coding agents",
