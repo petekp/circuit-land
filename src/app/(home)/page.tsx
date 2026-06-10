@@ -316,13 +316,12 @@ function MastheadSection() {
       </div>
 
       <h1 className="max-w-2xl text-pretty text-base font-medium leading-tight tracking-tight sm:text-xl">
-        Set your agent up to do its best work.
+        Coding agents aren&apos;t unreliable. Your process is.
       </h1>
 
       <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
-        Circuit gives it a process to run, a memory that carries across
-        sessions, and a record that proves the work. For the agent, not over
-        it.
+        Agents learned to work from us, and like us, they do their best work
+        inside a real process. Circuit is that process.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
