@@ -177,7 +177,7 @@ export function ExampleRunSection() {
     <section
       id="see-one-run"
       className="mt-28 flex flex-col gap-10"
-      data-site-hue-stop="0.125"
+      data-site-hue-stop="0.36"
     >
       <div className="flex max-w-3xl flex-col gap-4">
         <div className="flex flex-col gap-3">

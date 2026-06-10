@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     template: "%s - Circuit Docs",
   },
   description:
-    "Documentation for Circuit: repeatable work patterns for coding agents.",
+    "Documentation for Circuit: the process your coding agent follows.",
 };
 
 export default function DocsRootLayout({

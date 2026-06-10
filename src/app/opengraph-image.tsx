@@ -8,7 +8,7 @@ export const size = {
 export const contentType = "image/png";
 
 export const alt =
-  "Circuit — powerful, repeatable work patterns for coding agents. For Claude Code and Codex.";
+  "Circuit - the process your coding agent follows. For Claude Code and Codex.";
 
 export default function Image() {
   return new ImageResponse(
@@ -60,7 +60,7 @@ export default function Image() {
               color: "#b2a999",
             }}
           >
-            Powerful, repeatable work patterns for coding agents.
+            Coding agents aren&apos;t unreliable. Your process is.
           </div>
         </div>
         <div

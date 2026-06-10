@@ -19,9 +19,9 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const siteTitle = "Circuit - repeatable work patterns for coding agents";
+const siteTitle = "Circuit - the process your coding agent follows";
 const siteDescription =
-  "Circuit gives coding agents clear flows, timely skills, evidence, and checkpoints for everyday software work.";
+  "Coding agents do their best work inside a real process. Circuit moves the work step to step and keeps a written record. Tomorrow starts where today ended.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
