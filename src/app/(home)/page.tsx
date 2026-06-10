@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   CopyInstallInstructions,
@@ -11,18 +10,17 @@ import { FlowComposer } from "@/components/flow-composer";
 import { Wordmark } from "@/components/wordmark";
 
 type InstallTarget = {
-  name: "Claude Code" | "Codex" | "OpenCode";
-  commands?: string[];
-  comingSoon?: boolean;
+  name: "Claude Code" | "Codex";
+  commands: string[];
 };
 
 const codexInstallCommand =
   "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.7";
 
 export const metadata: Metadata = {
-  title: "Circuit - repeatable work patterns for coding agents",
+  title: "Circuit - the process your coding agent follows",
   description:
-    "Circuit gives coding agents clear flows, timely skills, evidence, and checkpoints for everyday software work.",
+    "Coding agents do their best work inside a real process. Circuit moves the work step to step and keeps a written record. Tomorrow starts where today ended.",
 };
 
 const installTargets: InstallTarget[] = [
@@ -38,33 +36,15 @@ const installTargets: InstallTarget[] = [
     name: "Codex",
     commands: [codexInstallCommand],
   },
-  {
-    name: "OpenCode",
-    comingSoon: true,
-  },
 ];
 
 const comparison = [
   {
-    name: "Prompting + Skills",
+    name: "Skills, AGENTS.md, and playbooks",
     approach:
-      "Skills give the agent stronger moves: read a trace, write a test, inspect a browser, review a diff. You still decide which move to call, when to call it, and when enough evidence exists.",
+      "A good skill gives the agent a stronger move: read a trace, write a test, inspect a browser. A good AGENTS.md or playbook gives it context, the local picture of what done means here. Both make each step of the work better.",
     circuit:
-      "Circuit uses those moves inside a flow. It routes the task, chooses the next block, carries context forward, and asks for your judgment only when the result depends on it.",
-  },
-  {
-    name: "AGENTS.md and Playbooks",
-    approach:
-      "Rules, docs, and saved prompts tell the agent what good work should look like. They are useful context, but they mostly sit still until you remember to apply them.",
-    circuit:
-      "Circuit turns the playbook into motion. Each block has an input, output, and done condition, so the process produces evidence instead of relying on memory and vibes.",
-  },
-  {
-    name: "Spec-driven development",
-    approach:
-      "Write a detailed spec and the agent implements against it. The spec captures intent well, but it stays a document. It does not carry the work through building, checking, and review.",
-    circuit:
-      "Circuit treats the spec as one input. Frame turns intent into a typed brief, then the flow carries it forward through plan, act, verify, and review until the outcome is backed by evidence.",
+      "The catch is timing. A skill waits for you to call it at the right moment, and a playbook sits still until someone applies it. Circuit puts both in motion inside a flow. It carries the context forward, and every handoff is typed, so the run produces a record you can check.",
   },
   {
     name: "Claude Code's Dynamic Workflows",
@@ -74,18 +54,11 @@ const comparison = [
       "Circuit is the repeatable process for everyday work. It picks Build, Fix, Review, Explore, Prototype, or Pursue, then runs the same proven process without making you design the orchestration.",
   },
   {
-    name: "Autonomous coding agents",
+    name: "Spec-driven development",
     approach:
-      "Agents like Cursor, Devin, or Copilot's agent take a task and run it end to end. They are powerful, but each run is shaped by the prompt, so what they do and how rigorously they do it varies.",
+      "Write a detailed spec and the agent implements against it. The spec captures intent well, but it stays a document. It does not carry the work through building, checking, and review.",
     circuit:
-      "Circuit is not another agent. It is the process your agent follows: running inside Claude Code or Codex, it moves the same kind of work the same way every time, with evidence to show for it.",
-  },
-  {
-    name: "Compound engineering",
-    approach:
-      "A philosophy: each task should leave the system smarter, so the next one is easier, through planning, parallel review, and documenting what worked. You assemble that loop yourself, task by task.",
-    circuit:
-      "Circuit is that loop, productized. Every flow already plans, acts, reviews, and checks, and each run leaves structured records: the substrate that longitudinal memory builds on.",
+      "Circuit treats the spec as one input. Frame turns intent into a typed brief, then the flow carries it forward through plan, act, verify, and review until the outcome is backed by evidence.",
   },
 ];
 
@@ -107,7 +80,7 @@ const blockInternals = [
   {
     name: "Human Decision",
     detail:
-      "Pauses only when judgment changes the result: a tradeoff, a taste call, risky scope.",
+      "Names the moments where your judgment changes the result: a tradeoff, a taste call, risky scope.",
   },
   {
     name: "Plan",
@@ -154,6 +127,26 @@ After Circuit is installed, start with:
 
 Use /circuit:run to start each task. Circuit routes the task to Build, Fix, Review, Explore, Prototype, or Pursue when that is the right fit.`;
 
+/* Condensed from a real Fix run record in the Circuit repo
+   (docs/release/proofs/runs/fix/run/reports/fix-result.json).
+   Field values are verbatim; the nine evidence links are trimmed to four. */
+const fixRunExcerpt = `{
+  "summary": "Fix 'quick fix: restore the failing login test': Added the fallback guard for the synthetic missing token path.",
+  "outcome": "partial",
+  "verification_status": "passed",
+  "change_set_status": "pass",
+  "review_status": "skipped",
+  "review_skip_reason": "Reviewer connector failed after proof passed; Fix closed with regression, verification, and change-set evidence.",
+  "residual_risks": [],
+  "evidence_links": [
+    { "report_id": "fix.diagnosis", "path": "reports/fix/diagnosis.json" },
+    { "report_id": "fix.regression-proof", "path": "reports/fix/regression-proof.json" },
+    { "report_id": "fix.verification", "path": "reports/fix/verification.json" },
+    { "report_id": "fix.change-set", "path": "reports/fix/change-set.json" },
+    … 5 more
+  ]
+}`;
+
 function Label({
   children,
   as: Tag = "div",
@@ -165,6 +158,17 @@ function Label({
     <Tag className="font-sans text-[15px] font-semibold tracking-tight text-foreground sm:text-[16px]">
       {children}
     </Tag>
+  );
+}
+
+function SectionDocsLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="text-[13px] font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -227,20 +231,6 @@ function CodexLogo() {
   );
 }
 
-function OpenCodeLogo() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="opencode-logo"
-      viewBox="0 0 24 42"
-      focusable="false"
-    >
-      <path d="M18 30H6V18H18V30Z" fill="#4B4646" />
-      <path d="M18 12H6V30H18V12ZM24 36H0V6H24V36Z" fill="#B7B1B1" />
-    </svg>
-  );
-}
-
 function GithubLogo() {
   return (
     <svg
@@ -266,21 +256,6 @@ function XLogo() {
     >
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
     </svg>
-  );
-}
-
-function ProcessArtwork() {
-  return (
-    <figure className="section-artwork process-artwork relative aspect-[1.45/1] min-h-[21rem] w-full max-w-full overflow-hidden bg-muted/40 lg:min-h-[25rem]">
-      <Image
-        src="/expert-process-illustration.png"
-        alt="Expert operator arranging process blocks, route lines, evidence cards, and verification tools."
-        fill
-        priority
-        sizes="(max-width: 1024px) 100vw, 48vw"
-        className="object-cover"
-      />
-    </figure>
   );
 }
 
@@ -344,70 +319,53 @@ function MastheadSection() {
   );
 }
 
-function ProcessSection() {
+function GapSection() {
   return (
-    <section
-      className="mt-28 grid gap-8 lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1fr)] lg:items-center"
-      data-site-hue-stop="0.25"
-    >
-      <div className="flex max-w-3xl flex-col gap-10">
-        <Label as="h2">Why Process</Label>
-
+    <section className="mt-28 flex flex-col" data-site-hue-stop="0.09">
+      <div className="flex max-w-3xl flex-col gap-5">
+        <Label as="h2">What your agent works without</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
-          <div className="flex flex-col gap-3">
-            <p className="text-[18px] font-medium leading-snug tracking-tight text-foreground">
-              Great engineers don&apos;t rely on raw talent.
-            </p>
-            <p>
-              They work through a process they trust, and that process is what
-              lets their judgment do its best work. It frees them to stop
-              re-deciding the basics and spend attention where it matters.
-            </p>
-          </div>
           <p>
-            Coding agents are surprisingly capable, but like humans, ad-hoc chat
-            isn&apos;t the best way to do effective work. You become the
-            agent&apos;s working memory. This is taxing for you, and a
-            suboptimal experience for the agent that puts it at a disadvantage.
+            Watch your agent work. It reads the codebase and the AGENTS.md,
+            checks what CI will catch, and improvises a process on the spot. It
+            survives on notes to itself: plan files, scratchpads, a compressed
+            summary of what it had to forget. When the notes run out, you
+            become the working memory.
           </p>
-          <div className="flex flex-col gap-3">
-            <p className="text-[18px] font-medium leading-snug tracking-tight text-foreground">
-              Circuit sets agents up for success.
-            </p>
-            <p>
-              The agent is the capable part. Circuit is the path it runs along.
-              You describe the task, and Circuit supplies the process that fits
-              it: the right moves, in the right order, with the checks that
-              prove the work. You hand off more and keep your confidence,
-              because the result comes with evidence, not just a claim that
-              it&apos;s done.
-            </p>
-          </div>
+          <p>
+            An engineer joining a team gets more than that. The team supplies
+            an approach that fits the task, review at the right moments, a
+            paper trail, and a memory of what was decided and why.
+          </p>
+          <p className="font-medium text-foreground">
+            Your agent learned this work from engineers who had all of that.
+            Every one of these gaps can be filled.
+          </p>
         </div>
       </div>
-
-      <ProcessArtwork />
     </section>
   );
 }
 
 function FlowFlexSection() {
   return (
-    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.375">
+    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.18">
       {/* Header and lead live in the standard content column, aligned with the
           rest of the page. */}
       <div className="flex max-w-3xl flex-col gap-3">
-        <Label as="h2">A flexible set of workflows</Label>
+        <Label as="h2">A process that fits</Label>
         <p className="text-balance text-[15px] leading-relaxed text-muted-foreground">
-          Just invoke{" "}
+          You wouldn&apos;t run a hotfix like a redesign. Your agent
+          shouldn&apos;t have to. Point{" "}
           <span className="font-mono font-medium text-foreground">
             /circuit:run
           </span>{" "}
-          with a task and it will automatically pick the appropriate flow. Flows
-          have varying levels of rigor depending on the task; high for big jobs,
-          low for quick changes. Tournament mode generates multiple competing
-          solutions in parallel. All steps are typed with deterministic handoff,
-          ensuring no steps are skipped.
+          at a task and Circuit picks the flow that fits, at the rigor you
+          choose: deep for big jobs, light for quick changes. Every handoff is
+          typed and Circuit does the routing, so the agent can&apos;t skip a
+          step or silently drop context mid-run. Some tasks deserve more than
+          one attempt. Tournament mode generates competing solutions in
+          parallel.
         </p>
       </div>
 
@@ -421,7 +379,7 @@ function FlowFlexSection() {
 
 function BlockInternalsSection() {
   return (
-    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.5">
+    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.27">
       <div className="flex flex-col gap-10">
         <div className="flex max-w-3xl flex-col gap-3">
           <Label as="h2">Inside a Block</Label>
@@ -456,98 +414,124 @@ function BlockInternalsSection() {
               </p>
             </article>
           ))}
-          <article className="block-internal-card block-internal-card-planned relative flex flex-col gap-4 bg-muted/40 p-5">
-            <span aria-hidden="true" className="block-edge block-edge-t">
-              <i />
-              <i />
-              <i />
-            </span>
-            <span aria-hidden="true" className="block-edge block-edge-l">
-              <i />
-              <i />
-              <i />
-            </span>
-            <div className="flex items-center gap-2">
-              <h3 className="text-[15px] font-medium tracking-tight">Custom</h3>
-              <span className="soft-chip shrink-0 px-1.5 py-1 text-[10px] uppercase leading-none tracking-[0.15em] text-muted-foreground">
-                soon
-              </span>
-            </div>
-            <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
-              Author your own blocks with typed inputs and outputs, then compose
-              them into new flows. Coming soon.
-            </p>
-          </article>
         </div>
 
-        <Link
-          href="/docs/concepts/how-it-works"
-          className="text-[13px] font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
+        <SectionDocsLink href="/docs/concepts/how-it-works">
           See how blocks compose into stages and flows →
-        </Link>
+        </SectionDocsLink>
       </div>
     </section>
   );
 }
 
-function TrustSection() {
+function RecordSection() {
   return (
-    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.625">
-      <Label as="h2">Why You Can Trust It</Label>
+    <section className="mt-28 flex flex-col gap-8" data-site-hue-stop="0.45">
+      <div className="flex max-w-3xl flex-col gap-3">
+        <Label as="h2">Every run leaves a record</Label>
+        <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
+          <p>
+            An engineer&apos;s work leaves a trail. Commits, review threads, CI
+            logs. You can go back and check. An agent leaves you a diff and a
+            note. And in a note, &apos;verified&apos; is just another claim.
+          </p>
+          <p>
+            With Circuit, every run ends in a file: what was checked and what
+            it showed, what was decided, what risks stay open.
+          </p>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="flex min-w-0 flex-col gap-2">
-          <h3 className="text-[15px] font-medium tracking-tight">
-            <Link
-              href="/docs/concepts/evidence-and-runs"
-              className="underline-offset-4 hover:underline"
-            >
-              Evidence
-            </Link>
-          </h3>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
-            Circuit keeps checks and results attached to the work. The agent
-            evaluates its own work against that evidence instead of asking you
-            to take it on faith.
+      <figure className="flex w-full max-w-3xl flex-col gap-3">
+        <div className="install-terminal-card overflow-hidden">
+          <pre className="whitespace-pre-wrap break-words px-5 py-4 font-mono text-[12px] leading-6 text-foreground">
+            <code>{fixRunExcerpt}</code>
+          </pre>
+        </div>
+        <figcaption className="text-[12px] leading-relaxed text-muted-foreground">
+          The file a real Fix run left behind, condensed. Each evidence link
+          names a report the run wrote along the way.
+        </figcaption>
+      </figure>
+
+      <SectionDocsLink href="/docs/concepts/evidence-and-runs">
+        More on run records →
+      </SectionDocsLink>
+    </section>
+  );
+}
+
+function CheckpointsSection() {
+  return (
+    <section className="mt-28 flex flex-col" data-site-hue-stop="0.55">
+      <div className="flex max-w-3xl flex-col gap-5">
+        <Label as="h2">When to loop you in</Label>
+        <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
+          <p>
+            You&apos;d never make an engineer guess which calls to run past
+            you. Nobody ever told your agent which ones.
+          </p>
+          <p>
+            Circuit&apos;s flows name those moments up front: a risky
+            direction, an ambiguous goal, a visual choice. At deep rigor,
+            Circuit waits for your answer. Otherwise it takes the safe default
+            and writes it down. The decision point lives in the flow, not the
+            agent&apos;s discretion.
           </p>
         </div>
-        <div className="flex min-w-0 flex-col gap-2">
-          <h3 className="text-[15px] font-medium tracking-tight">
-            <Link
-              href="/docs/concepts/checkpoints"
-              className="underline-offset-4 hover:underline"
-            >
-              Checkpoints
-            </Link>
-          </h3>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
-            Circuit pauses when your judgment changes the outcome: a risky
-            direction, an ambiguous goal, a visual choice. The pause is part of
-            the flow, not the agent&apos;s discretion. Otherwise it keeps
-            moving.
+        <SectionDocsLink href="/docs/concepts/checkpoints">
+          More on checkpoints →
+        </SectionDocsLink>
+      </div>
+    </section>
+  );
+}
+
+function ContinuitySection() {
+  return (
+    <section className="mt-28 flex flex-col" data-site-hue-stop="0.64">
+      <div className="flex max-w-3xl flex-col gap-5">
+        <Label as="h2">Tomorrow starts where today ended</Label>
+        <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
+          <p>
+            A session ends as a transcript, not a status. Somewhere in it is
+            what you decided and what comes next, and carrying that forward
+            has been your job. Circuit writes it down instead.
+          </p>
+          <p>
+            Stop mid-task and close the terminal. Your goal, next action, and
+            run state are waiting in the next session as a distilled brief.
+            Zero setup on Claude Code.
           </p>
         </div>
-        <div className="flex min-w-0 flex-col gap-2">
-          <h3 className="text-[15px] font-medium tracking-tight">Confidence</h3>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
-            The point is confidence while you delegate more: Circuit keeps the
-            process explicit, the evidence attached, and the outcome honest.
+        <SectionDocsLink href="/docs/concepts/continuity">
+          More on continuity →
+        </SectionDocsLink>
+      </div>
+    </section>
+  );
+}
+
+function MemorySection() {
+  return (
+    <section className="mt-28 flex flex-col" data-site-hue-stop="0.73">
+      <div className="flex max-w-3xl flex-col gap-5">
+        <Label as="h2">The next run remembers</Label>
+        <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
+          <p>
+            Teams write things down so no one pays for the same lesson twice.
+            Your agent has been working without that record. Circuit keeps it.
+          </p>
+          <p>
+            Every run leaves a structured record you can search from the
+            command line. Each new run starts by recalling a few hints from
+            past runs, ranked against the goal at hand. Hints only. They never
+            override a check.
           </p>
         </div>
-        <div className="flex min-w-0 flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <h3 className="text-[15px] font-medium tracking-tight">Memory</h3>
-            <span className="soft-chip shrink-0 px-1.5 py-1 text-[10px] uppercase leading-none tracking-[0.15em] text-muted-foreground">
-              soon
-            </span>
-          </div>
-          <p className="text-[13px] leading-relaxed text-muted-foreground">
-            Every run generates structured, CLI-queryable records: choices,
-            checks, evidence, and what happened next. These form a powerful
-            substrate for longitudinal memory.
-          </p>
-        </div>
+        <SectionDocsLink href="/docs/concepts/memory-and-history">
+          More on memory →
+        </SectionDocsLink>
       </div>
     </section>
   );
@@ -555,14 +539,14 @@ function TrustSection() {
 
 function ComparisonSection() {
   return (
-    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.75">
+    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.82">
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">Where It Fits</Label>
         <p className="text-[15px] leading-relaxed text-foreground">
-          Circuit overlaps with tools and approaches you already use, but it
-          solves a different problem. Those tools shape what the agent can do;
-          Circuit shapes how the work moves from request to evidence-backed
-          outcome.
+          Circuit is not another agent. It is the process your agent follows.
+          That means the tools you already use still have their jobs. They
+          shape what the agent can do. Circuit shapes how the work moves and
+          what every step leaves behind.
         </p>
       </div>
 
@@ -595,7 +579,7 @@ function InstallSection() {
     <section
       id="install"
       className="mt-28 flex flex-col gap-7"
-      data-site-hue-stop="0.875"
+      data-site-hue-stop="0.91"
     >
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">Get Started</Label>
@@ -608,50 +592,39 @@ function InstallSection() {
         <CopyInstallInstructions text={agentInstallInstructions} />
       </div>
 
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {installTargets.map((target) => (
           <article
             key={target.name}
-            className={[
-              "install-terminal-card flex flex-col overflow-hidden",
-              target.comingSoon ? "md:col-span-2 lg:col-span-1" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            className="install-terminal-card flex flex-col overflow-hidden"
           >
             <div className="install-terminal-header flex items-center justify-between gap-3 px-5 py-4">
               <h3 className="install-terminal-title text-[15px] font-medium tracking-tight">
-                {target.name === "Claude Code" ? <ClaudeCodeLogo /> : null}
-                {target.name === "Codex" ? <CodexLogo /> : null}
-                {target.name === "OpenCode" ? <OpenCodeLogo /> : null}
+                {target.name === "Claude Code" ? (
+                  <ClaudeCodeLogo />
+                ) : (
+                  <CodexLogo />
+                )}
                 {target.name}
               </h3>
-              {target.commands ? (
-                <CopyTextButton
-                  text={target.commands.join("\n")}
-                  className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
-                />
-              ) : target.comingSoon ? (
-                <span className="soft-chip inline-flex shrink-0 items-center justify-center px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                  Soon
-                </span>
-              ) : null}
+              <CopyTextButton
+                text={target.commands.join("\n")}
+                className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
+              />
             </div>
 
-            {target.commands ? (
-              <pre className="whitespace-pre-wrap break-words px-5 pb-4 text-[13px] leading-7 text-foreground">
-                <code>
-                  {target.commands.map((command) => `› ${command}`).join("\n")}
-                </code>
-              </pre>
-            ) : (
-              <div className="flex flex-1 items-center justify-center px-5 py-4 text-center text-[13px] leading-7 text-muted-foreground">
-                OpenCode support coming soon.
-              </div>
-            )}
+            <pre className="whitespace-pre-wrap break-words px-5 pb-4 text-[13px] leading-7 text-foreground">
+              <code>
+                {target.commands.map((command) => `› ${command}`).join("\n")}
+              </code>
+            </pre>
           </article>
         ))}
       </div>
+
+      <p className="text-[12px] leading-relaxed text-muted-foreground">
+        OpenCode support is coming.
+      </p>
     </section>
   );
 }
@@ -692,11 +665,14 @@ export default function Home() {
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-16">
       <MastheadSection />
+      <GapSection />
       <FlowFlexSection />
-      <ExampleRunSection />
-      <ProcessSection />
       <BlockInternalsSection />
-      <TrustSection />
+      <ExampleRunSection />
+      <RecordSection />
+      <CheckpointsSection />
+      <ContinuitySection />
+      <MemorySection />
       <ComparisonSection />
       <InstallSection />
       <SiteFooter />
