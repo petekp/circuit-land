@@ -395,9 +395,10 @@ function GapSection() {
           <p>
             Watch your agent work. It reads the codebase and the AGENTS.md,
             checks what CI will catch, and improvises a process on the spot.
-            It survives on notes to itself: plan files, scratchpads, a
-            compressed summary of what it had to forget. When the notes run
-            out, you become the working memory.
+            It survives on notes to itself like Guy Pearce in{" "}
+            <em>Memento</em>: plan files, scratchpads, a compressed summary
+            of what it had to forget. When the notes run out, you become the
+            working memory.
           </p>
           <p>
             An engineer joining a team gets more than that. The team supplies
