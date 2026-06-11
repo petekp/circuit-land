@@ -118,31 +118,34 @@ const blockInternals = [
   },
 ];
 
-const agentInstallInstructions = `Please install Circuit for the coding-agent tool I am using in this project.
+const agentInstallInstructions = `Install Circuit, then hand it something real.
 
-If this is Claude Code, run:
+If you are Claude Code, run:
 /plugin marketplace add petekp/circuit
 /plugin install circuit@circuit
 /reload-plugins
 
-If this is Codex, run:
+If you are Codex, run:
 ${codexInstallCommand}
 
-After Circuit is installed, start with:
-/circuit:run <my task>
+When the install finishes, suggest a first run, like:
+/circuit:run fix the flakiest test in this repo
+/circuit:run review the changes on this branch before I open the PR
 
-Use /circuit:run to start each task. Circuit routes the task to Build, Fix, Review, Explore, Prototype, or Pursue when that is the right fit.`;
+From here on, start every task with /circuit:run. Circuit picks the flow that fits: Build, Fix, Review, Explore, Prototype, or Pursue.`;
 
-/* Condensed from a real Fix run record in the Circuit repo
-   (docs/release/proofs/runs/fix/run/reports/fix-result.json).
-   Field values are verbatim; fields are trimmed to the load-bearing ones
-   and the nine evidence links to four. */
+/* A representative Fix record, written to the real fix-result schema:
+   field names, enum values, and the 'fixed' gating (regression proved,
+   verification passed) all match src/flows/fix/reports.ts in the Circuit
+   repo. Fields are trimmed to the load-bearing ones and the nine evidence
+   links to four. The story is authored, not a verbatim run. */
 const fixRunExcerpt = `{
-  "summary": "Fix 'quick fix: restore the failing login test': Added the fallback guard for the synthetic missing token path.",
-  "outcome": "partial",
+  "summary": "Fix 'customers get double-charged when checkout retries': capture now reuses the order's idempotency key, so a retry settles on the original charge.",
+  "outcome": "fixed",
+  "regression_status": "proved",
   "verification_status": "passed",
-  "review_status": "skipped",
-  "review_skip_reason": "Reviewer connector failed after proof passed; Fix closed with regression, verification, and change-set evidence.",
+  "review_status": "completed",
+  "residual_risks": ["The refund path bypasses the idempotency key; flagged, not changed here."],
   "evidence_links": [
     { "report_id": "fix.diagnosis", "path": "reports/fix/diagnosis.json" },
     { "report_id": "fix.regression-proof", "path": "reports/fix/regression-proof.json" },
@@ -158,6 +161,9 @@ const fixRunExcerpt = `{
 const recordStatusInk: Record<string, string> = {
   passed: "text-signal",
   pass: "text-signal",
+  fixed: "text-signal",
+  proved: "text-signal",
+  completed: "text-signal",
   failed: "text-destructive",
   skipped: "text-muted-foreground",
 };
@@ -508,8 +514,8 @@ function RecordSection() {
           </pre>
         </div>
         <figcaption className="text-[12px] leading-relaxed text-muted-foreground">
-          The file a real Fix run left behind, condensed. Each evidence link
-          names a report the run wrote along the way.
+          What a Fix run leaves behind, condensed. Each evidence link names a
+          report the run wrote along the way.
         </figcaption>
       </figure>
 
@@ -522,8 +528,8 @@ function RecordSection() {
 
 /* The three quieter sections each carry one compact artifact: the product
    surface the prose is describing, drawn in the page's own materials. They
-   are illustrative examples, not verbatim records (the run record above is
-   the verbatim one). */
+   are illustrative examples, not verbatim records, like the run record
+   above. */
 function CheckpointArtifact() {
   return (
     <aside

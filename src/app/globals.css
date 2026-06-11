@@ -198,8 +198,9 @@
 }
 
 /* A real terminal window: chrome strip on top, scrollable body below
-   with an always-present thin scrollbar. Fixed height on small
-   screens; on lg it stretches (flex-1) to fill the panel row. */
+   with an always-present thin scrollbar. The height is capped on every
+   screen so long transcripts scroll instead of stretching the panel;
+   on lg it can flex between the bounds to fill the panel row. */
 .example-run-terminal {
   height: 28rem;
 }
@@ -208,6 +209,7 @@
   .example-run-terminal {
     height: auto;
     min-height: 28rem;
+    max-height: 32rem;
   }
 }
 
@@ -231,9 +233,32 @@
   flex: 1;
   min-height: 0;
   overflow-y: scroll;
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent)
-    transparent;
+}
+
+/* Chromium and Safari only show a persistent scrollbar on macOS when the
+   ::-webkit-scrollbar pseudos are styled (the standard properties keep the
+   hide-when-idle overlay bar). Chromium also ignores these pseudos when
+   scrollbar-width/scrollbar-color are set, so the standard properties are
+   scoped to engines without the pseudo, i.e. Firefox. */
+.example-run-terminal-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.example-run-terminal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.example-run-terminal-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 25%, transparent);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .example-run-terminal-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 25%, transparent)
+      transparent;
+  }
 }
 
 .example-run-user-row {
