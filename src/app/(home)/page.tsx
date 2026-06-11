@@ -208,7 +208,7 @@ function SectionDocsLink({ href, children }: { href: string; children: ReactNode
   return (
     <Link
       href={href}
-      className="text-[14px] font-medium text-foreground underline decoration-signal/50 underline-offset-4 hover:decoration-signal"
+      className="text-[14px] font-medium text-foreground underline decoration-foreground/40 underline-offset-4 hover:decoration-foreground"
     >
       {children}
     </Link>
@@ -385,27 +385,30 @@ function MastheadSection() {
 function GapSection() {
   return (
     <section className="mt-28 flex flex-col gap-10">
-      <Label as="h2">What your agent works without</Label>
-
       <GapChapter />
 
-      <div className="flex max-w-3xl flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
-        <p>
-          Watch your agent work. It reads the codebase and the AGENTS.md,
-          checks what CI will catch, and improvises a process on the spot. It
-          survives on notes to itself: plan files, scratchpads, a compressed
-          summary of what it had to forget. When the notes run out, you become
-          the working memory.
-        </p>
-        <p>
-          An engineer joining a team gets more than that. The team supplies an
-          approach that fits the task, review at the right moments, a paper
-          trail, and a memory of what was decided and why.
-        </p>
-        <p className="text-foreground">
-          Your agent learned this work from engineers who had all of that.
-          Every one of these gaps can be filled.
-        </p>
+      {/* The heading lives with the prose it introduces, below the
+          visualization, so the stage opens the section on its own. */}
+      <div className="flex max-w-3xl flex-col gap-3">
+        <Label as="h2">What your agent works without</Label>
+        <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
+          <p>
+            Watch your agent work. It reads the codebase and the AGENTS.md,
+            checks what CI will catch, and improvises a process on the spot.
+            It survives on notes to itself: plan files, scratchpads, a
+            compressed summary of what it had to forget. When the notes run
+            out, you become the working memory.
+          </p>
+          <p>
+            An engineer joining a team gets more than that. The team supplies
+            an approach that fits the task, review at the right moments, a
+            paper trail, and a memory of what was decided and why.
+          </p>
+          <p className="text-foreground">
+            Your agent learned this work from engineers who had all of that.
+            Every one of these gaps can be filled.
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -419,7 +422,7 @@ function FlowFlexSection() {
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">A process that fits</Label>
         <p className="text-balance text-[15px] leading-relaxed text-muted-foreground">
-          You wouldn&apos;t run a hotfix like a redesign. Point{" "}
+          A hotfix is not a redesign. Point{" "}
           <span className="font-mono font-medium text-foreground">
             /circuit:run
           </span>{" "}

@@ -5,10 +5,8 @@
  * format (favicon, terminal, print, embroidery). Color is styling, applied
  * by whoever places it.
  *
- * Three states:
- * - "track":   the opened track alone. For tiny placements (favicons,
- *              16px chrome) where the gate dot would smear.
- * - "rest":    track + the runner waiting at the gate. The default mark.
+ * Two states:
+ * - "track":   the opened track alone. The default mark.
  * - "running": the runner lights in the brand signal color and laps the
  *              track. The accent is allowed here because a running state is
  *              product UI, not a logo placement — and a same-ink runner
@@ -25,19 +23,19 @@ const STADIUM_D = "M 23 15 H 41 A 17 17 0 0 1 41 49 H 23 A 17 17 0 0 1 23 15 Z";
 
 type CircuitMarkProps = {
   size?: number;
-  state?: "track" | "rest" | "running";
+  state?: "track" | "running";
   className?: string;
 };
 
 export function CircuitMark({
   size = 32,
-  state = "rest",
+  state = "track",
   className,
 }: CircuitMarkProps) {
-  // The track-only state closes the gap slightly (12 vs 16) since there is
-  // no runner to make room for.
-  const gap = state === "track" ? 12 : 16;
-  const dashoffset = state === "track" ? 62.7 : 60.7;
+  // The running state widens the gap slightly (16 vs 12) to make room for
+  // the runner passing through the gate.
+  const gap = state === "running" ? 16 : 12;
+  const dashoffset = state === "running" ? 60.7 : 62.7;
 
   return (
     <svg
@@ -57,7 +55,6 @@ export function CircuitMark({
         strokeDasharray={`${100 - gap} ${gap}`}
         strokeDashoffset={dashoffset}
       />
-      {state === "rest" && <circle cx={58} cy={32} r={4} fill="currentColor" />}
       {state === "running" && (
         <path
           className="circuit-mark-lap"

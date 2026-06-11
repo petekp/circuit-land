@@ -25,7 +25,10 @@ import { RunStageReveal } from "./reveal";
 //
 // Bottom lane (with Circuit): every run rides the same rail and WRITES
 // ITS RECORD as it goes — a small document rides level with the pulse,
-// gaining a line as steps complete. When the run finishes, the document
+// gaining a line as steps complete. Skill-slot sockets sit above select
+// pads; a chip snaps into each as the run seats into the step below,
+// so capability visibly arrives at the step that needs it (the counter
+// to lane A's wandering off to scattered notes). When the run finishes, the document
 // visibly drops onto a STACK below the last pad — one card per run, the
 // stack growing across the loop — and a ring pings around the stack as
 // each new run consults it at its first step. The run compounds —
@@ -86,6 +89,13 @@ const TICK_EDGE = 28;
 const TICK_SPACING = 14;
 const TICK_RESIDUE = 0.25;
 
+// Skill slots: a socket on a stem above select pads. The socket is
+// fixed furniture, like the pads; the chip inside snaps in as the run
+// seats into the step below, then dims to residue with the seats.
+const SLOT_Y = RAIL_B_Y - 46;
+const SLOT_SIZE = 18;
+const CHIP_SIZE = 10;
+
 // Lane A (without): improvised wanders, each with its own error
 // schedule. The dwell at each collision is the stunned beat before
 // retreating. Error marks sit just past the collision point, in the
@@ -145,6 +155,11 @@ type StageConfig = {
     exitPace: number;
     // One record line lands as each of these pads completes.
     docLinePads: number[];
+    // Pads that carry a skill slot: a socket above the rail where a
+    // chip snaps in as the run seats into that step. The contrast with
+    // lane A: capability arrives at the step that needs it, instead of
+    // the run wandering off to scattered notes.
+    skillSlotPads: number[];
     // The reduced-motion still freezes one with-run mid-route: some
     // steps freshly seated, the rest showing the previous run's residue.
     stillX: number;
@@ -244,6 +259,7 @@ const WIDE: StageConfig = {
     paceStep: 0.08,
     exitPace: 0.38,
     docLinePads: [0, 2, 4, 6],
+    skillSlotPads: [2, 5],
     stillX: 885,
     stillSeated: 5,
     stillDocLines: 3,
@@ -331,6 +347,7 @@ const NARROW: StageConfig = {
     paceStep: 0.16,
     exitPace: 0.45,
     docLinePads: [0, 1, 2, 3],
+    skillSlotPads: [1],
     stillX: 520,
     stillSeated: 3,
     stillDocLines: 3,
@@ -364,6 +381,31 @@ function seatKeyframes(name: string, arrivals: number[]) {
   return `@keyframes ${name} {
   ${frames}
   100% { opacity: ${SEAT_SETTLE}; transform: scale(1); }
+}`;
+}
+
+// A skill chip drops into its socket as the pulse seats into the step
+// below: it vanishes upward just before arrival, snaps back in from
+// above with a small overshoot, then follows the seats' residue
+// rhythm. Same event grammar as a seat, plus the drop-in.
+function chipKeyframes(name: string, arrivals: number[]) {
+  const frames = arrivals
+    .map((arrival, k) => {
+      const runStart = k * LANE_B_PERIOD;
+      return `${pct(runStart)}% { opacity: ${SEAT_SETTLE}; transform: translateY(0px); }
+  ${pct(runStart + 0.3)}% { opacity: ${SEAT_RESIDUE}; transform: translateY(0px); }
+  ${pct(arrival - 0.24)}% { opacity: ${SEAT_RESIDUE}; transform: translateY(0px); }
+  ${pct(arrival - 0.18)}% { opacity: 0; transform: translateY(-8px); }
+  ${pct(arrival - 0.04)}% { opacity: 0; transform: translateY(-8px); }
+  ${pct(arrival)}% { opacity: 1; transform: translateY(0px); }
+  ${pct(arrival + 0.08)}% { opacity: 1; transform: translateY(1.5px); }
+  ${pct(arrival + 0.16)}% { opacity: 1; transform: translateY(0px); }
+  ${pct(arrival + 0.3)}% { opacity: ${SEAT_SETTLE}; transform: translateY(0px); }`;
+    })
+    .join("\n  ");
+  return `@keyframes ${name} {
+  ${frames}
+  100% { opacity: ${SEAT_SETTLE}; transform: translateY(0px); }
 }`;
 }
 
@@ -588,19 +630,23 @@ function auraKeyframes(
 }`;
 }
 
+// The aura only draws when a lane animates it (lane B's working glow).
+// A static aura on the white lane-A square reads as a gray outline.
 function Pulse({ auraClassName }: { auraClassName?: string }) {
   return (
     <>
-      <rect
-        className={auraClassName}
-        x={-PULSE_SIZE / 2 - 3}
-        y={-PULSE_SIZE / 2 - 3}
-        width={PULSE_SIZE + 6}
-        height={PULSE_SIZE + 6}
-        rx={3.5}
-        fill="currentColor"
-        opacity={0.15}
-      />
+      {auraClassName && (
+        <rect
+          className={auraClassName}
+          x={-PULSE_SIZE / 2 - 3}
+          y={-PULSE_SIZE / 2 - 3}
+          width={PULSE_SIZE + 6}
+          height={PULSE_SIZE + 6}
+          rx={3.5}
+          fill="currentColor"
+          opacity={0.15}
+        />
+      )}
       <rect
         x={-PULSE_SIZE / 2}
         y={-PULSE_SIZE / 2}
@@ -657,6 +703,91 @@ function SteerGlyph() {
 }
 
 const half = PAD_SIZE / 2;
+
+// Hover tooltips: each zone is an invisible hit area over one of the
+// stage's fixtures; the card inside appears on :hover via the stage
+// CSS, so the whole layer is plain SVG with no client JS. Cards
+// prefer to sit above their zone and flip below when that would leave
+// the frame. The cards are a pointer nicety — the aria-label already
+// narrates the full scene.
+type StageTip = {
+  id: string;
+  title: string;
+  lines: string[];
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+  ink: string;
+};
+
+function TipZone({
+  p,
+  tip,
+  frame,
+}: {
+  p: string;
+  tip: StageTip;
+  frame: { width: number; height: number };
+}) {
+  const width = Math.ceil(
+    Math.max(tip.title.length * 7.6, ...tip.lines.map((l) => l.length * 6.3)) +
+      26,
+  );
+  const height = 36 + tip.lines.length * 17;
+  const bx = Math.min(
+    Math.max(tip.cx - width / 2, 10),
+    frame.width - width - 10,
+  );
+  let by = tip.cy - tip.ry - 10 - height;
+  if (by < 8) by = tip.cy + tip.ry + 10;
+  return (
+    <g className={`${p}-tipzone`} style={{ color: tip.ink }} aria-hidden="true">
+      <rect
+        x={tip.cx - tip.rx}
+        y={tip.cy - tip.ry}
+        width={tip.rx * 2}
+        height={tip.ry * 2}
+        rx={10}
+        fill="transparent"
+      />
+      <g className={`${p}-tipcard`}>
+        <rect
+          x={bx}
+          y={by}
+          width={width}
+          height={height}
+          rx={7}
+          style={{ fill: "var(--background)" }}
+          stroke="currentColor"
+          strokeOpacity={0.35}
+          strokeWidth={1}
+        />
+        <text
+          x={bx + 13}
+          y={by + 22}
+          fill="currentColor"
+          fontSize={13}
+          fontWeight={600}
+        >
+          {tip.title}
+        </text>
+        {tip.lines.map((line, i) => (
+          <text
+            key={line}
+            x={bx + 13}
+            y={by + 41 + i * 17}
+            style={{ fill: "var(--foreground)" }}
+            opacity={0.8}
+            fontSize={12.5}
+          >
+            {line}
+          </text>
+        ))}
+      </g>
+    </g>
+  );
+}
 
 function GapStage({
   config,
@@ -801,6 +932,15 @@ ${seatKeyframes(name, arrivals)}`;
     })
     .join("\n");
 
+  const chipCss = laneB.skillSlotPads
+    .map((padIdx) => {
+      const name = `${p}-chip-${padIdx}`;
+      const arrivals = laneBJourneys.map((j) => j.arrivalSeconds[padIdx + 1]);
+      return `.${name} { animation: ${name} ${LOOP_SECONDS}s linear infinite; transform-box: fill-box; transform-origin: center; }
+${chipKeyframes(name, arrivals)}`;
+    })
+    .join("\n");
+
   const docCss = laneBJourneys
     .map((journey, k) => {
       const start = k * LANE_B_PERIOD;
@@ -879,11 +1019,15 @@ ${tickKeyframes(name, land, 0.95)}`;
 .rs-gap2-with { color: var(--signal); }
 .rs-gap2-pulse-ink { color: var(--ink-bright); }
 .rs-gap2-error { color: var(--destructive); transform-box: fill-box; transform-origin: center; }
+.${p}-tipzone { cursor: help; }
+.${p}-tipzone .${p}-tipcard { opacity: 0; pointer-events: none; }
+.${p}-tipzone:hover .${p}-tipcard { opacity: 1; }
 @media (prefers-reduced-motion: no-preference) {
 ${laneACss}
 ${noteCss}
 ${laneBPulseCss}
 ${seatCss}
+${chipCss}
 ${docCss}
 ${cardCss}
 ${ghostCss}
@@ -903,12 +1047,129 @@ ${entranceCss}
   const tickX = (index: number, count: number) =>
     frame.width - TICK_EDGE - (count - 1 - index) * TICK_SPACING;
 
+  // The hover layer's zones, anchored to the stage's fixed furniture
+  // (labels, notes, error marks, rail, slots, stack, tallies). Later
+  // entries paint on top where zones overlap.
+  const inkB = "var(--signal)";
+  const tips: StageTip[] = [
+    {
+      id: "label-a",
+      title: "The same agent",
+      lines: [
+        "No supplied process. Each run improvises",
+        "its route from zero.",
+      ],
+      cx: label.x + 80,
+      cy: 31,
+      rx: 95,
+      ry: 14,
+      ink: INK_A,
+    },
+    ...laneA.notes.map((note, n) => ({
+      id: `note-${n}`,
+      title: "Scattered context",
+      lines: [
+        "Plan files and notes the run leaves itself,",
+        "then detours back to re-read.",
+      ],
+      cx: note.x,
+      cy: note.y,
+      rx: 22,
+      ry: 22,
+      ink: INK_A,
+    })),
+    ...laneA.runs.flatMap((run, i) =>
+      run.errors.map((err, j) => ({
+        id: `errzone-${i}-${j}`,
+        title: "An issue",
+        lines: [
+          "The whole run flashes red and stalls.",
+          "The bubble is you, steering it back.",
+        ],
+        cx: err.x,
+        cy: err.y,
+        rx: 20,
+        ry: 20,
+        ink: INK_A,
+      })),
+    ),
+    {
+      id: "tally-a",
+      title: "The score",
+      lines: ["Three runs finish in this loop."],
+      cx: tickX(1, laneA.runs.length),
+      cy: 32,
+      rx: 34,
+      ry: 16,
+      ink: INK_A,
+    },
+    {
+      id: "label-b",
+      title: "The same agent, on a flow",
+      lines: [
+        "Circuit supplies the steps, the checks,",
+        "and the record of the work.",
+      ],
+      cx: label.x + 80,
+      cy: 207,
+      rx: 95,
+      ry: 14,
+      ink: inkB,
+    },
+    {
+      id: "rail",
+      title: "The flow's steps",
+      lines: [
+        "Every run rides the same rail and seats",
+        "into each step in order.",
+      ],
+      cx: frame.width / 2,
+      cy: RAIL_B_Y,
+      rx: frame.width / 2 - 140,
+      ry: 17,
+      ink: inkB,
+    },
+    ...laneB.skillSlotPads.map((padIdx) => ({
+      id: `slotzone-${padIdx}`,
+      title: "A skill slot",
+      lines: ["The capability this step needs", "snaps in right here."],
+      cx: pads[padIdx].x,
+      cy: SLOT_Y,
+      rx: 18,
+      ry: 18,
+      ink: inkB,
+    })),
+    {
+      id: "stack",
+      title: "Run records",
+      lines: [
+        "Each run files what it did and checked.",
+        "The next one reads the stack as it starts.",
+      ],
+      cx: recordSlotX + DOC.width / 2,
+      cy: RECORD_SLOT_Y + DOC.height / 2 - 4,
+      rx: DOC.width / 2 + 12,
+      ry: 30,
+      ink: inkB,
+    },
+    {
+      id: "tally-b",
+      title: "The score",
+      lines: ["Four runs finish in the same loop."],
+      cx: tickX(1, LANE_B_RUN_COUNT) + TICK_SPACING / 2,
+      cy: 208,
+      rx: 36,
+      ry: 16,
+      ink: inkB,
+    },
+  ];
+
   return (
     <svg
       viewBox={`0 0 ${frame.width} ${frame.height}`}
       className={className}
       role="img"
-      aria-label="An endless procession of runs, shown in two lanes; each lane's next run is already entering as the last one finishes. Without Circuit, each agent improvises a different route in white, flashes red when it hits an error, waits for the user to steer it onward, detours past markdown notes scattered around the board to re-read context, and its route evaporates behind it; nothing carries over to the next run. With Circuit, every run rides the same rail and writes a small document as it works, one line per completed step. When the run finishes, the document drops onto a growing stack of records, and each new run consults the stack as it starts and gains speed as it goes. Tally marks at the right edge keep score: four runs finish with Circuit in the time three finish without."
+      aria-label="An endless procession of runs, shown in two lanes; each lane's next run is already entering as the last one finishes. Without Circuit, each agent improvises a different route in white, flashes red when it hits an error, waits for the user to steer it onward, detours past markdown notes scattered around the board to re-read context, and its route evaporates behind it; nothing carries over to the next run. With Circuit, every run rides the same rail and writes a small document as it works, one line per completed step. Sockets above some steps show a skill chip snapping in as the run reaches them: the capability a step needs arrives exactly there. When the run finishes, the document drops onto a growing stack of records, and each new run consults the stack as it starts and gains speed as it goes. Tally marks at the right edge keep score: four runs finish with Circuit in the time three finish without."
     >
       <style>{css}</style>
 
@@ -1073,6 +1334,39 @@ ${entranceCss}
             strokeOpacity={0.45}
           />
         ))}
+        {/* Skill-slot sockets: fixed furniture above their pads, popped
+            in with the same entrance as the pads they serve. */}
+        {laneB.skillSlotPads.map((padIdx) => (
+          <g
+            key={`slot-${padIdx}`}
+            className={`${p}-pad`}
+            style={{
+              animationDelay: `${(0.15 + padIdx * padStagger).toFixed(3)}s`,
+            }}
+            aria-hidden="true"
+          >
+            <line
+              x1={pads[padIdx].x}
+              y1={SLOT_Y + SLOT_SIZE / 2}
+              x2={pads[padIdx].x}
+              y2={RAIL_B_Y - half}
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeOpacity={0.3}
+            />
+            <rect
+              x={pads[padIdx].x - SLOT_SIZE / 2}
+              y={SLOT_Y - SLOT_SIZE / 2}
+              width={SLOT_SIZE}
+              height={SLOT_SIZE}
+              rx={3}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeOpacity={0.45}
+            />
+          </g>
+        ))}
         <g className={`${p}-actors`}>
           {pads.map((pad, i) => (
             <rect
@@ -1085,6 +1379,21 @@ ${entranceCss}
               rx={1.5}
               fill="currentColor"
               opacity={i < laneB.stillSeated ? SEAT_SETTLE : SEAT_RESIDUE}
+            />
+          ))}
+          {/* Skill chips: one per socket, snapping in as the run seats
+              into the step below. */}
+          {laneB.skillSlotPads.map((padIdx) => (
+            <rect
+              key={`chip-${padIdx}`}
+              className={`${p}-chip-${padIdx}`}
+              x={pads[padIdx].x - CHIP_SIZE / 2}
+              y={SLOT_Y - CHIP_SIZE / 2}
+              width={CHIP_SIZE}
+              height={CHIP_SIZE}
+              rx={1.5}
+              fill="currentColor"
+              opacity={padIdx < laneB.stillSeated ? SEAT_SETTLE : SEAT_RESIDUE}
             />
           ))}
           {/* The consult ping: flares around the stack as each new run
@@ -1231,6 +1540,14 @@ ${entranceCss}
             );
           })}
         </g>
+      </g>
+
+      {/* The hover layer sits above both lanes so its cards are never
+          painted over by stage elements. */}
+      <g>
+        {tips.map((tip) => (
+          <TipZone key={tip.id} p={p} tip={tip} frame={frame} />
+        ))}
       </g>
     </svg>
   );

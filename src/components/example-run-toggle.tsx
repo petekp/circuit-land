@@ -1,11 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
-
-// One tight spring for every mode transition in this section: quick,
-// slightly damped, no wobble.
-const SPRING = { type: "spring", stiffness: 520, damping: 40 } as const;
 
 type ExampleRunMode = "without" | "with";
 
@@ -197,15 +192,10 @@ export function ExampleRunSection() {
           <ExampleRunToggle mode={mode} setMode={setMode} />
         </div>
 
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={mode}
-            className="example-run-panel-content grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-stretch"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6, transition: { duration: 0.1 } }}
-            transition={SPRING}
-          >
+        <div
+          key={mode}
+          className="example-run-panel-content grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-stretch"
+        >
             {/* The terminal is a real window: chrome strip, scrollable
                 body, visible scrollbar. It stretches to fill the left
                 column. */}
@@ -250,8 +240,7 @@ export function ExampleRunSection() {
                 ))}
               </ol>
             </div>
-          </motion.div>
-        </AnimatePresence>
+        </div>
       </div>
     </section>
   );
