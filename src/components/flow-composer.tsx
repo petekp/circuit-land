@@ -783,7 +783,7 @@ function FlowDiagram({
     return () => ro.disconnect();
   }, [measure]);
 
-  // Geist Mono can change tile widths once loaded, shifting the wrap.
+  // Webfont load can change tile widths, shifting the wrap.
   useEffect(() => {
     if (typeof document === "undefined" || !document.fonts?.ready) return;
     let active = true;

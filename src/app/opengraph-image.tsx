@@ -10,6 +10,15 @@ export const contentType = "image/png";
 export const alt =
   "Circuit - the process your coding agent follows. For Claude Code and Codex.";
 
+// Brand hex values mirror the BRAND THEME block in globals.css
+// (ImageResponse can't read CSS vars). Re-theming means updating these.
+const BG = "#161718"; // --brand-bg
+const TEXT = "#edede9"; // --brand-text
+const MUTED = "#9b9da1"; // --brand-muted
+const SIGNAL = "#06eaa9"; // --brand-signal
+
+const STADIUM_D = "M 23 15 H 41 A 17 17 0 0 1 41 49 H 23 A 17 17 0 0 1 23 15 Z";
+
 export default function Image() {
   return new ImageResponse(
     (
@@ -20,36 +29,35 @@ export default function Image() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#171510",
-          color: "#f1eddf",
-          fontFamily: "monospace",
+          background: BG,
+          color: TEXT,
           padding: 72,
         }}
       >
-        <div style={{ display: "flex", gap: 18 }}>
-          {["#00ffd1", "#ff2e87", "#ffd140", "#7c4dff", "#00b8d4"].map(
-            (color) => (
-              <div
-                key={color}
-                style={{
-                  width: 34,
-                  height: 34,
-                  background: color,
-                }}
-              />
-            ),
-          )}
-        </div>
+        {/* The resting mark: gapped stadium, runner at the gate. Dash values
+            in real path units; the rasterizer doesn't honor pathLength. */}
+        <svg viewBox="0 0 64 64" width={96} height={96}>
+          <path
+            d={STADIUM_D}
+            fill="none"
+            stroke={SIGNAL}
+            strokeWidth={8}
+            strokeLinecap="round"
+            strokeDasharray="120 22.8"
+            strokeDashoffset={86.7}
+          />
+          <circle cx={58} cy={32} r={4} fill={SIGNAL} />
+        </svg>
         <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
           <div
             style={{
               display: "flex",
               fontSize: 96,
               fontWeight: 700,
-              letterSpacing: 0,
+              letterSpacing: -2,
             }}
           >
-            Circuit
+            circuit
           </div>
           <div
             style={{
@@ -57,7 +65,7 @@ export default function Image() {
               maxWidth: 860,
               fontSize: 38,
               lineHeight: 1.25,
-              color: "#b2a999",
+              color: MUTED,
             }}
           >
             Coding agents aren&apos;t unreliable. Your process is.
@@ -68,7 +76,7 @@ export default function Image() {
             display: "flex",
             fontSize: 24,
             letterSpacing: 2,
-            color: "#b2a999",
+            color: MUTED,
             textTransform: "uppercase",
           }}
         >

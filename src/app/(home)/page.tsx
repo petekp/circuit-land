@@ -7,7 +7,8 @@ import {
 } from "@/components/copy-install-instructions";
 import { ExampleRunSection } from "@/components/example-run-toggle";
 import { FlowComposer } from "@/components/flow-composer";
-import { Wordmark } from "@/components/wordmark";
+import { CircuitMark } from "@/components/brand/circuit-mark";
+import { GapChapter } from "@/components/run-stage/gap-chapter";
 
 type InstallTarget = {
   name: "Claude Code" | "Codex";
@@ -261,13 +262,15 @@ function XLogo() {
 
 function MastheadSection() {
   return (
-    <section
-      className="mt-4 flex flex-col gap-8 sm:mt-6"
-      data-site-hue-stop="0"
-    >
+    <section className="mt-4 flex flex-col gap-8 sm:mt-6">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <Wordmark />
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-2.5 text-foreground">
+            <CircuitMark size={34} />
+            <span className="text-[24px] font-semibold leading-none tracking-tight">
+              circuit
+            </span>
+          </div>
           <p className="text-[11px] leading-none text-muted-foreground">
             a plugin for Claude Code and Codex
           </p>
@@ -321,7 +324,10 @@ function MastheadSection() {
 
 function GapSection() {
   return (
-    <section className="mt-28 flex flex-col" data-site-hue-stop="0.09">
+    <section
+      className="mt-28 flex flex-col gap-10"
+     
+    >
       <div className="flex max-w-3xl flex-col gap-5">
         <Label as="h2">What your agent works without</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -343,13 +349,15 @@ function GapSection() {
           </p>
         </div>
       </div>
+
+      <GapChapter />
     </section>
   );
 }
 
 function FlowFlexSection() {
   return (
-    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.18">
+    <section className="mt-28 flex flex-col gap-10">
       {/* Header and lead live in the standard content column, aligned with the
           rest of the page. */}
       <div className="flex max-w-3xl flex-col gap-3">
@@ -379,7 +387,7 @@ function FlowFlexSection() {
 
 function BlockInternalsSection() {
   return (
-    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.27">
+    <section className="mt-28 flex flex-col gap-10">
       <div className="flex flex-col gap-10">
         <div className="flex max-w-3xl flex-col gap-3">
           <Label as="h2">Inside a Block</Label>
@@ -426,7 +434,7 @@ function BlockInternalsSection() {
 
 function RecordSection() {
   return (
-    <section className="mt-28 flex flex-col gap-8" data-site-hue-stop="0.45">
+    <section className="mt-28 flex flex-col gap-8">
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">Every run leaves a record</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -463,7 +471,7 @@ function RecordSection() {
 
 function CheckpointsSection() {
   return (
-    <section className="mt-28 flex flex-col" data-site-hue-stop="0.55">
+    <section className="mt-28 flex flex-col">
       <div className="flex max-w-3xl flex-col gap-5">
         <Label as="h2">When to loop you in</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -489,7 +497,7 @@ function CheckpointsSection() {
 
 function ContinuitySection() {
   return (
-    <section className="mt-28 flex flex-col" data-site-hue-stop="0.64">
+    <section className="mt-28 flex flex-col">
       <div className="flex max-w-3xl flex-col gap-5">
         <Label as="h2">Tomorrow starts where today ended</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -514,7 +522,7 @@ function ContinuitySection() {
 
 function MemorySection() {
   return (
-    <section className="mt-28 flex flex-col" data-site-hue-stop="0.73">
+    <section className="mt-28 flex flex-col">
       <div className="flex max-w-3xl flex-col gap-5">
         <Label as="h2">The next run remembers</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -539,7 +547,7 @@ function MemorySection() {
 
 function ComparisonSection() {
   return (
-    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.82">
+    <section className="mt-28 flex flex-col gap-10">
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">Where It Fits</Label>
         <p className="text-[15px] leading-relaxed text-foreground">
@@ -579,7 +587,7 @@ function InstallSection() {
     <section
       id="install"
       className="mt-28 flex flex-col gap-7"
-      data-site-hue-stop="0.91"
+     
     >
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">Get Started</Label>
@@ -613,7 +621,7 @@ function InstallSection() {
               />
             </div>
 
-            <pre className="whitespace-pre-wrap break-words px-5 pb-4 text-[13px] leading-7 text-foreground">
+            <pre className="whitespace-pre-wrap break-words px-5 pb-4 font-mono text-[13px] leading-7 text-foreground">
               <code>
                 {target.commands.map((command) => `› ${command}`).join("\n")}
               </code>
@@ -633,7 +641,7 @@ function SiteFooter() {
   return (
     <footer
       className="mt-28 flex items-center justify-between gap-3 pt-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground"
-      data-site-hue-stop="1"
+     
     >
       <div className="flex items-center gap-4">
         <a
