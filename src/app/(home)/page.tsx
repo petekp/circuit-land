@@ -44,30 +44,6 @@ const installTargets: InstallTarget[] = [
   },
 ];
 
-const comparison = [
-  {
-    name: "Skills, AGENTS.md, and playbooks",
-    approach:
-      "A good skill gives the agent a stronger move: read a trace, write a test, inspect a browser. A good AGENTS.md or playbook gives it context, the local picture of what done means here. Both make each step of the work better.",
-    circuit:
-      "The catch is timing. A skill waits for you to call it at the right moment, and a playbook sits still until someone applies it. Circuit puts both in motion inside a flow. It carries the context forward, and every handoff is typed, so the run produces a record you can check.",
-  },
-  {
-    name: "Claude Code's Dynamic Workflows",
-    approach:
-      "Workflows orchestrate many agents from a script. They are great for large one-off jobs: codebase audits, migrations, deep research, or hand-rolled fanout.",
-    circuit:
-      "Circuit is the repeatable process for everyday work. It picks Build, Fix, Review, Explore, Prototype, or Pursue, then runs the same proven process without making you design the orchestration.",
-  },
-  {
-    name: "Spec-driven development",
-    approach:
-      "Write a detailed spec and the agent implements against it. The spec captures intent well, but it stays a document. It does not carry the work through building, checking, and review.",
-    circuit:
-      "Circuit treats the spec as one input. Frame turns intent into a typed brief, then the flow carries it forward through plan, act, verify, and review until the outcome is backed by evidence.",
-  },
-];
-
 const blockInternals = [
   {
     name: "Frame",
@@ -713,43 +689,6 @@ function MemorySection() {
   );
 }
 
-function ComparisonSection() {
-  return (
-    <section className="mt-28 flex flex-col gap-10">
-      <div className="flex max-w-3xl flex-col gap-3">
-        <Label as="h2">Where It Fits</Label>
-        <p className="text-[15px] leading-relaxed text-foreground">
-          Circuit is not another agent. It is the process your agent follows.
-          That means the tools you already use still have their jobs. They
-          shape what the agent can do. Circuit shapes how the work moves and
-          what every step leaves behind.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        {comparison.map((c) => (
-          <div key={c.name} className="soft-info-card flex flex-col gap-5 p-5">
-            <h3 className="text-[15px] font-medium tracking-tight">{c.name}</h3>
-            <div className="flex flex-col gap-2">
-              <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-                {c.approach}
-              </p>
-            </div>
-            <div className="mt-auto flex flex-col gap-2">
-              <p className="font-sans text-[12px] font-medium text-muted-foreground">
-                How Circuit differs
-              </p>
-              <p className="text-balance text-[13px] leading-relaxed text-foreground">
-                {c.circuit}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function InstallSection() {
   return (
     <section id="install" className="mt-28 flex flex-col gap-7">
@@ -853,7 +792,6 @@ export default function Home() {
       <CheckpointsSection />
       <ContinuitySection />
       <MemorySection />
-      <ComparisonSection />
       <InstallSection />
       <SiteFooter />
     </main>
