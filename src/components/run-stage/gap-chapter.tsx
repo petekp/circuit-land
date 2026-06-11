@@ -20,8 +20,9 @@ import { RunStageReveal } from "./reveal";
 // each collision a small chat bubble pops in: the user has to step in
 // and steer. Dim markdown notes sit scattered around the board; runs
 // detour past them to re-read context that lives nowhere in particular.
-// Nothing persists: trails evaporate, even the error marks fade, and
-// the next run repeats the experience from zero.
+// Nothing persists: trails evaporate, error marks linger only while
+// their run is on the board (long enough to hover) and fade as it
+// leaves, and the next run repeats the experience from zero.
 //
 // Bottom lane (with Circuit): every run rides the same rail and WRITES
 // ITS RECORD as it goes — a small document rides level with the pulse,
@@ -30,8 +31,11 @@ import { RunStageReveal } from "./reveal";
 // so capability visibly arrives at the step that needs it (the counter
 // to lane A's wandering off to scattered notes). When the run finishes, the document
 // visibly drops onto a STACK below the last pad — one card per run, the
-// stack growing across the loop — and a ring pings around the stack as
-// each new run consults it at its first step. The run compounds —
+// stack growing across the loop. The stack is read, not just written:
+// as each new run enters, a COURIER — a copy of the record — lifts off
+// the stack (the consult ping flares as it departs) and flies across
+// the board to land on the entering run's document just as it seats
+// into its first step. The run compounds —
 // dwells shrink and segments quicken step over step (paceWeight), the
 // pulse's aura stretches into a streak — so four runs complete in the
 // time the lane above manages three. Tally ticks at the right edge of
@@ -155,6 +159,9 @@ type StageConfig = {
     exitPace: number;
     // One record line lands as each of these pads completes.
     docLinePads: number[];
+    // How long the courier — the record copy that flies from the stack
+    // to brief each entering run — spends in flight.
+    courierFlight: number;
     // Pads that carry a skill slot: a socket above the rail where a
     // chip snaps in as the run seats into that step. The contrast with
     // lane A: capability arrives at the step that needs it, instead of
@@ -259,6 +266,7 @@ const WIDE: StageConfig = {
     paceStep: 0.08,
     exitPace: 0.38,
     docLinePads: [0, 2, 4, 6],
+    courierFlight: 0.55,
     skillSlotPads: [2, 5],
     stillX: 885,
     stillSeated: 5,
@@ -347,6 +355,7 @@ const NARROW: StageConfig = {
     paceStep: 0.16,
     exitPace: 0.45,
     docLinePads: [0, 1, 2, 3],
+    courierFlight: 0.45,
     skillSlotPads: [1],
     stillX: 520,
     stillSeated: 3,
@@ -558,17 +567,22 @@ function tickKeyframes(name: string, at: number, settle: number) {
 }`;
 }
 
-// An error pops in at the collision, lingers a beat, and fades away —
-// in this lane even the mistakes leave nothing to learn from.
-function errorKeyframes(name: string, hitSeconds: number) {
+// An error pops bright at the collision, then settles to a dimmer mark
+// that stays put while its run is still on the board — long enough to
+// hover. It fades only once the run has left: in this lane even the
+// mistakes leave nothing for the next run to learn from.
+function errorKeyframes(name: string, hitSeconds: number, endSeconds: number) {
+  const dim = Math.min(hitSeconds + 1.6, endSeconds - 0.2);
+  const gone = Math.min(endSeconds + 0.8, LOOP_SECONDS - 0.1);
   return `@keyframes ${name} {
   0% { opacity: 0; transform: scale(0.5); }
   ${pct(hitSeconds - 0.02)}% { opacity: 0; transform: scale(0.5); }
   ${pct(hitSeconds)}% { opacity: 0.9; transform: scale(1.3); }
   ${pct(hitSeconds + 0.12)}% { opacity: 0.9; transform: scale(1); }
   ${pct(hitSeconds + 0.6)}% { opacity: 0.9; transform: scale(1); }
-  ${pct(hitSeconds + 1.8)}% { opacity: 0; transform: scale(1); }
-  ${pct(hitSeconds + 1.9)}% { opacity: 0; transform: scale(0.5); }
+  ${pct(dim)}% { opacity: 0.55; transform: scale(1); }
+  ${pct(endSeconds)}% { opacity: 0.55; transform: scale(1); }
+  ${pct(gone)}% { opacity: 0; transform: scale(1); }
   100% { opacity: 0; transform: scale(0.5); }
 }`;
 }
@@ -857,6 +871,20 @@ function GapStage({
   );
   const dropDx = -DOC.width / 2 - config.docTrailX;
 
+  // The courier schedule: as each run enters, a copy of the record
+  // lifts off the top of the stack and flies left across the board to
+  // meet it, landing on the run's own document just as it seats into
+  // the first step — the leverage made visible. Departure is clamped
+  // inside the run's own window so run 0's courier never crosses the
+  // loop seam.
+  const courierY = RECORD_SLOT_Y - (LANE_B_RUN_COUNT - 1) * CARD_LIFT;
+  const courierArrives = laneBJourneys.map((j) => j.arrivalSeconds[1]);
+  const courierDeparts = courierArrives.map((arrive, k) =>
+    Math.max(arrive - laneB.courierFlight, k * LANE_B_PERIOD + 0.05),
+  );
+  const courierDx = pads[0].x + config.docTrailX - recordSlotX;
+  const courierDy = RAIL_B_Y + DOC_Y - courierY;
+
   const laneACss = laneAJourneys
     .map((journey, i) => {
       const hits = laneA.runs[i].errors.map(
@@ -865,7 +893,7 @@ function GapStage({
       const errors = laneA.runs[i].errors
         .map(
           (err, j) => `.${p}-err-${i}-${j} { animation: ${p}-err-${i}-${j} ${LOOP_SECONDS}s linear infinite; }
-${errorKeyframes(`${p}-err-${i}-${j}`, journey.arrivalSeconds[err.errorAt])}`,
+${errorKeyframes(`${p}-err-${i}-${j}`, journey.arrivalSeconds[err.errorAt], laneAEnds[i])}`,
         )
         .join("\n");
       const steers = laneA.runs[i].errors
@@ -975,11 +1003,17 @@ ${dropKeyframes(name, closes[k], land, dropDx, dy)}`;
     })
     .join("\n");
 
+  const courierCss = courierArrives
+    .map((arrive, k) => {
+      const name = `${p}-courier-${k}`;
+      return `.${name} { animation: ${name} ${LOOP_SECONDS}s linear infinite; }
+${dropKeyframes(name, courierDeparts[k], arrive, courierDx, courierDy)}`;
+    })
+    .join("\n");
+
+  // The ping fires as each courier lifts off — the stack being read.
   const pingCss = `.${p}-ping { animation: ${p}-ping ${LOOP_SECONDS}s linear infinite; transform-box: fill-box; transform-origin: center; }
-${pingKeyframes(
-  `${p}-ping`,
-  laneBJourneys.map((j) => j.arrivalSeconds[1]),
-)}`;
+${pingKeyframes(`${p}-ping`, courierDeparts)}`;
 
   const tallyCss = [
     ...laneA.runs.map((_, i) => {
@@ -1031,6 +1065,7 @@ ${chipCss}
 ${docCss}
 ${cardCss}
 ${ghostCss}
+${courierCss}
 ${pingCss}
 ${tallyCss}
 ${entranceCss}
@@ -1144,7 +1179,7 @@ ${entranceCss}
       title: "Run records",
       lines: [
         "Each run files what it did and checked.",
-        "The next one reads the stack as it starts.",
+        "A copy flies out to brief each new run.",
       ],
       cx: recordSlotX + DOC.width / 2,
       cy: RECORD_SLOT_Y + DOC.height / 2 - 4,
@@ -1169,7 +1204,7 @@ ${entranceCss}
       viewBox={`0 0 ${frame.width} ${frame.height}`}
       className={className}
       role="img"
-      aria-label="An endless procession of runs, shown in two lanes; each lane's next run is already entering as the last one finishes. Without Circuit, each agent improvises a different route in white, flashes red when it hits an error, waits for the user to steer it onward, detours past markdown notes scattered around the board to re-read context, and its route evaporates behind it; nothing carries over to the next run. With Circuit, every run rides the same rail and writes a small document as it works, one line per completed step. Sockets above some steps show a skill chip snapping in as the run reaches them: the capability a step needs arrives exactly there. When the run finishes, the document drops onto a growing stack of records, and each new run consults the stack as it starts and gains speed as it goes. Tally marks at the right edge keep score: four runs finish with Circuit in the time three finish without."
+      aria-label="An endless procession of runs, shown in two lanes; each lane's next run is already entering as the last one finishes. Without Circuit, each agent improvises a different route in white, flashes red when it hits an error, waits for the user to steer it onward, detours past markdown notes scattered around the board to re-read context, and its route evaporates behind it; nothing carries over to the next run. With Circuit, every run rides the same rail and writes a small document as it works, one line per completed step. Sockets above some steps show a skill chip snapping in as the run reaches them: the capability a step needs arrives exactly there. When the run finishes, the document drops onto a growing stack of records, and a copy flies from the stack to meet each new run as it enters: every run starts briefed by the ones before it, and gains speed as it goes. Tally marks at the right edge keep score: four runs finish with Circuit in the time three finish without."
     >
       <style>{css}</style>
 
@@ -1396,8 +1431,8 @@ ${entranceCss}
               opacity={padIdx < laneB.stillSeated ? SEAT_SETTLE : SEAT_RESIDUE}
             />
           ))}
-          {/* The consult ping: flares around the stack as each new run
-              reads it at its first step. */}
+          {/* The consult ping: flares around the stack as each courier
+              lifts off — the stack being read. */}
           <rect
             className={`${p}-ping`}
             x={recordSlotX - 5}
@@ -1468,6 +1503,41 @@ ${entranceCss}
                 {laneB.docLinePads.map((padIdx, j) => (
                   <rect
                     key={`drop-l-${padIdx}`}
+                    x={DOC_LINE.inset}
+                    y={DOC_LINE.top + j * DOC_LINE.gap}
+                    width={DOC_LINE.width}
+                    height={DOC_LINE.height}
+                    rx={1}
+                    fill="currentColor"
+                  />
+                ))}
+              </g>
+            </g>
+          ))}
+          {/* The couriers: a copy of the record lifts off the stack and
+              flies to meet each entering run at its first step, landing
+              on the run's own document — the stack isn't an archive,
+              it's read at the start of every run. */}
+          {laneBJourneys.map((_, k) => (
+            <g
+              key={`courier-${k * LANE_B_PERIOD}`}
+              transform={`translate(${recordSlotX} ${courierY})`}
+              aria-hidden="true"
+            >
+              <g className={`${p}-courier-${k}`} opacity={0}>
+                <rect
+                  x={0}
+                  y={0}
+                  width={DOC.width}
+                  height={DOC.height}
+                  rx={DOC.rx}
+                  style={{ fill: DOC_FILL }}
+                  stroke="currentColor"
+                  strokeWidth={1.2}
+                />
+                {laneB.docLinePads.map((padIdx, j) => (
+                  <rect
+                    key={`courier-l-${padIdx}`}
                     x={DOC_LINE.inset}
                     y={DOC_LINE.top + j * DOC_LINE.gap}
                     width={DOC_LINE.width}
