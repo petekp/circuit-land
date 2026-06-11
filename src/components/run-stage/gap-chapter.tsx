@@ -12,25 +12,27 @@ import { RunStageReveal } from "./reveal";
 
 // Chapter one: the same work, two worlds, running forever.
 //
-// Both lanes are a seamless procession — as one agent leaves the board,
-// the next enters. Top lane (without Circuit): every run improvises a
-// DIFFERENT route, hits errors at different moments, backtracks, and
-// leaves nothing behind; even the error marks fade, so the next run
-// repeats the experience from zero. Three authored variants play
-// back-to-back inside the master loop, so the lane never visibly
-// repeats itself on a casual watch.
+// Both lanes are a seamless procession — before one agent has left the
+// board, the next is already entering, so the lane never sits empty.
+// Top lane (without Circuit): every run improvises a DIFFERENT route in
+// plain white, and the whole actor — head, aura, trail — flashes red
+// when it hits an error, then fades back to white as it recovers. After
+// each collision a small chat bubble pops in: the user has to step in
+// and steer. Dim markdown notes sit scattered around the board; runs
+// detour past them to re-read context that lives nowhere in particular.
+// Nothing persists: trails evaporate, even the error marks fade, and
+// the next run repeats the experience from zero.
 //
 // Bottom lane (with Circuit): every run rides the same rail and WRITES
 // ITS RECORD as it goes — a small document rides level with the pulse,
-// trailing just behind it, gaining a line as steps complete — and gets
-// filed below the last pad when the run finishes. The run compounds —
+// gaining a line as steps complete. When the run finishes, the document
+// visibly drops onto a STACK below the last pad — one card per run, the
+// stack growing across the loop — and a ring pings around the stack as
+// each new run consults it at its first step. The run compounds —
 // dwells shrink and segments quicken step over step (paceWeight), the
-// pulse's aura stretches into a streak — so each run finishes early and
-// four runs complete in the time the lane above manages three. When a
-// new run enters, the filed record and the seated steps dim to a
-// residue (the record recedes into history; it never un-writes); the
-// record brightens briefly as the new run passes the first pad —
-// consulted, which is why this lane is fast.
+// pulse's aura stretches into a streak — so four runs complete in the
+// time the lane above manages three. Tally ticks at the right edge of
+// each lane keep the score, so the lap advantage reads at a glance.
 //
 // All pulses share one bright ink: it is the same agent. Only the
 // world around it differs.
@@ -52,7 +54,15 @@ const LANE_B_PERIOD = 6;
 const LANE_B_RUN_COUNT = 4;
 
 const RAIL_B_Y = 256;
-const RECORD_SLOT_Y = 286;
+const RECORD_SLOT_Y = 288;
+// Each filed record sits this much higher than the one before it, so
+// the stack visibly grows upward run over run.
+const CARD_LIFT = 4;
+
+// Lane A's ink is pure white — the agent and its route, nothing else.
+// The red flash on error is animated on `color`, so trail, head, and
+// aura all pulse together.
+const INK_A = "hsl(0 0% 100%)";
 
 // The record document: a small card that rides LEVEL with the pulse —
 // same y-center, trailing just behind it — so card and agent read as
@@ -69,6 +79,12 @@ const RECORD_RESIDUE = 0.35;
 const SEAT_SETTLE = 0.5;
 const SEAT_RESIDUE = 0.15;
 const DWELL_BASE = 0.3;
+
+// Tally ticks: a right-aligned scoreboard per lane. Both lanes end at
+// the same x, so "four ticks vs three" reads instantly.
+const TICK_EDGE = 28;
+const TICK_SPACING = 14;
+const TICK_RESIDUE = 0.25;
 
 // Lane A (without): improvised wanders, each with its own error
 // schedule. The dwell at each collision is the stunned beat before
@@ -89,18 +105,38 @@ type StageConfig = {
   // Where the traveling document trails, relative to the pulse.
   docTrailX: number;
   laneA: {
-    // Travel + trail fade fill the window exactly: each run's trail
-    // finishes eroding at the moment the next run enters, and the last
-    // run's erosion completes precisely at the loop boundary (no
-    // keyframe may land past 100% of the master loop).
+    // Runs overlap on purpose: travel runs PAST the 8s window, so the
+    // next run is already entering while the previous one is still
+    // finishing — the procession never gaps. The final run instead uses
+    // lastTravel + lastTrailFade, sized so its erosion completes
+    // exactly at the loop boundary (no keyframe may land past 100% of
+    // the master loop).
     travel: number;
     trailFade: number;
+    lastTravel: number;
+    lastTrailFade: number;
     // Mid-journey waypoint of run 1 used as the reduced-motion tableau.
     stillWaypoint: number;
+    // Scattered markdown notes: dim furniture the runs detour past to
+    // re-read context. `run`/`at` name the journey and waypoint of the
+    // visit; `lead` shifts the brighten earlier when the note sits
+    // mid-segment rather than at the waypoint itself.
+    notes: {
+      x: number;
+      y: number;
+      rotate: number;
+      run: number;
+      at: number;
+      lead: number;
+    }[];
     runs: LaneARun[];
   };
   laneB: {
+    // Same overlap trick: travel runs past the 6s period so the next
+    // run enters while the previous one exits. The final run's
+    // lastTravel lands its record just before the seam.
     travel: number;
+    lastTravel: number;
     // Compounding is carried by the numbers: every pad's dwell is
     // shorter and every segment's paceWeight smaller than the one
     // before.
@@ -127,9 +163,16 @@ const WIDE: StageConfig = {
   label: { x: 102, fontSize: 13, letterSpacing: 2 },
   docTrailX: -50,
   laneA: {
-    travel: 7.4,
+    travel: 8.3,
     trailFade: 0.6,
+    lastTravel: 7.7,
+    lastTrailFade: 0.3,
     stillWaypoint: 7,
+    notes: [
+      { x: 398, y: 122, rotate: -8, run: 0, at: 5, lead: 0.25 },
+      { x: 98, y: 96, rotate: 6, run: 1, at: 3, lead: 0.25 },
+      { x: 810, y: 142, rotate: -5, run: 2, at: 6, lead: 0.8 },
+    ],
     runs: [
       // Run 1: two collisions, mid and late.
       {
@@ -195,7 +238,8 @@ const WIDE: StageConfig = {
     ],
   },
   laneB: {
-    travel: 5.8,
+    travel: 6.3,
+    lastTravel: 5.9,
     dwellStep: 0.032,
     paceStep: 0.08,
     exitPace: 0.38,
@@ -216,9 +260,16 @@ const NARROW: StageConfig = {
   label: { x: 82, fontSize: 19, letterSpacing: 2.5 },
   docTrailX: -40,
   laneA: {
-    travel: 6.8,
-    trailFade: 1.2,
+    travel: 8.25,
+    trailFade: 0.5,
+    lastTravel: 7.6,
+    lastTrailFade: 0.4,
     stillWaypoint: 7,
+    notes: [
+      { x: 266, y: 118, rotate: -8, run: 0, at: 5, lead: 0.25 },
+      { x: 52, y: 108, rotate: 6, run: 1, at: 3, lead: 0.25 },
+      { x: 552, y: 138, rotate: -5, run: 2, at: 6, lead: 0.3 },
+    ],
     runs: [
       // Run 1: two collisions, mid and late.
       {
@@ -274,7 +325,8 @@ const NARROW: StageConfig = {
     ],
   },
   laneB: {
-    travel: 5.2,
+    travel: 6.2,
+    lastTravel: 5.8,
     dwellStep: 0.06,
     paceStep: 0.16,
     exitPace: 0.45,
@@ -293,7 +345,9 @@ const pct = (seconds: number) =>
 // persists. When the next run enters the board it dims to a residue —
 // the record recedes into history, it never un-writes — and re-stamps
 // when the new pulse reaches the pad. First and last keyframes both
-// sit at the settled value, so the loop is seamless.
+// sit at the settled value, so the loop is seamless. The pop frames are
+// shaped like a tight spring: undershoot, overshoot, small counter,
+// rest.
 function seatKeyframes(name: string, arrivals: number[]) {
   const frames = arrivals
     .map((arrival, k) => {
@@ -301,9 +355,10 @@ function seatKeyframes(name: string, arrivals: number[]) {
       return `${pct(runStart)}% { opacity: ${SEAT_SETTLE}; transform: scale(1); }
   ${pct(runStart + 0.3)}% { opacity: ${SEAT_RESIDUE}; transform: scale(1); }
   ${pct(arrival - 0.02)}% { opacity: ${SEAT_RESIDUE}; transform: scale(1); }
-  ${pct(arrival)}% { opacity: 1; transform: scale(0.55); }
-  ${pct(arrival + 0.12)}% { opacity: 1; transform: scale(1.12); }
-  ${pct(arrival + 0.35)}% { opacity: ${SEAT_SETTLE}; transform: scale(1); }`;
+  ${pct(arrival)}% { opacity: 1; transform: scale(0.6); }
+  ${pct(arrival + 0.1)}% { opacity: 1; transform: scale(1.1); }
+  ${pct(arrival + 0.18)}% { opacity: 1; transform: scale(0.96); }
+  ${pct(arrival + 0.3)}% { opacity: ${SEAT_SETTLE}; transform: scale(1); }`;
     })
     .join("\n  ");
   return `@keyframes ${name} {
@@ -313,8 +368,8 @@ function seatKeyframes(name: string, arrivals: number[]) {
 }
 
 // The traveling document is visible only while its run is on the board;
-// it blinks out at the close pad, where the filed record pops in (the
-// handoff to the slot).
+// it blinks out at the close pad, where the drop ghost takes over and
+// slides it down onto the stack.
 function docGroupKeyframes(name: string, start: number, close: number) {
   return `@keyframes ${name} {
   0% { opacity: 0; }
@@ -339,32 +394,125 @@ function docLineKeyframes(name: string, appear: number, close: number) {
 }`;
 }
 
-// The filed record below the close pad: lands with a drop when each run
-// finishes, dims to a residue when the next run enters, and brightens
-// briefly as the new run passes the first pad — consulted.
-function recordSlotKeyframes(
+// The drop ghost: a stationary copy of the finished document, parked at
+// the handoff point beside the close pad. The traveling copy blinks out
+// there, the ghost appears in its place and slides down onto the stack
+// (eased via a per-keyframe timing function under the linear master
+// loop), then hands off to the stack card popping bright.
+function dropKeyframes(
   name: string,
-  journeys: Journey[],
-  closeIndex: number,
+  close: number,
+  land: number,
+  dx: number,
+  dy: number,
 ) {
-  const frames = journeys
-    .map((journey, k) => {
-      const runStart = k * LANE_B_PERIOD;
-      const consult = journey.arrivalSeconds[1];
-      const land = journey.arrivalSeconds[closeIndex] + 0.06;
-      return `${pct(runStart)}% { opacity: ${RECORD_SETTLE}; transform: translateY(0); }
-  ${pct(runStart + 0.3)}% { opacity: ${RECORD_RESIDUE}; transform: translateY(0); }
-  ${pct(consult)}% { opacity: 0.6; transform: translateY(0); }
-  ${pct(consult + 0.4)}% { opacity: ${RECORD_RESIDUE}; transform: translateY(0); }
-  ${pct(land - 0.02)}% { opacity: ${RECORD_RESIDUE}; transform: translateY(0); }
-  ${pct(land)}% { opacity: 1; transform: translateY(-14px); }
-  ${pct(land + 0.22)}% { opacity: 1; transform: translateY(0); }
-  ${pct(land + 0.32)}% { opacity: ${RECORD_SETTLE}; transform: translateY(0); }`;
-    })
+  return `@keyframes ${name} {
+  0% { opacity: 0; transform: translate(0px, 0px); }
+  ${pct(close - 0.01)}% { opacity: 0; transform: translate(0px, 0px); }
+  ${pct(close + 0.03)}% { opacity: 0.95; transform: translate(0px, 0px); animation-timing-function: cubic-bezier(0.45, 0, 0.2, 1); }
+  ${pct(land)}% { opacity: 0.95; transform: translate(${dx}px, ${dy}px); }
+  ${pct(land + 0.06)}% { opacity: 0; transform: translate(${dx}px, ${dy}px); }
+  100% { opacity: 0; transform: translate(0px, 0px); }
+}`;
+}
+
+// One stack card per run. The whole stack starts the loop bright (the
+// previous cycle's history), dims to a residue as the first run enters,
+// and each card re-stamps — a small press as its ghost settles into it —
+// when its run files the record. Cards then HOLD their settled
+// brightness for the rest of the loop, so the stack visibly accumulates
+// run over run; 100% matches 0% (all bright), keeping the seam
+// invisible.
+function cardKeyframes(name: string, land: number) {
+  return `@keyframes ${name} {
+  0% { opacity: ${RECORD_SETTLE}; transform: scale(1); }
+  ${pct(0.35)}% { opacity: ${RECORD_RESIDUE}; transform: scale(1); }
+  ${pct(land - 0.02)}% { opacity: ${RECORD_RESIDUE}; transform: scale(1); }
+  ${pct(land)}% { opacity: 1; transform: scale(1.06); }
+  ${pct(land + 0.12)}% { opacity: 1; transform: scale(0.98); }
+  ${pct(land + 0.22)}% { opacity: ${RECORD_SETTLE}; transform: scale(1); }
+  100% { opacity: ${RECORD_SETTLE}; transform: scale(1); }
+}`;
+}
+
+// The consult ping: a ring around the stack that flares and expands as
+// each new run passes its first pad — the stack is being read, which is
+// why this lane is fast.
+function pingKeyframes(name: string, consults: number[]) {
+  const frames = consults
+    .map(
+      (t) => `${pct(t - 0.02)}% { opacity: 0; transform: scale(1); }
+  ${pct(t + 0.04)}% { opacity: 0.65; transform: scale(1); }
+  ${pct(t + 0.5)}% { opacity: 0; transform: scale(1.3); }
+  ${pct(t + 0.55)}% { opacity: 0; transform: scale(1); }`,
+    )
     .join("\n  ");
   return `@keyframes ${name} {
+  0% { opacity: 0; transform: scale(1); }
   ${frames}
-  100% { opacity: ${RECORD_SETTLE}; transform: translateY(0); }
+  100% { opacity: 0; transform: scale(1); }
+}`;
+}
+
+// Lane A's ink: white at rest; the WHOLE actor (trail + head + aura)
+// flashes red at each collision, holds through the stunned dwell, and
+// fades back to white as the run recovers.
+function inkKeyframes(name: string, hits: number[]) {
+  const frames = hits
+    .map(
+      (hit) => `${pct(hit - 0.03)}% { color: ${INK_A}; }
+  ${pct(hit + 0.05)}% { color: var(--destructive); }
+  ${pct(hit + 0.7)}% { color: var(--destructive); }
+  ${pct(hit + 1.5)}% { color: ${INK_A}; }`,
+    )
+    .join("\n  ");
+  return `@keyframes ${name} {
+  0% { color: ${INK_A}; }
+  ${frames}
+  100% { color: ${INK_A}; }
+}`;
+}
+
+// The steer bubble: right after each collision, a chat bubble pops in
+// beside the stunned pulse — the user stepping in to point the way —
+// and the run only backtracks once it has been told to.
+function steerKeyframes(name: string, hit: number) {
+  return `@keyframes ${name} {
+  0% { opacity: 0; transform: scale(0.5); }
+  ${pct(hit + 0.16)}% { opacity: 0; transform: scale(0.5); }
+  ${pct(hit + 0.26)}% { opacity: 1; transform: scale(1.08); }
+  ${pct(hit + 0.34)}% { opacity: 1; transform: scale(1); }
+  ${pct(hit + 1)}% { opacity: 1; transform: scale(1); }
+  ${pct(hit + 1.2)}% { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 0; transform: scale(0.5); }
+}`;
+}
+
+// A scattered note brightens as its run detours past it — context being
+// re-read from a stray file — then dims back to furniture.
+function noteKeyframes(name: string, at: number) {
+  return `@keyframes ${name} {
+  0% { opacity: 0.22; transform: scale(1); }
+  ${pct(at - 0.02)}% { opacity: 0.22; transform: scale(1); }
+  ${pct(at + 0.08)}% { opacity: 0.9; transform: scale(1.1); }
+  ${pct(at + 0.25)}% { opacity: 0.85; transform: scale(1); }
+  ${pct(at + 1.2)}% { opacity: 0.85; transform: scale(1); }
+  ${pct(at + 2)}% { opacity: 0.22; transform: scale(1); }
+  100% { opacity: 0.22; transform: scale(1); }
+}`;
+}
+
+// A tally tick pops bright the moment its run finishes and holds for
+// the rest of the loop; the whole scoreboard starts the loop bright
+// (last cycle's score) and dims as the first run enters.
+function tickKeyframes(name: string, at: number, settle: number) {
+  return `@keyframes ${name} {
+  0% { opacity: ${settle}; transform: scale(1); }
+  ${pct(0.3)}% { opacity: ${TICK_RESIDUE}; transform: scale(1); }
+  ${pct(at - 0.02)}% { opacity: ${TICK_RESIDUE}; transform: scale(1); }
+  ${pct(at)}% { opacity: 1; transform: scale(1.4); }
+  ${pct(at + 0.14)}% { opacity: ${settle}; transform: scale(1); }
+  100% { opacity: ${settle}; transform: scale(1); }
 }`;
 }
 
@@ -434,8 +582,8 @@ function auraKeyframes(
   0% { transform: scale(1, 1); opacity: 0.12; }
   ${pct(start)}% { transform: scale(1, 1); opacity: 0.12; }
   ${stops}
-  ${pct(start + travel + 0.05)}% { ${streak(padCount)} }
-  ${pct(start + travel + 0.15)}% { transform: scale(1, 1); opacity: 0.12; }
+  ${pct(start + travel + 0.02)}% { ${streak(padCount)} }
+  ${pct(start + travel + 0.1)}% { transform: scale(1, 1); opacity: 0.12; }
   100% { transform: scale(1, 1); opacity: 0.12; }
 }`;
 }
@@ -465,6 +613,49 @@ function Pulse({ auraClassName }: { auraClassName?: string }) {
   );
 }
 
+// A small markdown note: page-filled card, a few text lines, slightly
+// rotated — context living loose on the board.
+function NoteGlyph() {
+  return (
+    <>
+      <rect
+        x={-7.5}
+        y={-9.5}
+        width={15}
+        height={19}
+        rx={2}
+        style={{ fill: DOC_FILL }}
+        stroke="currentColor"
+        strokeWidth={1.2}
+      />
+      <rect x={-4} y={-5} width={8} height={1.8} rx={0.9} fill="currentColor" />
+      <rect
+        x={-4}
+        y={-1}
+        width={6.5}
+        height={1.8}
+        rx={0.9}
+        fill="currentColor"
+      />
+      <rect x={-4} y={3} width={7.5} height={1.8} rx={0.9} fill="currentColor" />
+    </>
+  );
+}
+
+// The steer bubble: a white chat bubble with a tail pointing back down
+// toward the stunned pulse, dots in the page color.
+function SteerGlyph() {
+  return (
+    <>
+      <path d="M -7 7 L -11 14.5 L 0 7.5 Z" fill={INK_A} />
+      <rect x={-12} y={-8} width={24} height={16} rx={5.5} fill={INK_A} />
+      <circle cx={-5.5} cy={0} r={1.7} fill="var(--background)" />
+      <circle cx={0} cy={0} r={1.7} fill="var(--background)" />
+      <circle cx={5.5} cy={0} r={1.7} fill="var(--background)" />
+    </>
+  );
+}
+
 const half = PAD_SIZE / 2;
 
 function GapStage({
@@ -477,16 +668,24 @@ function GapStage({
   const p = config.prefix;
   const { frame, pads, laneA, laneB, label } = config;
   const closeIndex = pads.length;
+  const lastRunA = laneA.runs.length - 1;
 
   const laneAJourneys: Journey[] = laneA.runs.map((run, i) =>
     buildJourney({
       waypoints: run.waypoints,
       loopSeconds: LOOP_SECONDS,
       travelStartSeconds: i * LANE_A_WINDOW,
-      travelEndSeconds: i * LANE_A_WINDOW + laneA.travel,
+      travelEndSeconds:
+        i * LANE_A_WINDOW + (i === lastRunA ? laneA.lastTravel : laneA.travel),
       trailUnits: TRAIL_A_UNITS,
-      trailFadeSeconds: laneA.trailFade,
+      trailFadeSeconds: i === lastRunA ? laneA.lastTrailFade : laneA.trailFade,
     }),
+  );
+
+  // When each without-run leaves the board — its tally moment.
+  const laneAEnds = laneA.runs.map(
+    (_, i) =>
+      i * LANE_A_WINDOW + (i === lastRunA ? laneA.lastTravel : laneA.travel),
   );
 
   const laneBWaypoints: Waypoint[] = [
@@ -507,7 +706,9 @@ function GapStage({
         waypoints: laneBWaypoints,
         loopSeconds: LOOP_SECONDS,
         travelStartSeconds: k * LANE_B_PERIOD,
-        travelEndSeconds: k * LANE_B_PERIOD + laneB.travel,
+        travelEndSeconds:
+          k * LANE_B_PERIOD +
+          (k === LANE_B_RUN_COUNT - 1 ? laneB.lastTravel : laneB.travel),
         trailUnits: 10, // lane B draws no trail; the rail is already there
         trailFadeSeconds: 1,
       }),
@@ -515,12 +716,31 @@ function GapStage({
 
   const recordSlotX = pads[closeIndex - 1].x - DOC.width / 2;
 
+  // The record-filing schedule: when each run reaches the close pad,
+  // and when its ghost finishes the slide onto the stack. The last
+  // land is clamped clear of the seam so every settle frame stays
+  // inside the loop.
+  const closes = laneBJourneys.map((j) => j.arrivalSeconds[closeIndex]);
+  const lands = closes.map((close) =>
+    Math.min(close + 0.24, LOOP_SECONDS - 0.25),
+  );
+  const dropDx = -DOC.width / 2 - config.docTrailX;
+
   const laneACss = laneAJourneys
     .map((journey, i) => {
+      const hits = laneA.runs[i].errors.map(
+        (err) => journey.arrivalSeconds[err.errorAt],
+      );
       const errors = laneA.runs[i].errors
         .map(
           (err, j) => `.${p}-err-${i}-${j} { animation: ${p}-err-${i}-${j} ${LOOP_SECONDS}s linear infinite; }
 ${errorKeyframes(`${p}-err-${i}-${j}`, journey.arrivalSeconds[err.errorAt])}`,
+        )
+        .join("\n");
+      const steers = laneA.runs[i].errors
+        .map(
+          (err, j) => `.${p}-steer-${i}-${j} { animation: ${p}-steer-${i}-${j} ${LOOP_SECONDS}s linear infinite; transform-box: fill-box; transform-origin: center; }
+${steerKeyframes(`${p}-steer-${i}-${j}`, journey.arrivalSeconds[err.errorAt])}`,
         )
         .join("\n");
       const jolt = joltKeyframes(
@@ -530,8 +750,8 @@ ${errorKeyframes(`${p}-err-${i}-${j}`, journey.arrivalSeconds[err.errorAt])}`,
           axis: err.axis,
         })),
       );
-      return `.${p}-pulse-a${i} { animation: ${p}-pulse-a${i} ${LOOP_SECONDS}s linear infinite; }
-.${p}-trail-a${i} { animation: ${p}-trail-a${i} ${LOOP_SECONDS}s linear infinite; }
+      return `.${p}-pulse-a${i} { animation: ${p}-pulse-a${i} ${LOOP_SECONDS}s linear infinite, ${p}-ink-a${i} ${LOOP_SECONDS}s linear infinite; }
+.${p}-trail-a${i} { animation: ${p}-trail-a${i} ${LOOP_SECONDS}s linear infinite, ${p}-ink-a${i} ${LOOP_SECONDS}s linear infinite; }
 .${p}-jolt-a${i} { animation: ${p}-jolt-a${i} ${LOOP_SECONDS}s linear infinite; }
 @keyframes ${p}-pulse-a${i} {
 ${journey.pulseKeyframes}
@@ -539,8 +759,19 @@ ${journey.pulseKeyframes}
 @keyframes ${p}-trail-a${i} {
 ${journey.trailKeyframes}
 }
+${inkKeyframes(`${p}-ink-a${i}`, hits)}
 ${jolt}
-${errors}`;
+${errors}
+${steers}`;
+    })
+    .join("\n");
+
+  const noteCss = laneA.notes
+    .map((note, n) => {
+      const at = laneAJourneys[note.run].arrivalSeconds[note.at] - note.lead;
+      const name = `${p}-note-${n}`;
+      return `.${name} { animation: ${name} ${LOOP_SECONDS}s linear infinite; transform-box: fill-box; transform-origin: center; }
+${noteKeyframes(name, at)}`;
     })
     .join("\n");
 
@@ -551,7 +782,13 @@ ${errors}`;
 @keyframes ${p}-pulse-b${k} {
 ${journey.pulseKeyframes}
 }
-${auraKeyframes(`${p}-aura-b${k}`, journey, k, closeIndex, laneB.travel)}`,
+${auraKeyframes(
+  `${p}-aura-b${k}`,
+  journey,
+  k,
+  closeIndex,
+  k === LANE_B_RUN_COUNT - 1 ? laneB.lastTravel : laneB.travel,
+)}`,
     )
     .join("\n");
 
@@ -581,8 +818,41 @@ ${lines}`;
     })
     .join("\n");
 
-  const recordCss = `.${p}-rec { animation: ${p}-rec ${LOOP_SECONDS}s linear infinite; }
-${recordSlotKeyframes(`${p}-rec`, laneBJourneys, closeIndex)}`;
+  const cardCss = lands
+    .map((land, k) => {
+      const name = `${p}-card-${k}`;
+      return `.${name} { animation: ${name} ${LOOP_SECONDS}s linear infinite; transform-box: fill-box; transform-origin: center; }
+${cardKeyframes(name, land)}`;
+    })
+    .join("\n");
+
+  const ghostCss = lands
+    .map((land, k) => {
+      const name = `${p}-drop-${k}`;
+      const dy = RECORD_SLOT_Y - k * CARD_LIFT - (RAIL_B_Y + DOC_Y);
+      return `.${name} { animation: ${name} ${LOOP_SECONDS}s linear infinite; }
+${dropKeyframes(name, closes[k], land, dropDx, dy)}`;
+    })
+    .join("\n");
+
+  const pingCss = `.${p}-ping { animation: ${p}-ping ${LOOP_SECONDS}s linear infinite; transform-box: fill-box; transform-origin: center; }
+${pingKeyframes(
+  `${p}-ping`,
+  laneBJourneys.map((j) => j.arrivalSeconds[1]),
+)}`;
+
+  const tallyCss = [
+    ...laneA.runs.map((_, i) => {
+      const name = `${p}-tick-a${i}`;
+      return `.${name} { animation: ${name} ${LOOP_SECONDS}s linear infinite; transform-box: fill-box; transform-origin: center; }
+${tickKeyframes(name, laneAEnds[i], 0.8)}`;
+    }),
+    ...lands.map((land, k) => {
+      const name = `${p}-tick-b${k}`;
+      return `.${name} { animation: ${name} ${LOOP_SECONDS}s linear infinite; transform-box: fill-box; transform-origin: center; }
+${tickKeyframes(name, land, 0.95)}`;
+    }),
+  ].join("\n");
 
   // The entrance: once the reveal wrapper goes live, the rail draws in
   // from the left, pads pop on in order (delays set inline per pad),
@@ -602,18 +872,23 @@ ${recordSlotKeyframes(`${p}-rec`, laneBJourneys, closeIndex)}`;
   // All motion lives behind prefers-reduced-motion; the SVG's default
   // attribute values below ARE the designed still (one wandering pulse
   // mid-route, one with-pulse partway into its record, the previous
-  // run's residue on the pads ahead of it).
+  // run's residue on the pads ahead of it, two filed records on the
+  // stack with two ghost slots above them).
   const css = `
-.rs-gap2-without { color: var(--ink-dim); }
+.rs-gap2-without { color: ${INK_A}; }
 .rs-gap2-with { color: var(--signal); }
 .rs-gap2-pulse-ink { color: var(--ink-bright); }
 .rs-gap2-error { color: var(--destructive); transform-box: fill-box; transform-origin: center; }
 @media (prefers-reduced-motion: no-preference) {
 ${laneACss}
+${noteCss}
 ${laneBPulseCss}
 ${seatCss}
 ${docCss}
-${recordCss}
+${cardCss}
+${ghostCss}
+${pingCss}
+${tallyCss}
 ${entranceCss}
 }
 `;
@@ -625,13 +900,15 @@ ${entranceCss}
     ).toFixed(3),
   );
   const padStagger = Number((0.48 / pads.length).toFixed(3));
+  const tickX = (index: number, count: number) =>
+    frame.width - TICK_EDGE - (count - 1 - index) * TICK_SPACING;
 
   return (
     <svg
       viewBox={`0 0 ${frame.width} ${frame.height}`}
       className={className}
       role="img"
-      aria-label="An endless procession of runs, shown in two lanes. Without Circuit, each agent improvises a different route through empty space, hits errors at different moments, backtracks, and its route evaporates behind it; nothing carries over to the next run. With Circuit, every run rides the same rail and writes a small document as it works, one line per completed step. The document is filed when the run finishes, the run gains speed as it goes, and the next run consults the filed record as it starts. More runs finish in the same time."
+      aria-label="An endless procession of runs, shown in two lanes; each lane's next run is already entering as the last one finishes. Without Circuit, each agent improvises a different route in white, flashes red when it hits an error, waits for the user to steer it onward, detours past markdown notes scattered around the board to re-read context, and its route evaporates behind it; nothing carries over to the next run. With Circuit, every run rides the same rail and writes a small document as it works, one line per completed step. When the run finishes, the document drops onto a growing stack of records, and each new run consults the stack as it starts and gains speed as it goes. Tally marks at the right edge keep score: four runs finish with Circuit in the time three finish without."
     >
       <style>{css}</style>
 
@@ -651,6 +928,17 @@ ${entranceCss}
           WITHOUT CIRCUIT
         </text>
         <g className={`${p}-actors`}>
+          {laneA.notes.map((note, n) => (
+            <g
+              key={`note-${note.x}-${note.y}`}
+              transform={`translate(${note.x} ${note.y}) rotate(${note.rotate})`}
+              aria-hidden="true"
+            >
+              <g className={`${p}-note-${n}`} opacity={0.22}>
+                <NoteGlyph />
+              </g>
+            </g>
+          ))}
           {laneA.runs.map((run, i) => (
             <path
               key={`trail-${run.waypoints[1].x}-${run.waypoints[1].y}`}
@@ -660,7 +948,7 @@ ${entranceCss}
               fill="none"
               stroke="currentColor"
               strokeWidth={2.5}
-              strokeOpacity={0.55}
+              strokeOpacity={0.7}
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeDasharray={`${TRAIL_A_UNITS} 100`}
@@ -695,18 +983,46 @@ ${entranceCss}
             )),
           )}
           {laneA.runs.map((run, i) => {
-            const home =
-              i === 0 ? stillA : run.waypoints[0];
+            const home = i === 0 ? stillA : run.waypoints[0];
             return (
               <g
                 key={`pulse-${run.waypoints[1].x}-${run.waypoints[1].y}`}
-                className={`${p}-pulse-a${i} rs-gap2-pulse-ink`}
+                className={`${p}-pulse-a${i}`}
                 transform={`translate(${home.x} ${home.y})`}
               >
                 <g className={`${p}-jolt-a${i}`}>
                   <Pulse />
                 </g>
               </g>
+            );
+          })}
+          {laneA.runs.flatMap((run, i) =>
+            run.errors.map((mark, j) => (
+              <g
+                key={`steer-${mark.x}-${mark.y}`}
+                transform={`translate(${mark.x + 14} ${mark.y - 26})`}
+                aria-hidden="true"
+              >
+                <g className={`${p}-steer-${i}-${j}`} opacity={0}>
+                  <SteerGlyph />
+                </g>
+              </g>
+            )),
+          )}
+          {laneA.runs.map((_, i) => {
+            const x = tickX(i, laneA.runs.length);
+            return (
+              <rect
+                key={`tick-a-${x}`}
+                className={`${p}-tick-a${i}`}
+                x={x - 1.25}
+                y={27}
+                width={2.5}
+                height={10}
+                rx={1.25}
+                fill="currentColor"
+                opacity={0.3}
+              />
             );
           })}
         </g>
@@ -771,31 +1087,89 @@ ${entranceCss}
               opacity={i < laneB.stillSeated ? SEAT_SETTLE : SEAT_RESIDUE}
             />
           ))}
-          {/* The filed record: each finished run drops its document
-              into the slot below the close pad. */}
-          <g className={`${p}-rec`} opacity={RECORD_SETTLE}>
-            <rect
-              x={recordSlotX}
-              y={RECORD_SLOT_Y}
-              width={DOC.width}
-              height={DOC.height}
-              rx={DOC.rx}
-              style={{ fill: DOC_FILL }}
-              stroke="currentColor"
-              strokeWidth={1.2}
-            />
-            {laneB.docLinePads.map((padIdx, j) => (
+          {/* The consult ping: flares around the stack as each new run
+              reads it at its first step. */}
+          <rect
+            className={`${p}-ping`}
+            x={recordSlotX - 5}
+            y={RECORD_SLOT_Y - (LANE_B_RUN_COUNT - 1) * CARD_LIFT - 5}
+            width={DOC.width + 10}
+            height={DOC.height + (LANE_B_RUN_COUNT - 1) * CARD_LIFT + 10}
+            rx={5}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            opacity={0}
+          />
+          {/* The record stack: one card per run, each filed slightly
+              above the last, accumulating across the loop. */}
+          {laneBJourneys.map((_, k) => (
+            <g
+              key={`card-${k * LANE_B_PERIOD}`}
+              className={`${p}-card-${k}`}
+              opacity={k < 2 ? 0.55 : 0.25}
+            >
               <rect
-                key={`rec-l-${padIdx}`}
-                x={recordSlotX + DOC_LINE.inset}
-                y={RECORD_SLOT_Y + DOC_LINE.top + j * DOC_LINE.gap}
-                width={DOC_LINE.width}
-                height={DOC_LINE.height}
-                rx={1}
-                fill="currentColor"
+                x={recordSlotX}
+                y={RECORD_SLOT_Y - k * CARD_LIFT}
+                width={DOC.width}
+                height={DOC.height}
+                rx={DOC.rx}
+                style={{ fill: DOC_FILL }}
+                stroke="currentColor"
+                strokeWidth={1.2}
               />
-            ))}
-          </g>
+              {laneB.docLinePads.map((padIdx, j) => (
+                <rect
+                  key={`card-l-${padIdx}`}
+                  x={recordSlotX + DOC_LINE.inset}
+                  y={
+                    RECORD_SLOT_Y -
+                    k * CARD_LIFT +
+                    DOC_LINE.top +
+                    j * DOC_LINE.gap
+                  }
+                  width={DOC_LINE.width}
+                  height={DOC_LINE.height}
+                  rx={1}
+                  fill="currentColor"
+                />
+              ))}
+            </g>
+          ))}
+          {/* The drop ghosts: the finished document sliding from the
+              pulse's side down onto the stack. */}
+          {laneBJourneys.map((_, k) => (
+            <g
+              key={`drop-${k * LANE_B_PERIOD}`}
+              transform={`translate(${pads[closeIndex - 1].x + config.docTrailX} ${RAIL_B_Y + DOC_Y})`}
+              aria-hidden="true"
+            >
+              <g className={`${p}-drop-${k}`} opacity={0}>
+                <rect
+                  x={0}
+                  y={0}
+                  width={DOC.width}
+                  height={DOC.height}
+                  rx={DOC.rx}
+                  style={{ fill: DOC_FILL }}
+                  stroke="currentColor"
+                  strokeWidth={1.2}
+                />
+                {laneB.docLinePads.map((padIdx, j) => (
+                  <rect
+                    key={`drop-l-${padIdx}`}
+                    x={DOC_LINE.inset}
+                    y={DOC_LINE.top + j * DOC_LINE.gap}
+                    width={DOC_LINE.width}
+                    height={DOC_LINE.height}
+                    rx={1}
+                    fill="currentColor"
+                  />
+                ))}
+              </g>
+            </g>
+          ))}
           {laneBJourneys.map((_, k) => (
             <g
               key={`pulse-b-${k * LANE_B_PERIOD}`}
@@ -840,6 +1214,22 @@ ${entranceCss}
               <Pulse auraClassName={`${p}-aura-b${k}`} />
             </g>
           ))}
+          {lands.map((_, k) => {
+            const x = tickX(k, LANE_B_RUN_COUNT);
+            return (
+              <rect
+                key={`tick-b-${x}`}
+                className={`${p}-tick-b${k}`}
+                x={x - 1.25}
+                y={203}
+                width={2.5}
+                height={10}
+                rx={1.25}
+                fill="currentColor"
+                opacity={0.3}
+              />
+            );
+          })}
         </g>
       </g>
     </svg>
@@ -848,27 +1238,17 @@ ${entranceCss}
 
 export function GapChapter() {
   return (
-    <figure className="flex w-full flex-col gap-3">
+    <figure className="flex w-full flex-col">
       {/* Full-bleed breakout: the stage spans the viewport while the
-          figure (and caption) stay in the content column. The body's
-          overflow-x-clip absorbs any scrollbar-width excess. The
-          reveal wrapper adds .is-live on first scroll-into-view so the
-          stages can play their entrance. */}
+          figure stays in the content column. The body's overflow-x-clip
+          absorbs any scrollbar-width excess. The reveal wrapper adds
+          .is-live on first scroll-into-view so the stages can play their
+          entrance. The section prose below the figure carries the
+          explanation, so there is no caption. */}
       <RunStageReveal className="relative left-1/2 w-screen -translate-x-1/2">
         <GapStage config={WIDE} className="hidden w-full lg:block" />
         <GapStage config={NARROW} className="w-full lg:hidden" />
       </RunStageReveal>
-      <figcaption className="flex flex-col gap-1.5">
-        <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          the same work, two worlds
-        </span>
-        <span className="text-sm text-muted-foreground">
-          Without Circuit, every run improvises a fresh route, hits fresh
-          errors, and leaves nothing behind. With Circuit, every run
-          writes its record as it works, files it at the finish, and the
-          next run starts already knowing it.
-        </span>
-      </figcaption>
     </figure>
   );
 }

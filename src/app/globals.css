@@ -197,9 +197,43 @@
   min-height: 100%;
 }
 
+/* A real terminal window: chrome strip on top, scrollable body below
+   with an always-present thin scrollbar. Fixed height on small
+   screens; on lg it stretches (flex-1) to fill the panel row. */
 .example-run-terminal {
-  height: 25rem;
-  overflow-y: auto;
+  height: 28rem;
+}
+
+@media (min-width: 1024px) {
+  .example-run-terminal {
+    height: auto;
+    min-height: 28rem;
+  }
+}
+
+.example-run-terminal-chrome {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.example-run-terminal-chrome span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 14%, transparent);
+}
+
+.example-run-terminal-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: scroll;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent)
+    transparent;
 }
 
 .example-run-user-row {
@@ -215,6 +249,29 @@
   min-height: 24rem;
 }
 
+/* The example-run panel borrows the flow explorer's construction — one
+   bordered container, control strip on top, content below a hairline — so the
+   two feature elements read as the same family. */
+.example-run-panel {
+  width: 100%;
+  border-radius: 24px;
+  corner-shape: squircle;
+  background: color-mix(in oklab, var(--muted) 32%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 7%, transparent);
+}
+
+.example-run-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.example-run-panel-content {
+  padding: 1.6rem;
+}
+
 .example-run-toggle {
   display: inline-flex;
   width: fit-content;
@@ -226,11 +283,11 @@
 }
 
 .example-run-toggle-button {
-  min-height: 1.85rem;
-  border-radius: 10px;
-  padding: 0.3rem 0.6rem;
+  min-height: 2.1rem;
+  border-radius: 11px;
+  padding: 0.4rem 0.9rem;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1;
   transition:
@@ -259,9 +316,11 @@
 .soft-code-block,
 .soft-info-card,
 .soft-chip,
+.example-run-panel,
 .example-run-toggle,
 .example-run-toggle-button,
 .install-terminal-card,
+.install-prompt-well,
 .flow-picker-button,
 .flow-composer-panel,
 .flow-block-tile,
@@ -317,6 +376,13 @@
 .install-terminal-card {
   border-radius: 24px;
   background: var(--brand-panel-deep);
+}
+
+/* The paste-this-prompt well inside the install card: a slightly
+   lifted strip on the deep panel, terminal-flavored. */
+.install-prompt-well {
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
 }
 
 .install-terminal-header {

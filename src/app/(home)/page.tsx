@@ -11,8 +11,9 @@ import { CircuitMark } from "@/components/brand/circuit-mark";
 import { GapChapter } from "@/components/run-stage/gap-chapter";
 
 type InstallTarget = {
-  name: "Claude Code" | "Codex";
-  commands: string[];
+  name: "Claude Code" | "Codex" | "OpenCode";
+  commands?: string[];
+  comingSoon?: boolean;
 };
 
 const codexInstallCommand =
@@ -36,6 +37,10 @@ const installTargets: InstallTarget[] = [
   {
     name: "Codex",
     commands: [codexInstallCommand],
+  },
+  {
+    name: "OpenCode",
+    comingSoon: true,
   },
 ];
 
@@ -130,15 +135,14 @@ Use /circuit:run to start each task. Circuit routes the task to Build, Fix, Revi
 
 /* Condensed from a real Fix run record in the Circuit repo
    (docs/release/proofs/runs/fix/run/reports/fix-result.json).
-   Field values are verbatim; the nine evidence links are trimmed to four. */
+   Field values are verbatim; fields are trimmed to the load-bearing ones
+   and the nine evidence links to four. */
 const fixRunExcerpt = `{
   "summary": "Fix 'quick fix: restore the failing login test': Added the fallback guard for the synthetic missing token path.",
   "outcome": "partial",
   "verification_status": "passed",
-  "change_set_status": "pass",
   "review_status": "skipped",
   "review_skip_reason": "Reviewer connector failed after proof passed; Fix closed with regression, verification, and change-set evidence.",
-  "residual_risks": [],
   "evidence_links": [
     { "report_id": "fix.diagnosis", "path": "reports/fix/diagnosis.json" },
     { "report_id": "fix.regression-proof", "path": "reports/fix/regression-proof.json" },
@@ -148,6 +152,38 @@ const fixRunExcerpt = `{
   ]
 }`;
 
+/* The record is colored like a reviewer would read it: keys and structure
+   recede, values carry the ink, and real check outcomes light in the
+   signal color so "what passed" is answerable at a glance. */
+const recordStatusInk: Record<string, string> = {
+  passed: "text-signal",
+  pass: "text-signal",
+  failed: "text-destructive",
+  skipped: "text-muted-foreground",
+};
+
+function RecordLine({ line }: { line: string }) {
+  const m = line.match(/^(\s*)"([^"]+)": (.*?)(,?)$/);
+  if (!m) {
+    return <span className="block text-muted-foreground/70">{line}</span>;
+  }
+  const [, indent, key, value, comma] = m;
+  const bareValue = value.match(/^"(.*)"$/)?.[1];
+  const ink =
+    bareValue !== undefined && recordStatusInk[bareValue]
+      ? recordStatusInk[bareValue]
+      : "text-foreground";
+  return (
+    <span className="block">
+      {indent}
+      <span className="text-muted-foreground">&quot;{key}&quot;</span>
+      <span className="text-muted-foreground/70">: </span>
+      <span className={ink}>{value}</span>
+      <span className="text-muted-foreground/70">{comma}</span>
+    </span>
+  );
+}
+
 function Label({
   children,
   as: Tag = "div",
@@ -156,7 +192,7 @@ function Label({
   as?: "div" | "h2";
 }) {
   return (
-    <Tag className="font-sans text-[15px] font-semibold tracking-tight text-foreground sm:text-[16px]">
+    <Tag className="font-sans text-[17px] font-semibold tracking-tight text-foreground sm:text-[19px]">
       {children}
     </Tag>
   );
@@ -166,7 +202,7 @@ function SectionDocsLink({ href, children }: { href: string; children: ReactNode
   return (
     <Link
       href={href}
-      className="text-[13px] font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      className="text-[14px] font-medium text-foreground underline decoration-signal/50 underline-offset-4 hover:decoration-signal"
     >
       {children}
     </Link>
@@ -232,6 +268,24 @@ function CodexLogo() {
   );
 }
 
+function OpenCodeLogo() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="opencode-logo"
+      viewBox="0 0 24 42"
+      focusable="false"
+    >
+      <path d="M18 30H6V18H18V30Z" fill="currentColor" opacity={0.35} />
+      <path
+        d="M18 12H6V30H18V12ZM24 36H0V6H24V36Z"
+        fill="currentColor"
+        opacity={0.9}
+      />
+    </svg>
+  );
+}
+
 function GithubLogo() {
   return (
     <svg
@@ -267,7 +321,7 @@ function MastheadSection() {
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-2.5 text-foreground">
             <CircuitMark size={34} />
-            <span className="text-[24px] font-semibold leading-none tracking-tight">
+            <span className="text-[30px] font-semibold leading-none tracking-tight">
               circuit
             </span>
           </div>
@@ -293,11 +347,11 @@ function MastheadSection() {
         </div>
       </div>
 
-      <h1 className="max-w-2xl text-pretty text-base font-medium leading-tight tracking-tight sm:text-xl">
+      <h1 className="max-w-2xl text-pretty text-lg font-medium leading-tight tracking-tight sm:text-2xl">
         Coding agents aren&apos;t unreliable. Your process is.
       </h1>
 
-      <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+      <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
         Agents learned to work from us, and like us, they do their best work
         inside a real process. Circuit is that process.
       </p>
@@ -306,14 +360,14 @@ function MastheadSection() {
         <a
           href="#install"
           aria-label="Install for Claude Code and Codex"
-          className="soft-cta-primary inline-flex min-h-11 items-center gap-2.5 px-5 py-2 text-[13px] font-medium"
+          className="soft-cta-primary inline-flex min-h-11 items-center gap-2.5 px-5 py-2 text-[14px] font-semibold"
         >
           <span>Install</span>
           <InstallProviderIcons />
         </a>
         <Link
           href="/docs"
-          className="soft-cta-secondary inline-flex min-h-11 items-center px-5 py-2 text-[13px] font-medium text-foreground"
+          className="soft-cta-secondary inline-flex min-h-11 items-center px-5 py-2 text-[14px] font-medium text-foreground"
         >
           View Docs
         </Link>
@@ -324,33 +378,29 @@ function MastheadSection() {
 
 function GapSection() {
   return (
-    <section
-      className="mt-28 flex flex-col gap-10"
-     
-    >
-      <div className="flex max-w-3xl flex-col gap-5">
-        <Label as="h2">What your agent works without</Label>
-        <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
-          <p>
-            Watch your agent work. It reads the codebase and the AGENTS.md,
-            checks what CI will catch, and improvises a process on the spot. It
-            survives on notes to itself: plan files, scratchpads, a compressed
-            summary of what it had to forget. When the notes run out, you
-            become the working memory.
-          </p>
-          <p>
-            An engineer joining a team gets more than that. The team supplies
-            an approach that fits the task, review at the right moments, a
-            paper trail, and a memory of what was decided and why.
-          </p>
-          <p className="font-medium text-foreground">
-            Your agent learned this work from engineers who had all of that.
-            Every one of these gaps can be filled.
-          </p>
-        </div>
-      </div>
+    <section className="mt-28 flex flex-col gap-10">
+      <Label as="h2">What your agent works without</Label>
 
       <GapChapter />
+
+      <div className="flex max-w-3xl flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
+        <p>
+          Watch your agent work. It reads the codebase and the AGENTS.md,
+          checks what CI will catch, and improvises a process on the spot. It
+          survives on notes to itself: plan files, scratchpads, a compressed
+          summary of what it had to forget. When the notes run out, you become
+          the working memory.
+        </p>
+        <p>
+          An engineer joining a team gets more than that. The team supplies an
+          approach that fits the task, review at the right moments, a paper
+          trail, and a memory of what was decided and why.
+        </p>
+        <p className="text-foreground">
+          Your agent learned this work from engineers who had all of that.
+          Every one of these gaps can be filled.
+        </p>
+      </div>
     </section>
   );
 }
@@ -363,17 +413,14 @@ function FlowFlexSection() {
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">A process that fits</Label>
         <p className="text-balance text-[15px] leading-relaxed text-muted-foreground">
-          You wouldn&apos;t run a hotfix like a redesign. Your agent
-          shouldn&apos;t have to. Point{" "}
+          You wouldn&apos;t run a hotfix like a redesign. Point{" "}
           <span className="font-mono font-medium text-foreground">
             /circuit:run
           </span>{" "}
           at a task and Circuit picks the flow that fits, at the rigor you
-          choose: deep for big jobs, light for quick changes. Every handoff is
-          typed and Circuit does the routing, so the agent can&apos;t skip a
-          step or silently drop context mid-run. Some tasks deserve more than
-          one attempt. Tournament mode generates competing solutions in
-          parallel.
+          choose. Typed handoffs mean no skipped steps and no dropped context.
+          And when a task deserves more than one attempt, Tournament mode runs
+          competing solutions in parallel.
         </p>
       </div>
 
@@ -390,7 +437,7 @@ function BlockInternalsSection() {
     <section className="mt-28 flex flex-col gap-10">
       <div className="flex flex-col gap-10">
         <div className="flex max-w-3xl flex-col gap-3">
-          <Label as="h2">Inside a Block</Label>
+          <Label as="h2">What every flow is made of</Label>
           <p className="text-balance text-[15px] leading-relaxed text-muted-foreground">
             Blocks are the power units inside every flow. Each one has a typed
             input, a typed output, and a clear job, so flows can combine them
@@ -402,7 +449,7 @@ function BlockInternalsSection() {
           {blockInternals.map((block) => (
             <article
               key={block.name}
-              className="block-internal-card relative flex flex-col gap-4 bg-muted/70 p-5"
+              className="block-internal-card relative flex flex-col gap-2.5 bg-muted/70 p-5"
             >
               <span aria-hidden="true" className="block-edge block-edge-t">
                 <i />
@@ -417,7 +464,7 @@ function BlockInternalsSection() {
               <h3 className="text-balance text-[15px] font-medium leading-tight tracking-tight">
                 {block.name}
               </h3>
-              <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
+              <p className="text-pretty text-[13px] leading-relaxed text-muted-foreground">
                 {block.detail}
               </p>
             </article>
@@ -453,7 +500,11 @@ function RecordSection() {
       <figure className="flex w-full max-w-3xl flex-col gap-3">
         <div className="install-terminal-card overflow-hidden">
           <pre className="whitespace-pre-wrap break-words px-5 py-4 font-mono text-[12px] leading-6 text-foreground">
-            <code>{fixRunExcerpt}</code>
+            <code>
+              {fixRunExcerpt.split("\n").map((line, index) => (
+                <RecordLine key={index} line={line} />
+              ))}
+            </code>
           </pre>
         </div>
         <figcaption className="text-[12px] leading-relaxed text-muted-foreground">
@@ -469,9 +520,111 @@ function RecordSection() {
   );
 }
 
+/* The three quieter sections each carry one compact artifact: the product
+   surface the prose is describing, drawn in the page's own materials. They
+   are illustrative examples, not verbatim records (the run record above is
+   the verbatim one). */
+function CheckpointArtifact() {
+  return (
+    <aside
+      aria-label="Example checkpoint"
+      className="soft-info-card flex flex-col gap-4 p-5"
+    >
+      <p className="font-mono text-[12px] text-signal">decision needed</p>
+      <p className="text-[14px] leading-relaxed text-foreground">
+        The fix touches the session refresh path. Patch it in place, or hold
+        for the auth migration landing this week?
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <span className="soft-chip px-3 py-1.5 text-[12px] text-foreground">
+          1 · Patch in place
+        </span>
+        <span className="soft-chip px-3 py-1.5 text-[12px] text-foreground">
+          2 · Hold for the migration
+        </span>
+      </div>
+      <p className="text-[12px] leading-relaxed text-muted-foreground">
+        At deep rigor the run waits here. Otherwise it takes the safe default
+        and records it.
+      </p>
+    </aside>
+  );
+}
+
+function ContinuityArtifact() {
+  return (
+    <aside
+      aria-label="Example session brief"
+      className="soft-info-card flex flex-col gap-4 p-5"
+    >
+      <p className="font-mono text-[12px] text-muted-foreground">
+        next session opens with
+      </p>
+      <dl className="flex flex-col gap-3">
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-[12px] font-medium text-muted-foreground">
+            Goal
+          </dt>
+          <dd className="text-[13px] leading-relaxed text-foreground">
+            Ship the staged deploy behind a feature flag
+          </dd>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-[12px] font-medium text-muted-foreground">
+            Next
+          </dt>
+          <dd className="text-[13px] leading-relaxed text-foreground">
+            Wire the flag into the router, then rerun e2e
+          </dd>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-[12px] font-medium text-muted-foreground">
+            State
+          </dt>
+          <dd className="font-mono text-[12px] leading-relaxed text-foreground">
+            verify green · feat/staged-deploy · no PR yet
+          </dd>
+        </div>
+      </dl>
+    </aside>
+  );
+}
+
+function MemoryArtifact() {
+  return (
+    <aside
+      aria-label="Example recall hints"
+      className="soft-info-card flex flex-col gap-4 p-5"
+    >
+      <p className="font-mono text-[12px] text-muted-foreground">
+        recalled at run start
+      </p>
+      <ul className="flex flex-col gap-4">
+        <li className="flex flex-col gap-1">
+          <p className="text-[13px] leading-relaxed text-foreground">
+            The e2e suite is flaky on a cold start. Rerun once before trusting
+            a failure.
+          </p>
+          <p className="font-mono text-[11px] text-muted-foreground">
+            from a Fix run · 2 weeks ago
+          </p>
+        </li>
+        <li className="flex flex-col gap-1">
+          <p className="text-[13px] leading-relaxed text-foreground">
+            Auth is mocked in tests. Never point them at the live endpoint.
+          </p>
+          <p className="font-mono text-[11px] text-muted-foreground">
+            from a Build run · last month
+          </p>
+        </li>
+      </ul>
+    </aside>
+  );
+}
+
 function CheckpointsSection() {
   return (
-    <section className="mt-28 flex flex-col">
+    <section className="mt-28 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] lg:items-center">
       <div className="flex max-w-3xl flex-col gap-5">
         <Label as="h2">When to loop you in</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -491,13 +644,14 @@ function CheckpointsSection() {
           More on checkpoints →
         </SectionDocsLink>
       </div>
+      <CheckpointArtifact />
     </section>
   );
 }
 
 function ContinuitySection() {
   return (
-    <section className="mt-28 flex flex-col">
+    <section className="mt-28 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] lg:items-center">
       <div className="flex max-w-3xl flex-col gap-5">
         <Label as="h2">Tomorrow starts where today ended</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -516,13 +670,14 @@ function ContinuitySection() {
           More on continuity →
         </SectionDocsLink>
       </div>
+      <ContinuityArtifact />
     </section>
   );
 }
 
 function MemorySection() {
   return (
-    <section className="mt-28 flex flex-col">
+    <section className="mt-28 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] lg:items-center">
       <div className="flex max-w-3xl flex-col gap-5">
         <Label as="h2">The next run remembers</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -541,6 +696,7 @@ function MemorySection() {
           More on memory →
         </SectionDocsLink>
       </div>
+      <MemoryArtifact />
     </section>
   );
 }
@@ -568,7 +724,7 @@ function ComparisonSection() {
               </p>
             </div>
             <div className="mt-auto flex flex-col gap-2">
-              <p className="font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="font-sans text-[12px] font-medium text-muted-foreground">
                 How Circuit differs
               </p>
               <p className="text-balance text-[13px] leading-relaxed text-foreground">
@@ -584,11 +740,7 @@ function ComparisonSection() {
 
 function InstallSection() {
   return (
-    <section
-      id="install"
-      className="mt-28 flex flex-col gap-7"
-     
-    >
+    <section id="install" className="mt-28 flex flex-col gap-7">
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">Get Started</Label>
         <p className="text-balance text-[15px] leading-relaxed text-foreground">
@@ -600,49 +752,57 @@ function InstallSection() {
         <CopyInstallInstructions text={agentInstallInstructions} />
       </div>
 
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
         {installTargets.map((target) => (
           <article
             key={target.name}
-            className="install-terminal-card flex flex-col overflow-hidden"
+            className={[
+              "install-terminal-card flex flex-col overflow-hidden",
+              target.comingSoon ? "md:col-span-2 lg:col-span-1" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
           >
             <div className="install-terminal-header flex items-center justify-between gap-3 px-5 py-4">
               <h3 className="install-terminal-title text-[15px] font-medium tracking-tight">
-                {target.name === "Claude Code" ? (
-                  <ClaudeCodeLogo />
-                ) : (
-                  <CodexLogo />
-                )}
+                {target.name === "Claude Code" ? <ClaudeCodeLogo /> : null}
+                {target.name === "Codex" ? <CodexLogo /> : null}
+                {target.name === "OpenCode" ? <OpenCodeLogo /> : null}
                 {target.name}
               </h3>
-              <CopyTextButton
-                text={target.commands.join("\n")}
-                className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
-              />
+              {target.commands ? (
+                <CopyTextButton
+                  text={target.commands.join("\n")}
+                  className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
+                />
+              ) : (
+                <span className="soft-chip inline-flex min-h-8 shrink-0 items-center justify-center px-3 py-1.5 text-[12px] font-medium text-muted-foreground">
+                  Soon
+                </span>
+              )}
             </div>
 
-            <pre className="whitespace-pre-wrap break-words px-5 pb-4 font-mono text-[13px] leading-7 text-foreground">
-              <code>
-                {target.commands.map((command) => `› ${command}`).join("\n")}
-              </code>
-            </pre>
+            {target.commands ? (
+              <pre className="whitespace-pre-wrap break-words px-5 pb-4 font-mono text-[13px] leading-7 text-foreground">
+                <code>
+                  {target.commands.map((command) => `› ${command}`).join("\n")}
+                </code>
+              </pre>
+            ) : (
+              <div className="flex flex-1 items-center justify-center px-5 pb-4 text-center text-[13px] leading-7 text-muted-foreground">
+                OpenCode support is coming.
+              </div>
+            )}
           </article>
         ))}
       </div>
-
-      <p className="text-[12px] leading-relaxed text-muted-foreground">
-        OpenCode support is coming.
-      </p>
     </section>
   );
 }
 
 function SiteFooter() {
   return (
-    <footer
-      className="mt-28 flex items-center justify-between gap-3 pt-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground"
-     
-    >
+    <footer className="mt-28 flex items-center justify-between gap-3 pt-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
       <div className="flex items-center gap-4">
         <a
           href="https://github.com/petekp/circuit"

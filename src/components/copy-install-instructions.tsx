@@ -72,7 +72,7 @@ export function CopyInstallInstructions({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="soft-info-card flex flex-col gap-4 p-5">
+    <div className="install-terminal-card flex flex-col gap-4 p-5">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-[26px] font-medium leading-tight tracking-tight">
           Let your agent install it
@@ -89,17 +89,24 @@ export function CopyInstallInstructions({ text }: { text: string }) {
         aria-expanded={expanded}
         className="group flex w-full flex-col items-start gap-2 text-left"
       >
-        <span
-          className={[
-            "block w-full overflow-hidden whitespace-pre-wrap break-words font-mono text-[13px] leading-6 text-muted-foreground group-hover:text-foreground",
-            expanded ? "max-h-none" : "max-h-[4.5rem]",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          {text}
+        {/* Collapsed, the prompt reads as one terminal line (newlines
+            collapse, clamped to two lines); expanded, the real line
+            structure comes back. */}
+        <span className="install-prompt-well block w-full overflow-hidden px-4 py-3 font-mono text-[13px] leading-6 text-muted-foreground group-hover:text-foreground">
+          <span
+            className={
+              expanded
+                ? "block whitespace-pre-wrap break-words"
+                : "line-clamp-2 whitespace-normal break-words"
+            }
+          >
+            <span aria-hidden="true" className="text-signal">
+              {"› "}
+            </span>
+            {text}
+          </span>
         </span>
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground group-hover:text-foreground">
+        <span className="inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground group-hover:text-foreground">
           {expanded ? "Show less" : "Show full prompt"}
           <ChevronDown
             aria-hidden="true"
