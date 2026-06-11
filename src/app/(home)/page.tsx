@@ -401,13 +401,15 @@ function GapSection() {
             working memory.
           </p>
           <p>
-            An engineer joining a team gets more than that. The team supplies
-            an approach that fits the task, review at the right moments, a
-            paper trail, and a memory of what was decided and why.
+            Human engineers don&apos;t work this way. An engineer is a
+            specialist with a process for their role: the reviewer knows when
+            to look, the release engineer keeps the paper trail, the tech
+            lead remembers what was decided and why. Your agent is asked to
+            be every role at once.
           </p>
           <p className="text-foreground">
-            Your agent learned this work from engineers who had all of that.
-            Every one of these gaps can be filled.
+            Your agent learned this work from those specialists. Every one
+            of these gaps can be filled.
           </p>
         </div>
       </div>
