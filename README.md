@@ -1,6 +1,6 @@
 # Circuit Land
 
-Marketing site for Circuit.
+Marketing site and docs for Circuit (circuit.land + circuit.land/docs).
 
 ## Local Development
 
@@ -14,7 +14,7 @@ Open `http://localhost:3000`.
 ## Checks
 
 ```bash
-npm run lint
+npm run check
 npm run build
 ```
 

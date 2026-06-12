@@ -9,14 +9,21 @@ is optional. An override that sets nothing contributes nothing.
 
 ## Layers
 
-Overrides apply at four layers. Later layers win.
+Overrides apply at seven layers. Later layers win.
 
 | Layer | Where it lives |
 | --- | --- |
 | `default` | Circuit's built-in baseline. |
 | `user-global` | `~/.config/circuit/config.yaml`. |
 | `project` | `.circuit/config.yaml`. |
+| `flow` | Declared by the flow package. |
+| `stage` | Declared by the flow package, for one stage. |
+| `step` | Declared by the flow package, for one step. |
 | `invocation` | Passed on a single run. |
+
+The three middle layers are flow-authored: a flow can pin what a stage or step
+needs, and that declaration outranks your project config. Only `invocation`
+outranks the flow.
 
 In a config file, a selection override lives at `defaults.selection` (applies to
 every run) or under `circuits.<flow>.selection` (applies to one flow).
@@ -31,7 +38,7 @@ defaults:
       provider: anthropic
       model: claude-opus-4-7
     effort: high
-    depth: standard
+    depth: medium
 circuits:
   fix:
     selection:
@@ -52,7 +59,7 @@ at parse time instead of silently dropping your override.
 | --- | --- |
 | `model` | A `provider` (`openai`, `anthropic`, `gemini`, or `custom`) and a `model` string. |
 | `effort` | One of `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`. |
-| `depth` | One of `lite`, `standard`, `deep`, `tournament`, `autonomous`. |
+| `depth` | One of `low`, `medium`, `high`, `tournament`, `autonomous`. |
 | `skills` | A skill operation (see below). |
 | `invocation_options` | A JSON object passed to the connector. Merged right-biased by layer. |
 
@@ -68,7 +75,18 @@ at parse time instead of silently dropping your override.
 | `append` | Add these to the prior set. |
 | `remove` | Drop these from the prior set. |
 
+## Selection and the power dial
+
+The [power dial](/docs/flows/modes#power) fills `model` and `effort` only when
+no layer set them. An explicit `model` or `effort` in any selection override
+wins over the dial. Set the dial itself with `--power` on a run or
+`defaults.power` in config; both accept `auto`, `low`, `medium`, or `high`.
+With `auto`, the run's researcher recommends a tier, the engine clamps it to
+the `power_auto` bounds, and the receipt reports the resolution, such as
+`power low (auto)`. Per-connector tier tables live under `power_tiers` (see
+[Connectors](/docs/configuration/connectors)).
+
 ## Related
 
 - [Skills](/docs/configuration/skills)
-- [Modes and rigor](/docs/flows/modes)
+- [Depth, power, and modes](/docs/flows/modes)

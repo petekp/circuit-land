@@ -27,7 +27,9 @@ type BlockId =
   | "diagnose"
   | "human-decision"
   | "plan"
-  | "coordinate"
+  | "pursue"
+  | "coordinate-pursuits"
+  | "batch"
   | "act"
   | "run-verification"
   | "review"
@@ -39,7 +41,9 @@ const BLOCK_LABEL: Record<BlockId, string> = {
   diagnose: "Diagnose",
   "human-decision": "Human Decision",
   plan: "Plan",
-  coordinate: "Coordinate",
+  pursue: "Pursue",
+  "coordinate-pursuits": "Coordinate Pursuits",
+  batch: "Batch",
   act: "Act",
   "run-verification": "Run Verification",
   review: "Review",
@@ -84,7 +88,7 @@ const FLOWS: ComposerFlow[] = [
     accent: "var(--flow-build-accent)",
     motif: FLOW_MOTIFS.build,
     summary: "Turn a clear brief into a reviewed change, backed by evidence.",
-    blocks: ["frame", "plan", "act", "run-verification", "review", "close-with-evidence"],
+    blocks: ["frame", "gather-context", "plan", "act", "run-verification", "review", "close-with-evidence"],
   },
   {
     key: "fix",
@@ -97,7 +101,6 @@ const FLOWS: ComposerFlow[] = [
       "frame",
       "gather-context",
       "diagnose",
-      "human-decision",
       "act",
       "run-verification",
       "review",
@@ -113,10 +116,10 @@ const FLOWS: ComposerFlow[] = [
     summary:
       "Coordinate several related changes without pretending they run at once.",
     blocks: [
-      "frame",
-      "coordinate",
+      "pursue",
+      "coordinate-pursuits",
       "plan",
-      "act",
+      "batch",
       "run-verification",
       "review",
       "close-with-evidence",
@@ -129,8 +132,8 @@ const FLOWS: ComposerFlow[] = [
     accent: "var(--flow-explore-accent)",
     motif: FLOW_MOTIFS.explore,
     summary:
-      "Compare paths before the agent commits to one. With tournament enabled, option cases fan out, then rejoin for review.",
-    blocks: ["frame", "diagnose", "plan", "review", "human-decision", "close-with-evidence"],
+      "Compare paths before the agent commits to one. With tournament enabled, option cases fan out, then rejoin at the tradeoff checkpoint.",
+    blocks: ["frame", "diagnose", "plan", "review", "close-with-evidence"],
   },
   {
     key: "review",
@@ -153,7 +156,6 @@ const FLOWS: ComposerFlow[] = [
       "plan",
       "act",
       "run-verification",
-      "review",
       "human-decision",
       "close-with-evidence",
     ],
@@ -169,15 +171,16 @@ const FLOWS: ComposerFlow[] = [
   },
 ];
 
-// Explore renders a tournament fanout between Plan and Review. The "fanout"
-// pseudo-node is one wide cluster (a single list item); the verbatim aria-label
-// in FlowDiagram names the announced order including "fan out option cases".
+// Explore renders a tournament fanout between Plan and Human Decision: the
+// fanned-out cases are stressed and rejoin at the tradeoff checkpoint, with no
+// separate review block on that path. The "fanout" pseudo-node is one wide
+// cluster (a single list item); the aria-label in FlowDiagram derives the
+// announced order from this sequence, including "fan out option cases".
 const EXPLORE_SEQUENCE = [
   "frame",
   "diagnose",
   "plan",
   "fanout",
-  "review",
   "human-decision",
   "close-with-evidence",
 ] as const;
@@ -384,28 +387,28 @@ function connectorGroupProps(reduceMotion: boolean, delay: number): MotionProps 
 
 // ---- Flow flexibility data --------------------------------------------------
 
-type Rigor = "lite" | "standard" | "deep";
+type Depth = "low" | "medium" | "high";
 
-// What each flow can flex, mirroring the support table in
-// circuit/docs/architecture/run-process.md. Only `tournament` actually reshapes
-// the block diagram (Explore and Prototype fan out into parallel option cases,
-// per their real tournament fixtures). `rigors` and `autonomous` change how a
-// run executes, not which blocks it has — verified against the fixtures: there
-// is no deep.json or autonomous.json, so they are stated, never animated as
-// fake block changes.
+// What each flow can flex, mirroring each flow's allowed_depths /
+// supports_tournament / supports_autonomous in circuit/src/flows/<id>/data.ts.
+// Only `tournament` actually reshapes the block diagram (Explore and Prototype
+// fan out into parallel option cases, per their real tournament fixtures).
+// `depths` and `autonomous` change how a run executes, not which blocks it
+// has — verified against the fixtures: there is no high.json or
+// autonomous.json, so they are stated, never animated as fake block changes.
 type AxisSupport = {
-  rigors: Rigor[];
+  depths: Depth[];
   tournament: boolean;
   autonomous: boolean;
 };
 
 const AXIS_SUPPORT: Record<Exclude<FlowKey, "custom">, AxisSupport> = {
-  build: { rigors: ["lite", "standard", "deep"], tournament: false, autonomous: true },
-  fix: { rigors: ["lite", "standard", "deep"], tournament: false, autonomous: true },
-  pursue: { rigors: ["standard"], tournament: false, autonomous: true },
-  explore: { rigors: ["lite", "standard", "deep"], tournament: true, autonomous: true },
-  review: { rigors: ["standard"], tournament: false, autonomous: false },
-  prototype: { rigors: ["standard", "deep"], tournament: true, autonomous: true },
+  build: { depths: ["low", "medium", "high"], tournament: false, autonomous: true },
+  fix: { depths: ["low", "medium", "high"], tournament: false, autonomous: true },
+  pursue: { depths: ["medium"], tournament: false, autonomous: true },
+  explore: { depths: ["low", "medium", "high"], tournament: true, autonomous: true },
+  review: { depths: ["medium"], tournament: false, autonomous: false },
+  prototype: { depths: ["medium", "high"], tournament: true, autonomous: true },
 };
 
 function supportFor(key: FlowKey): AxisSupport | null {
@@ -413,14 +416,14 @@ function supportFor(key: FlowKey): AxisSupport | null {
 }
 
 // A glance-level badge of what the active flow supports, shown opposite the
-// flow title. Rigor is always present (every flow has a rigor range); autonomy
+// flow title. Depth is always present (every flow has a depth range); autonomy
 // and tournament appear only when the flow actually supports them, so the badge
 // reads as a quick answer to "what can this flow do."
 function FlowSupportIndicator({ support }: { support: AxisSupport }) {
-  const rigorRange =
-    support.rigors.length > 1
-      ? `${support.rigors[0]}–${support.rigors[support.rigors.length - 1]}`
-      : support.rigors[0];
+  const depthRange =
+    support.depths.length > 1
+      ? `${support.depths[0]}–${support.depths[support.depths.length - 1]}`
+      : support.depths[0];
   const chipClass =
     "soft-chip px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em]";
   return (
@@ -429,7 +432,7 @@ function FlowSupportIndicator({ support }: { support: AxisSupport }) {
       className="flex flex-wrap items-center justify-end gap-1.5"
     >
       <li className={`${chipClass} flex items-center gap-1 text-muted-foreground`}>
-        Rigor <span className="text-foreground">{rigorRange}</span>
+        Depth <span className="text-foreground">{depthRange}</span>
       </li>
       {support.autonomous ? (
         <li className={`${chipClass} text-foreground`}>Autonomous</li>
