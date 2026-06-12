@@ -27,7 +27,9 @@ type BlockId =
   | "diagnose"
   | "human-decision"
   | "plan"
-  | "coordinate"
+  | "pursue"
+  | "coordinate-pursuits"
+  | "batch"
   | "act"
   | "run-verification"
   | "review"
@@ -39,7 +41,9 @@ const BLOCK_LABEL: Record<BlockId, string> = {
   diagnose: "Diagnose",
   "human-decision": "Human Decision",
   plan: "Plan",
-  coordinate: "Coordinate",
+  pursue: "Pursue",
+  "coordinate-pursuits": "Coordinate Pursuits",
+  batch: "Batch",
   act: "Act",
   "run-verification": "Run Verification",
   review: "Review",
@@ -84,7 +88,7 @@ const FLOWS: ComposerFlow[] = [
     accent: "var(--flow-build-accent)",
     motif: FLOW_MOTIFS.build,
     summary: "Turn a clear brief into a reviewed change, backed by evidence.",
-    blocks: ["frame", "plan", "act", "run-verification", "review", "close-with-evidence"],
+    blocks: ["frame", "gather-context", "plan", "act", "run-verification", "review", "close-with-evidence"],
   },
   {
     key: "fix",
@@ -113,10 +117,10 @@ const FLOWS: ComposerFlow[] = [
     summary:
       "Coordinate several related changes without pretending they run at once.",
     blocks: [
-      "frame",
-      "coordinate",
+      "pursue",
+      "coordinate-pursuits",
       "plan",
-      "act",
+      "batch",
       "run-verification",
       "review",
       "close-with-evidence",

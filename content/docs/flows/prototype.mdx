@@ -46,7 +46,10 @@ relays a comparison to a reviewer, and ranks them. This needs
 
 ## Checkpoints
 
-After the artifact is verified, Circuit stops for your call:
+After the artifact is verified, a checkpoint decides what happens to the
+prototype. At deep rigor or in a tournament run, Circuit pauses for your call;
+otherwise it auto-resolves to the safe default, Keep Prototype (see
+[Checkpoints](/docs/concepts/checkpoints)). The choices:
 
 - **Keep Prototype** — save it as evidence and stop.
 - **Save Build Input** — close with a Build-ready follow-up prompt, without

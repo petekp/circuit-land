@@ -11,11 +11,12 @@ Other artifacts (README, etc.) will be derived from these docs.
 
 ## Ground truth (non-negotiable)
 
-- Canonical source: `/Users/petepetrash/Code/circuit` (current working tree).
+- Canonical source: a pinned ref of the circuit repo — the latest published
+  release tag by default, or a stated commit when intentionally documenting
+  pre-release changes.
 - **Never** use the README or other top-level prose in that repo — they are stale.
 - Authorities: source under `src/cli`, `src/flows`, `src/schemas`, `schemas/`,
-  `plugins/`, and `UBIQUITOUS_LANGUAGE.md` (terminology). The session inventory
-  is at `/private/tmp/claude-501/-Users-petepetrash-Code-circuit-land/3599f278-aa36-4119-bb2a-7e8a78b85b8b/tasks/wtx4q4k9b.output`.
+  `plugins/`, and `UBIQUITOUS_LANGUAGE.md` (terminology).
 - **Invent nothing.** Every command, subcommand, flag, default, config key, flow,
   and concept must exist in source. If you can't verify it, don't write it.
 - Prefer verifying CLI flags by reading the command's source in `src/cli/<cmd>.ts`.
@@ -70,10 +71,11 @@ shaped → annotated `yaml` example → key reference. Note `.strict()` parsing
 
 Use the exact terms and casing from `UBIQUITOUS_LANGUAGE.md`. Key ones:
 Flow, Schematic, Block, Stage, Step, Route, Run, Checkpoint, Check, Evidence,
-Trace, Report, Run folder, Depth, Mode, Rigor, Effort, Relay, Connector, Role,
+Trace, Report, Run folder, Depth, Mode, Power, Effort, Relay, Connector, Role,
 Tournament, Continuity, Skill, Skill slot, Plugin.
 
 - The six public flows: **Build, Fix, Explore, Review, Prototype, Pursue.**
 - Builtin connectors: `claude-code`, `codex`, `cursor-agent`.
-- Rigor levels: `lite`, `standard`, `deep`. Effort: `none`…`max`.
+- Depth levels: `low`, `medium`, `high`. Power: `auto`|`low`|`medium`|`high`
+  (default `medium`). Effort: `none`…`max`.
 - The CLI binary is `circuit`; the agent command is `/circuit:run`.

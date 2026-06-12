@@ -88,9 +88,9 @@ const blockInternals = [
       "Chooses the path, order, and verification points before anything changes.",
   },
   {
-    name: "Coordinate",
+    name: "Coordinate Pursuits",
     detail:
-      "Tracks dependencies and parallelizable chunks across multi-part work.",
+      "Orders multi-part work by dependency, conflict risk, and safe composition.",
   },
   {
     name: "Act",
