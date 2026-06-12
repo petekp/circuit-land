@@ -17,15 +17,15 @@ folder records the checkpoint request: the context to review and the allowed
 choices. Some checkpoints also declare a safe default — the choice Circuit takes
 when no operator answers.
 
-A checkpoint pauses for an operator at deep rigor and in tournament runs. At
-lighter rigor and under [autonomous](/docs/flows/modes) mode, it auto-resolves
-with its declared default instead of waiting.
+A checkpoint pauses for an operator at high depth and in tournament runs. At
+low and medium depth and under [autonomous](/docs/flows/modes) mode, it
+auto-resolves with its declared default instead of waiting.
 
 <Mermaid
-  label="How a checkpoint resolves by rigor and mode"
+  label="How a checkpoint resolves by depth and mode"
   chart={`
 flowchart TD
-  CP["Checkpoint reached"] --> Q{"Deep rigor or tournament?"}
+  CP["Checkpoint reached"] --> Q{"High depth or tournament?"}
   Q -->|yes| Wait["Wait for operator choice"]
   Q -->|no| Default["Auto-resolve with safe default"]
 `}

@@ -78,6 +78,43 @@ Because a custom connector is read-only, it cannot fill the `implementer` role â
 
 The `relay` block parses strictly: unknown keys are rejected.
 
+## Power tier tables
+
+The [power dial](/docs/flows/modes#power) never names models. Each connector
+carries a tier table that translates `low`, `medium`, and `high` into a
+concrete model or reasoning effort. The builtins ship with defaults:
+`claude-code` maps the tiers to Anthropic's small, middle, and big model
+aliases; `codex` maps them to reasoning effort. A custom connector has no
+table until you declare one under the top-level `power_tiers` key:
+
+```yaml
+power_tiers:
+  my-ollama:
+    low: { model: { provider: custom, model: qwen3-coder } }
+    medium: { model: { provider: custom, model: qwen3-coder-plus } }
+    high: { model: { provider: custom, model: qwen3-max } }
+```
+
+A declared tier overrides only that tier of that connector; shipped defaults
+fill the rest. Without a table, the dial is inert for that connector.
+
+## What a custom command receives
+
+Circuit appends two paths as the final two arguments of your `command`: the
+prompt file to read and the output file to write. The subprocess inherits
+Circuit's environment and working directory, plus the resolved selection:
+
+| Variable | Value |
+| --- | --- |
+| `CIRCUIT_RELAY_MODEL` | The materialized tier's model id. |
+| `CIRCUIT_RELAY_MODEL_PROVIDER` | `anthropic`, `openai`, `gemini`, or `custom`. |
+| `CIRCUIT_RELAY_EFFORT` | The effort tier, when one is set. |
+
+This is the seam for local workers: wrap a local agentic CLI in a small
+script, point `power_tiers.<name>` at your local model names, and the power
+dial drives local model choice with no engine changes.
+
 ## Related
 
 - [Selection](/docs/configuration/selection)
+- [Depth, power, and modes](/docs/flows/modes)

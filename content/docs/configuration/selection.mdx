@@ -31,7 +31,7 @@ defaults:
       provider: anthropic
       model: claude-opus-4-7
     effort: high
-    depth: standard
+    depth: medium
 circuits:
   fix:
     selection:
@@ -52,7 +52,7 @@ at parse time instead of silently dropping your override.
 | --- | --- |
 | `model` | A `provider` (`openai`, `anthropic`, `gemini`, or `custom`) and a `model` string. |
 | `effort` | One of `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`. |
-| `depth` | One of `lite`, `standard`, `deep`, `tournament`, `autonomous`. |
+| `depth` | One of `low`, `medium`, `high`, `tournament`, `autonomous`. |
 | `skills` | A skill operation (see below). |
 | `invocation_options` | A JSON object passed to the connector. Merged right-biased by layer. |
 
@@ -68,7 +68,15 @@ at parse time instead of silently dropping your override.
 | `append` | Add these to the prior set. |
 | `remove` | Drop these from the prior set. |
 
+## Selection and the power dial
+
+The [power dial](/docs/flows/modes#power) fills `model` and `effort` only when
+no layer set them. An explicit `model` or `effort` in any selection override
+wins over the dial. Set the dial itself with `--power` on a run or
+`defaults.power` in config; per-connector tier tables live under
+`power_tiers` (see [Connectors](/docs/configuration/connectors)).
+
 ## Related
 
 - [Skills](/docs/configuration/skills)
-- [Modes and rigor](/docs/flows/modes)
+- [Depth, power, and modes](/docs/flows/modes)

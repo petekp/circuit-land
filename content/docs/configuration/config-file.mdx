@@ -60,10 +60,11 @@ skills:
 circuits:
   fix:
     selection:
-      depth: deep
+      depth: high
 
-# Baseline selection applied to every run. See Selection.
+# Baseline selection and dial defaults applied to every run. See Selection.
 defaults:
+  power: low
   selection:
     effort: high
 ```
@@ -81,7 +82,8 @@ Parsing is strict. Unknown keys are rejected at parse time, so a typo like `defu
 | `skills` | Skill slot bindings. See [Skills](/docs/configuration/skills). |
 | `skill_hooks` | Skill-hook policy and detection. |
 | `circuits` | Per-flow overrides, keyed by flow id. |
-| `defaults` | Baseline selection for every run. See [Selection](/docs/configuration/selection). |
+| `power_tiers` | Per-connector tier tables for the [power dial](/docs/flows/modes#power), keyed by connector name. |
+| `defaults` | Baseline selection (`defaults.selection`) and the power dial default (`defaults.power`) for every run. See [Selection](/docs/configuration/selection). |
 
 ## Related
 

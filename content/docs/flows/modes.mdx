@@ -1,24 +1,54 @@
 ---
-title: Modes and rigor
-description: Tune care, tournaments, and autonomy.
+title: Depth, power, and modes
+description: Tune thoroughness, model power, tournaments, and autonomy.
 ---
 
-Three axes tune a run. You set them as flags on [run](/docs/cli/run); the flow
-rejects any axis it does not support.
+Two dials and two modes tune a run. You set them as flags on
+[run](/docs/cli/run); the flow rejects anything it does not support, before
+the run starts.
 
-## Rigor
+## Depth
 
-Rigor controls how much care a flow takes.
+Depth is the process dial: how much thoroughness and care a flow spends.
 
 ```bash
-circuit run build --goal "..." --rigor deep
+circuit run build --goal "..." --depth high
 ```
 
 | Value | Description |
 | --- | --- |
-| `lite` | Less care, fewer stages. |
-| `standard` | The default. |
-| `deep` | More care. |
+| `low` | Less care. For Fix, also drops the independent review stage. |
+| `medium` | The default. |
+| `high` | More care. Checkpoints pause for you instead of auto-resolving. |
+
+Build, Explore, and Fix support all three values. Prototype supports `medium`
+and `high`. Review and Pursue run at `medium` only.
+
+## Power
+
+Power is the model dial: how much model each worker run gets. It never names
+models. Per-connector tier tables translate the dial into a concrete model or
+reasoning effort at selection time.
+
+```bash
+circuit run fix --goal "..." --power low
+```
+
+| Value | What workers get |
+| --- | --- |
+| `low` | Research on the big tier, implementation on the small tier, review on the middle tier. |
+| `medium` | The default. Research on the big tier, implementation and review on the middle tier. |
+| `high` | Everything on the big tier. |
+
+Research stays on the big tier at every dial position: the reading that
+steers the run is the wrong place to save. A worker retry automatically runs
+one tier up, capped at high. Explicit model or effort config always wins over
+the dial.
+
+Every flow supports the dial. Persist a default with `defaults.power` in
+[config](/docs/configuration/config-file); the flag wins over config. The
+end-of-run receipt line reports the dial position and any escalations, so a
+cheap run that had to escalate is visible, not silent.
 
 ## Tournament
 
@@ -43,13 +73,14 @@ run does not complete. Supported by Build, Fix, Explore, Prototype, and Pursue.
 circuit run fix --goal "..." --autonomous
 ```
 
-## Depth
+## Compiled depth
 
-Depth is the thoroughness value Circuit compiles from these axes. Autonomous and
-tournament each resolve to their own depth; otherwise depth is the rigor. A flow
-falls back to its default axes when you pass none.
+A run records one compiled thoroughness value. Tournament and autonomous each
+resolve to their own compiled depth; otherwise it is the depth dial. A flow
+falls back to its defaults when you pass nothing.
 
 ## Related
 
 - [run](/docs/cli/run)
 - [Selection](/docs/configuration/selection)
+- [Connectors](/docs/configuration/connectors)
