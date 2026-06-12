@@ -88,9 +88,9 @@ const blockInternals = [
       "Chooses the path, order, and verification points before anything changes.",
   },
   {
-    name: "Coordinate",
+    name: "Coordinate Pursuits",
     detail:
-      "Tracks dependencies and parallelizable chunks across multi-part work.",
+      "Orders multi-part work by dependency, conflict risk, and safe composition.",
   },
   {
     name: "Act",
@@ -360,8 +360,8 @@ function FlowFlexSection() {
           <span className="font-mono font-medium text-foreground">
             /circuit:run
           </span>{" "}
-          at a task and Circuit picks the flow that fits, at the rigor you
-          choose: deep for big jobs, light for quick changes. Every handoff is
+          at a task and Circuit picks the flow that fits, at the depth you
+          choose: high for big jobs, low for quick changes. Every handoff is
           typed and Circuit does the routing, so the agent can&apos;t skip a
           step or silently drop context mid-run. Some tasks deserve more than
           one attempt. Tournament mode generates competing solutions in
@@ -473,7 +473,7 @@ function CheckpointsSection() {
           </p>
           <p>
             Circuit&apos;s flows name those moments up front: a risky
-            direction, an ambiguous goal, a visual choice. At deep rigor,
+            direction, an ambiguous goal, a visual choice. At high depth,
             Circuit waits for your answer. Otherwise it takes the safe default
             and writes it down. The decision point lives in the flow, not the
             agent&apos;s discretion.

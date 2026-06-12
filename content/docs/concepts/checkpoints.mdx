@@ -12,22 +12,25 @@ settling an ambiguous goal scope. The rest of a run advances on its own checks.
 
 ## How it works
 
-When a checkpoint pauses, the run stops in a `checkpoint_waiting` state. The run
+When a checkpoint pauses, the run stops in a `waiting_checkpoint` state. The run
 folder records the checkpoint request: the context to review and the allowed
 choices. Some checkpoints also declare a safe default — the choice Circuit takes
 when no operator answers.
 
-A checkpoint pauses for an operator at deep rigor and in tournament runs. At
-lighter rigor and under [autonomous](/docs/flows/modes) mode, it auto-resolves
-with its declared default instead of waiting.
+A checkpoint pauses for an operator at high depth and in tournament runs. At
+low and medium depth, it auto-resolves with its declared safe default instead
+of waiting. Under [autonomous](/docs/flows/modes) mode, it auto-resolves with
+a declared resolution policy when the flow ships one (Explore and Prototype
+pick the highest-scoring tournament option), and with the safe default
+otherwise.
 
 <Mermaid
-  label="How a checkpoint resolves by rigor and mode"
+  label="How a checkpoint resolves by depth and mode"
   chart={`
 flowchart TD
-  CP["Checkpoint reached"] --> Q{"Deep rigor or tournament?"}
+  CP["Checkpoint reached"] --> Q{"High depth or tournament?"}
   Q -->|yes| Wait["Wait for operator choice"]
-  Q -->|no| Default["Auto-resolve with safe default"]
+  Q -->|no| Default["Auto-resolve (policy or safe default)"]
 `}
 />
 
@@ -47,7 +50,9 @@ rejected.
   safe default is to continue.
 - [Explore](/docs/flows/explore) asks which option to close with after its
   decision tournament.
-- [Prototype](/docs/flows/prototype) asks which variant to keep.
+- [Prototype](/docs/flows/prototype) asks what to do with the verified
+  artifact: keep it, save it as a Build input, or discard it. Its safe default
+  is to keep it. In a tournament run it instead asks which variant to keep.
 
 ## Related
 

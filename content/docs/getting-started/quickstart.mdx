@@ -24,7 +24,9 @@ A flow may pause at a [checkpoint](/docs/concepts/checkpoints) when it needs you
 decision — for example, to confirm the brief before it starts changing code.
 Circuit shows the prompt and the choices. Pick one to continue.
 
-If you do nothing, a checkpoint can fall back to its declared safe default.
+At low and medium depth, a checkpoint that declares a safe default resolves
+with it automatically; at high depth or in a tournament the run waits for your
+answer.
 
 ## From the CLI
 
