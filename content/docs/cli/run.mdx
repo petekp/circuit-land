@@ -22,7 +22,7 @@ Pass the flow id as the first argument: `build`, `fix`, `explore`, `review`,
 | `--goal <goal>` | The task to run. Required. | |
 | `--why <why>` | Why the task matters. Threaded into worker prompts. | |
 | `--depth <low\|medium\|high>` | Thoroughness of the flow. | `medium` |
-| `--power <low\|medium\|high>` | How much model each worker run gets. | `medium` |
+| `--power <auto\|low\|medium\|high>` | How much model each worker run gets. | `medium` |
 | `--tournament` | Run candidates in parallel and pick a winner. | off |
 | `--tournament-n <2\|3\|4>` | Number of tournament candidates. Requires `--tournament`. | `3` |
 | `--autonomous` | Drive the continuation loop instead of a single pass. | off |
@@ -35,6 +35,11 @@ Pass the flow id as the first argument: `build`, `fix`, `explore`, `review`,
 Not every flow supports every control. `--depth`, `--tournament`, and
 `--autonomous` are rejected when the flow does not declare them; `--power`
 works on every flow. See [Depth, power, and modes](/docs/flows/modes).
+
+`--power auto` lets the run pick the tier: the researcher recommends one and
+the engine clamps it to the `power_auto` bounds in
+[config](/docs/configuration/config-file). Checkpoint resume re-reads power
+from config, so omit `--power` when resuming.
 
 ## Examples
 

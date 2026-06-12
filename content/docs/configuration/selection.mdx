@@ -73,8 +73,11 @@ at parse time instead of silently dropping your override.
 The [power dial](/docs/flows/modes#power) fills `model` and `effort` only when
 no layer set them. An explicit `model` or `effort` in any selection override
 wins over the dial. Set the dial itself with `--power` on a run or
-`defaults.power` in config; per-connector tier tables live under
-`power_tiers` (see [Connectors](/docs/configuration/connectors)).
+`defaults.power` in config; both accept `auto`, `low`, `medium`, or `high`.
+With `auto`, the run's researcher recommends a tier, the engine clamps it to
+the `power_auto` bounds, and the receipt reports the resolution, such as
+`power low (auto)`. Per-connector tier tables live under `power_tiers` (see
+[Connectors](/docs/configuration/connectors)).
 
 ## Related
 
