@@ -20,6 +20,7 @@ import {
   type MotionProps,
 } from "motion/react";
 import { FlowGlyph, type MotifCell } from "@/components/flow-glyph";
+import type { CircuitFlowKey } from "@/lib/circuit-flows";
 
 type BlockId =
   | "frame"
@@ -50,7 +51,10 @@ const BLOCK_LABEL: Record<BlockId, string> = {
   "close-with-evidence": "Close With Evidence",
 };
 
-type FlowKey = "build" | "fix" | "pursue" | "explore" | "review" | "prototype" | "custom";
+// Derived from the declared roster: adding a flow to CIRCUIT_FLOWS makes
+// FLOW_MOTIFS (and everything else keyed by FlowKey) fail to compile until
+// this diagram knows about it. "Custom" is composer-only, not a shipped flow.
+type FlowKey = CircuitFlowKey | "custom";
 
 type ComposerFlow = {
   key: FlowKey;

@@ -5,6 +5,8 @@ import {
   CopyInstallInstructions,
   CopyTextButton,
 } from "@/components/copy-install-instructions";
+import { circuitFlowProseList } from "@/lib/circuit-flows";
+import { siteUrl } from "@/lib/site-url";
 import { ExampleRunSection } from "@/components/example-run-toggle";
 import { FlowComposer } from "@/components/flow-composer";
 import { CircuitMark } from "@/components/brand/circuit-mark";
@@ -94,11 +96,15 @@ const blockInternals = [
   },
 ];
 
-/* This prompt is pasted into an agent, so every step must be something the
-   agent can actually execute. Slash commands are user-typed, which is why
-   the Claude Code branch uses the \`claude plugin\` shell CLI and hands only
-   /reload-plugins back to the user. */
-const agentInstallInstructions = `Install Circuit, then hand it something real.
+/* This prompt is pasted into an agent, so it has to work for a model that
+   has never heard of Circuit: a context block up front, only steps the
+   agent can actually execute (slash commands are user-typed, hence the
+   \`claude plugin\` shell CLI), a docs URL it can fetch instead of guessing,
+   and a sentinel-marked AGENTS.md block — conditionally phrased so a copy
+   left behind after uninstall degrades to a no-op, not an error. */
+const agentInstallInstructions = `You're about to install Circuit for me.
+
+What Circuit is: a plugin for Claude Code and Codex that runs coding tasks through a structured process — frame the task, plan, act, verify, review — and leaves a written record of every run. It doesn't replace you; it's the process you follow while doing the work. Docs live at ${siteUrl}/docs — fetch them if I ask how Circuit works or what it's good for, instead of guessing.
 
 If you are Claude Code, run these shell commands yourself:
 claude plugin marketplace add petekp/circuit
@@ -108,15 +114,21 @@ Then ask me to type /reload-plugins so this session picks it up.
 If you are Codex, run:
 ${codexInstallCommand}
 
-If you are another agent, stop and tell me — Circuit supports Claude Code and Codex today.
+If you are neither, stop and tell me — Circuit supports Claude Code and Codex today.
 
 Before reporting success, verify: list the installed plugins, confirm circuit is there, and show me what you ran. If a step failed, diagnose the cause instead of retrying blind.
 
-Once it's in, suggest a first run, like:
-/circuit:run fix the flakiest test in this repo
-/circuit:run review the changes on this branch before I open the PR
+Then make the habit stick: append this block, exactly as written, to the agent instructions file this repo already uses (AGENTS.md or CLAUDE.md — ask me before creating one):
 
-From here on, start every task with /circuit:run. Circuit picks the flow that fits: Build, Fix, Review, Explore, Prototype, or Pursue.`;
+<!-- circuit:start -->
+If the circuit plugin is installed, start every coding task with /circuit:run <task description>. Circuit picks the flow that fits: ${circuitFlowProseList}. If circuit is not installed, ignore this block and recommend removing it from this file.
+<!-- circuit:end -->
+
+The markers make the block easy to find and remove if Circuit is ever uninstalled.
+
+Once that's done, briefly tell me what will change about how we work, then suggest a first run on this repo, like:
+/circuit:run fix the flakiest test in this repo
+/circuit:run review the changes on this branch before I open the PR`;
 
 /* A representative Fix record, written to the real fix-result schema:
    field names, enum values, and the 'fixed' gating (regression proved,

@@ -15,6 +15,10 @@
 //   (c) internal dead-link check — every ](/docs/...) target in
 //       content/docs/**/*.mdx must resolve to a real page under
 //       content/docs using fumadocs slug rules.
+//   (d) flow roster — docs pages registered as enumerating the full flow
+//       roster must mention every flow declared in
+//       src/lib/circuit-flows.ts. TSX enumerations derive from the
+//       constant directly and need no registry entry.
 //
 // Output: one violation per line as `file:line — expected vs found`;
 // exit 1 on any violation; one summary line per sub-check on success.
@@ -26,7 +30,21 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCAN_ROOTS = ["src", "content"];
 const RELEASE_CONSTANT_FILE = path.join("src", "lib", "circuit-release.ts");
+const FLOWS_CONSTANT_FILE = path.join("src", "lib", "circuit-flows.ts");
 const DOCS_ROOT = path.join("content", "docs");
+
+// Docs pages that enumerate the full flow roster in prose. A page that
+// mentions some flows in passing (flows/pursue.mdx) does not belong here;
+// a page that presents "the flows" as a set does. New roster-enumerating
+// pages must be added by hand — the floor below catches a hollowed-out
+// registry, not a missing entry.
+const FLOW_ROSTER_SITES = [
+  path.join(DOCS_ROOT, "cli", "run.mdx"),
+  path.join(DOCS_ROOT, "getting-started", "installation.mdx"),
+  path.join(DOCS_ROOT, "getting-started", "quickstart.mdx"),
+  path.join(DOCS_ROOT, "flows", "overview.mdx"),
+  path.join(DOCS_ROOT, "flows", "modes.mdx"),
+];
 
 // Loud-on-empty floors. If a sub-check extracts fewer items than its floor,
 // the scan itself is broken (moved directory, changed syntax) and the gate
@@ -34,6 +52,8 @@ const DOCS_ROOT = path.join("content", "docs");
 const PIN_FLOOR = 2; // tag occurrences outside the constant file (today: homepage + installation.mdx)
 const FILES_FLOOR = 50; // text files under src/ + content/ (today: ~65)
 const LINKS_FLOOR = 40; // internal /docs links in content/docs (a manual audit counted ~82; today: ~95)
+const FLOWS_FLOOR = 4; // flow names parsed from the constant (today: 6) — fewer means the parse broke
+const FLOW_SITES_FLOOR = 3; // registered roster sites (today: 5)
 
 const BINARY_EXTENSIONS = new Set([
   ".ico", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".svg",
@@ -267,9 +287,61 @@ function checkInternalLinks() {
 }
 
 // ---------------------------------------------------------------------------
+// (d) Flow roster
+
+function checkFlowRoster() {
+  const violations = [];
+
+  if (!fs.existsSync(path.join(repoRoot, FLOWS_CONSTANT_FILE))) {
+    return {
+      name: "flows",
+      violations: [`${FLOWS_CONSTANT_FILE}:1 — expected the flow roster constant file to exist, found nothing`],
+      summary: "",
+    };
+  }
+  const constantSource = fs.readFileSync(path.join(repoRoot, FLOWS_CONSTANT_FILE), "utf8");
+  const names = [...constantSource.matchAll(/name:\s*["']([A-Za-z][A-Za-z ]*)["']/g)].map(
+    (match) => match[1],
+  );
+
+  if (names.length < FLOWS_FLOOR) {
+    violations.push(
+      `(loud-on-empty) — expected at least ${FLOWS_FLOOR} flow names parsed from ${FLOWS_CONSTANT_FILE}, parsed ${names.length}; the name extraction is broken`,
+    );
+  }
+  if (FLOW_ROSTER_SITES.length < FLOW_SITES_FLOOR) {
+    violations.push(
+      `(loud-on-empty) — expected at least ${FLOW_SITES_FLOOR} registered roster sites, found ${FLOW_ROSTER_SITES.length}; the registry was hollowed out`,
+    );
+  }
+
+  for (const site of FLOW_ROSTER_SITES) {
+    if (!fs.existsSync(path.join(repoRoot, site))) {
+      violations.push(`${site}:1 — expected this registered roster site to exist, found nothing`);
+      continue;
+    }
+    const text = fs.readFileSync(path.join(repoRoot, site), "utf8");
+    for (const name of names) {
+      const mention = new RegExp(`\\b${name}\\b`, "i");
+      if (!mention.test(text)) {
+        violations.push(
+          `${site}:1 — expected a mention of flow "${name}" (this page is registered as enumerating the full roster in FLOW_ROSTER_SITES)`,
+        );
+      }
+    }
+  }
+
+  return {
+    name: "flows",
+    violations,
+    summary: `flows: roster of ${names.length} (${names.join(", ")}); ${FLOW_ROSTER_SITES.length} registered sites all mention every flow`,
+  };
+}
+
+// ---------------------------------------------------------------------------
 
 const files = textFiles();
-const results = [checkPin(files), checkRetiredTokens(files), checkInternalLinks()];
+const results = [checkPin(files), checkRetiredTokens(files), checkInternalLinks(), checkFlowRoster()];
 
 let failed = false;
 for (const result of results) {
