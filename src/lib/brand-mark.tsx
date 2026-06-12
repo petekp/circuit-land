@@ -1,25 +1,26 @@
 import type { ReactElement } from "react";
 
-// Circuit brand mark: a 3x3 grid in the FlowGlyph visual language, using the
-// "Build" flow motif (an ascending fill). Shared by icon.tsx and apple-icon.tsx
-// so the favicon and apple-touch icon stay identical. Palette matches
-// opengraph-image.tsx (#171510 ground, #00ffd1 accent).
-const BG = "#171510";
-const FILL = "#00ffd1";
-const EMPTY = "rgba(241, 237, 223, 0.08)";
+// Circuit brand mark for generated icons: the gapped-stadium track on
+// graphite. Shared by icon.tsx and apple-icon.tsx so the favicon and
+// apple-touch icon stay identical.
+//
+// This is one of the two surfaces that restate the brand theme outside
+// globals.css (see the BRAND THEME block there): ImageResponse can't read
+// CSS vars, so the hex values below mirror --brand-bg and --brand-signal.
+// Re-theming the site means updating these two constants too.
+const BG = "#161718"; // --brand-bg  hsl(220 3% 9%)
+const INK = "#06eaa9"; // --brand-signal  hsl(163 95% 47%)
 
-// Build motif (same cells as the on-page FlowGlyph): lower-left triangle.
-const MOTIF = [
-  false, false, true,
-  false, true, true,
-  true, true, true,
-];
+const STADIUM_D = "M 23 15 H 41 A 17 17 0 0 1 41 49 H 23 A 17 17 0 0 1 23 15 Z";
+
+// Dash values are in real path units (perimeter ≈ 142.8), not the
+// pathLength=100 normalization the CircuitMark component uses — the SVG
+// rasterizer behind ImageResponse doesn't honor pathLength. The gate is
+// centered on the right cap.
+const TRACK = { dasharray: "125.7 17.1", dashoffset: 89.5 }; // gap 12
 
 export function brandMark(pixel: number): ReactElement {
-  const pad = Math.round(pixel * 0.094);
-  const gap = Math.round(pixel * 0.06);
-  const cell = Math.floor((pixel - pad * 2 - gap * 2) / 3);
-  const radius = Math.max(1, Math.round(cell * 0.18));
+  const dash = TRACK;
 
   return (
     <div
@@ -27,29 +28,22 @@ export function brandMark(pixel: number): ReactElement {
         width: "100%",
         height: "100%",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap,
         background: BG,
       }}
     >
-      {[0, 1, 2].map((r) => (
-        <div key={r} style={{ display: "flex", gap }}>
-          {[0, 1, 2].map((c) => (
-            <div
-              key={c}
-              style={{
-                display: "flex",
-                width: cell,
-                height: cell,
-                borderRadius: radius,
-                background: MOTIF[r * 3 + c] ? FILL : EMPTY,
-              }}
-            />
-          ))}
-        </div>
-      ))}
+      <svg viewBox="0 0 64 64" width={pixel} height={pixel}>
+        <path
+          d={STADIUM_D}
+          fill="none"
+          stroke={INK}
+          strokeWidth={8}
+          strokeLinecap="round"
+          strokeDasharray={dash.dasharray}
+          strokeDashoffset={dash.dashoffset}
+        />
+      </svg>
     </div>
   );
 }

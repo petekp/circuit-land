@@ -9,9 +9,14 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono);
+  /* --font-prose / --font-evidence are set by next/font in
+     src/app/(home)/layout.tsx. Prose face for humans, mono for artifacts. */
+  --font-sans: var(--font-prose), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-evidence), ui-monospace, monospace;
   --font-heading: var(--font-sans);
+  --color-signal: var(--signal);
+  --color-ink-dim: var(--ink-dim);
+  --color-ink-bright: var(--ink-bright);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -50,29 +55,69 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ==========================================================================
+   BRAND THEME — the single place to re-theme the site.
+
+   Identity locked 2026-06-10 ("Aurora"): near-neutral graphite with a
+   breath of blue, one green-turquoise signal color, Schibsted Grotesk for
+   prose, Fragment Mono reserved for evidence, the gapped-stadium mark.
+
+   Every color on the site derives from these raw tokens (directly or via
+   the semantic vars they feed below). To try a new theme, edit ONLY this
+   block. Two companion surfaces restate values outside CSS:
+   - fonts: src/app/(home)/layout.tsx (next/font)
+   - favicon/OG hex colors: src/lib/brand-mark.tsx, src/app/opengraph-image.tsx
+     (ImageResponse can't read CSS vars)
+   The six --flow-* colors further down are content colors for the flow
+   diagrams, deliberately not part of the brand theme.
+   ========================================================================== */
 :root {
-  --site-primary-hue: 150;
-  --site-primary-hue-soft: calc(var(--site-primary-hue) + 2);
-  --site-primary-hue-light: calc(var(--site-primary-hue) + 5);
-  --site-primary-hue-gold: calc(var(--site-primary-hue) + 6);
-  --background: hsl(var(--site-primary-hue) 15% 9%);
-  --foreground: hsl(var(--site-primary-hue-light) 28% 93%);
-  --card: hsl(var(--site-primary-hue) 12% 12%);
-  --card-foreground: hsl(var(--site-primary-hue-light) 28% 93%);
-  --popover: hsl(var(--site-primary-hue) 12% 12%);
-  --popover-foreground: hsl(var(--site-primary-hue-light) 28% 93%);
-  --primary: hsl(var(--site-primary-hue-light) 28% 93%);
-  --primary-foreground: hsl(var(--site-primary-hue) 15% 9%);
-  --secondary: hsl(var(--site-primary-hue) 12% 18%);
-  --secondary-foreground: hsl(var(--site-primary-hue-light) 28% 93%);
-  --muted: hsl(var(--site-primary-hue) 12% 18%);
-  --muted-foreground: hsl(var(--site-primary-hue-soft) 10% 62%);
-  --accent: hsl(var(--site-primary-hue) 12% 18%);
-  --accent-foreground: hsl(var(--site-primary-hue-light) 28% 93%);
-  --destructive: hsl(3 75% 58%);
-  --border: hsl(var(--site-primary-hue) 10% 24%);
-  --input: hsl(var(--site-primary-hue) 10% 24%);
-  --ring: hsl(var(--site-primary-hue-soft) 8% 52%);
+  --brand-bg: hsl(220 3% 9%);
+  --brand-panel: hsl(220 3% 13%); /* cards, raised surfaces */
+  --brand-panel-deep: hsl(220 4% 6.5%); /* terminal wells, darker than bg */
+  --brand-surface: hsl(220 3% 18%); /* muted fills, hover washes */
+  --brand-border: hsl(220 3% 24%);
+  --brand-text: hsl(60 10% 92%);
+  --brand-muted: hsl(220 3% 62%);
+  --brand-signal: hsl(163 95% 47%); /* the one accent */
+  --brand-second: hsl(220 15% 72%); /* quiet links, marginalia, diagram ink */
+  --brand-error: hsl(0 75% 62%);
+  --brand-ink-dim: hsl(220 3% 46%); /* diagram "without" lane */
+  --brand-ink-bright: hsl(160 15% 94%); /* diagram pulse */
+  /* Light register (paper surfaces, e.g. docs/readme previews): the signal
+     becomes a highlighter behind text — never colored text on white. */
+  --brand-paper: hsl(180 20% 97%);
+  --brand-paper-ink: hsl(220 10% 15%);
+  --brand-highlight: hsl(160 85% 62%);
+}
+
+:root {
+  --background: var(--brand-bg);
+  --foreground: var(--brand-text);
+  --card: var(--brand-panel);
+  --card-foreground: var(--brand-text);
+  --popover: var(--brand-panel);
+  --popover-foreground: var(--brand-text);
+  --primary: var(--brand-text);
+  --primary-foreground: var(--brand-bg);
+  --secondary: var(--brand-surface);
+  --secondary-foreground: var(--brand-text);
+  --muted: var(--brand-surface);
+  --muted-foreground: var(--brand-muted);
+  /* Run-stage SVG ink: quieter than --foreground so diagrams read as
+     drawings, not headlines. */
+  --run-stage-stroke: var(--brand-second);
+  --accent: var(--brand-surface);
+  --accent-foreground: var(--brand-text);
+  /* The brand accent under its product name. Use text-signal/bg-signal for
+     the active step, the lit track, the one highlight on a surface. */
+  --signal: var(--brand-signal);
+  --ink-dim: var(--brand-ink-dim);
+  --ink-bright: var(--brand-ink-bright);
+  --destructive: var(--brand-error);
+  --border: var(--brand-border);
+  --input: var(--brand-border);
+  --ring: var(--brand-muted);
   --chart-1: hsl(0 0% 87%);
   --chart-2: hsl(0 0% 56%);
   --chart-3: hsl(0 0% 44%);
@@ -99,43 +144,9 @@
   --flow-review: hsl(145 100% 39%);
   --flow-review-accent: hsl(338 100% 65%);
   --flow-prototype: hsl(254 100% 65%);
-  --flow-prototype-accent: hsl(var(--site-primary-hue-gold) 100% 62%);
+  --flow-prototype-accent: hsl(156 100% 62%);
   --flow-pursue: hsl(43 92% 55%);
   --flow-pursue-accent: hsl(54 96% 68%);
-}
-
-.dark {
-  --background: hsl(0 0% 14%);
-  --foreground: hsl(0 0% 98%);
-  --card: hsl(0 0% 21%);
-  --card-foreground: hsl(0 0% 98%);
-  --popover: hsl(0 0% 21%);
-  --popover-foreground: hsl(0 0% 98%);
-  --primary: hsl(0 0% 92%);
-  --primary-foreground: hsl(0 0% 21%);
-  --secondary: hsl(0 0% 27%);
-  --secondary-foreground: hsl(0 0% 98%);
-  --muted: hsl(0 0% 27%);
-  --muted-foreground: hsl(0 0% 71%);
-  --accent: hsl(0 0% 27%);
-  --accent-foreground: hsl(0 0% 98%);
-  --destructive: hsl(2 73% 60%);
-  --border: hsl(0 0% 100% / 10%);
-  --input: hsl(0 0% 100% / 15%);
-  --ring: hsl(0 0% 56%);
-  --chart-1: hsl(0 0% 87%);
-  --chart-2: hsl(0 0% 56%);
-  --chart-3: hsl(0 0% 44%);
-  --chart-4: hsl(0 0% 37%);
-  --chart-5: hsl(0 0% 27%);
-  --sidebar: hsl(0 0% 21%);
-  --sidebar-foreground: hsl(0 0% 98%);
-  --sidebar-primary: hsl(263 82% 58%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(0 0% 27%);
-  --sidebar-accent-foreground: hsl(0 0% 98%);
-  --sidebar-border: hsl(0 0% 100% / 10%);
-  --sidebar-ring: hsl(0 0% 56%);
 }
 
 @layer base {
@@ -146,18 +157,28 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-mono;
+    @apply font-sans;
   }
 }
 
-/*
- * Plain text fallback for the wordmark, shown before the canvas energy
- * field mounts, when JS is off, and when the operator prefers reduced
- * motion. The animated streak field lives in the Wordmark canvas component.
- */
-.circuit-wordmark {
-  width: fit-content;
-  color: var(--foreground);
+/* The mark's running state: the gate element leaves home, laps the track,
+   and eases back through the gate. One full lap of the pathLength=100
+   stadium, starting and ending at the gate (offset 68.7 → -31.3). Applied
+   by CircuitMark only when state="running"; reduced motion parks the
+   element at the gate. */
+@keyframes circuit-mark-lap {
+  from {
+    stroke-dashoffset: 68.7;
+  }
+  to {
+    stroke-dashoffset: -31.3;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .circuit-mark-lap {
+    animation: circuit-mark-lap 4.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
 }
 
 .run-terminal-stage {
@@ -168,7 +189,7 @@
   position: relative;
   border-radius: 24px;
   corner-shape: squircle;
-  background: hsl(var(--site-primary-hue) 18% 6.5%);
+  background: var(--brand-panel-deep);
   box-shadow: none;
 }
 
@@ -176,9 +197,68 @@
   min-height: 100%;
 }
 
+/* A real terminal window: chrome strip on top, scrollable body below
+   with an always-present thin scrollbar. The height is capped on every
+   screen so long transcripts scroll instead of stretching the panel;
+   on lg it can flex between the bounds to fill the panel row. */
 .example-run-terminal {
-  height: 25rem;
-  overflow-y: auto;
+  height: 28rem;
+}
+
+@media (min-width: 1024px) {
+  .example-run-terminal {
+    height: auto;
+    min-height: 28rem;
+    max-height: 32rem;
+  }
+}
+
+.example-run-terminal-chrome {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.85rem 1.25rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.example-run-terminal-chrome span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 14%, transparent);
+}
+
+.example-run-terminal-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: scroll;
+}
+
+/* Chromium and Safari only show a persistent scrollbar on macOS when the
+   ::-webkit-scrollbar pseudos are styled (the standard properties keep the
+   hide-when-idle overlay bar). Chromium also ignores these pseudos when
+   scrollbar-width/scrollbar-color are set, so the standard properties are
+   scoped to engines without the pseudo, i.e. Firefox. */
+.example-run-terminal-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.example-run-terminal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.example-run-terminal-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 25%, transparent);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .example-run-terminal-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 25%, transparent)
+      transparent;
+  }
 }
 
 .example-run-user-row {
@@ -194,6 +274,29 @@
   min-height: 24rem;
 }
 
+/* The example-run panel borrows the flow explorer's construction — one
+   bordered container, control strip on top, content below a hairline — so the
+   two feature elements read as the same family. */
+.example-run-panel {
+  width: 100%;
+  border-radius: 24px;
+  corner-shape: squircle;
+  background: color-mix(in oklab, var(--muted) 32%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--foreground) 7%, transparent);
+}
+
+.example-run-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.85rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.example-run-panel-content {
+  padding: 1.6rem;
+}
+
 .example-run-toggle {
   display: inline-flex;
   width: fit-content;
@@ -205,11 +308,11 @@
 }
 
 .example-run-toggle-button {
-  min-height: 1.85rem;
-  border-radius: 10px;
-  padding: 0.3rem 0.6rem;
+  min-height: 2.1rem;
+  border-radius: 11px;
+  padding: 0.4rem 0.9rem;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1;
   transition:
@@ -238,9 +341,11 @@
 .soft-code-block,
 .soft-info-card,
 .soft-chip,
+.example-run-panel,
 .example-run-toggle,
 .example-run-toggle-button,
 .install-terminal-card,
+.install-prompt-well,
 .flow-picker-button,
 .flow-composer-panel,
 .flow-block-tile,
@@ -295,11 +400,18 @@
 
 .install-terminal-card {
   border-radius: 24px;
-  background: hsl(var(--site-primary-hue) 18% 6.5%);
+  background: var(--brand-panel-deep);
+}
+
+/* The paste-this-prompt well inside the install card: a slightly
+   lifted strip on the deep panel, terminal-flavored. */
+.install-prompt-well {
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
 }
 
 .install-terminal-header {
-  background: hsl(var(--site-primary-hue) 18% 6.5%);
+  background: var(--brand-panel-deep);
 }
 
 .install-terminal-title {
@@ -645,5 +757,5 @@
 }
 
 .process-artwork {
-  background: hsl(var(--site-primary-hue) 15% 15% / 0.86);
+  background: color-mix(in oklab, var(--brand-panel) 86%, transparent);
 }

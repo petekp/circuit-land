@@ -7,11 +7,13 @@ import {
 } from "@/components/copy-install-instructions";
 import { ExampleRunSection } from "@/components/example-run-toggle";
 import { FlowComposer } from "@/components/flow-composer";
-import { Wordmark } from "@/components/wordmark";
+import { CircuitMark } from "@/components/brand/circuit-mark";
+import { GapChapter } from "@/components/run-stage/gap-chapter";
 
 type InstallTarget = {
-  name: "Claude Code" | "Codex";
-  commands: string[];
+  name: "Claude Code" | "Codex" | "OpenCode";
+  commands?: string[];
+  comingSoon?: boolean;
 };
 
 const codexInstallCommand =
@@ -36,29 +38,9 @@ const installTargets: InstallTarget[] = [
     name: "Codex",
     commands: [codexInstallCommand],
   },
-];
-
-const comparison = [
   {
-    name: "Skills, AGENTS.md, and playbooks",
-    approach:
-      "A good skill gives the agent a stronger move: read a trace, write a test, inspect a browser. A good AGENTS.md or playbook gives it context, the local picture of what done means here. Both make each step of the work better.",
-    circuit:
-      "The catch is timing. A skill waits for you to call it at the right moment, and a playbook sits still until someone applies it. Circuit puts both in motion inside a flow. It carries the context forward, and every handoff is typed, so the run produces a record you can check.",
-  },
-  {
-    name: "Claude Code's Dynamic Workflows",
-    approach:
-      "Workflows orchestrate many agents from a script. They are great for large one-off jobs: codebase audits, migrations, deep research, or hand-rolled fanout.",
-    circuit:
-      "Circuit is the repeatable process for everyday work. It picks Build, Fix, Review, Explore, Prototype, or Pursue, then runs the same proven process without making you design the orchestration.",
-  },
-  {
-    name: "Spec-driven development",
-    approach:
-      "Write a detailed spec and the agent implements against it. The spec captures intent well, but it stays a document. It does not carry the work through building, checking, and review.",
-    circuit:
-      "Circuit treats the spec as one input. Frame turns intent into a typed brief, then the flow carries it forward through plan, act, verify, and review until the outcome is backed by evidence.",
+    name: "OpenCode",
+    comingSoon: true,
   },
 ];
 
@@ -112,32 +94,34 @@ const blockInternals = [
   },
 ];
 
-const agentInstallInstructions = `Please install Circuit for the coding-agent tool I am using in this project.
+const agentInstallInstructions = `Install Circuit, then hand it something real.
 
-If this is Claude Code, run:
+If you are Claude Code, run:
 /plugin marketplace add petekp/circuit
 /plugin install circuit@circuit
 /reload-plugins
 
-If this is Codex, run:
+If you are Codex, run:
 ${codexInstallCommand}
 
-After Circuit is installed, start with:
-/circuit:run <my task>
+When the install finishes, suggest a first run, like:
+/circuit:run fix the flakiest test in this repo
+/circuit:run review the changes on this branch before I open the PR
 
-Use /circuit:run to start each task. Circuit routes the task to Build, Fix, Review, Explore, Prototype, or Pursue when that is the right fit.`;
+From here on, start every task with /circuit:run. Circuit picks the flow that fits: Build, Fix, Review, Explore, Prototype, or Pursue.`;
 
-/* Condensed from a real Fix run record in the Circuit repo
-   (docs/release/proofs/runs/fix/run/reports/fix-result.json).
-   Field values are verbatim; the nine evidence links are trimmed to four. */
+/* A representative Fix record, written to the real fix-result schema:
+   field names, enum values, and the 'fixed' gating (regression proved,
+   verification passed) all match src/flows/fix/reports.ts in the Circuit
+   repo. Fields are trimmed to the load-bearing ones and the nine evidence
+   links to four. The story is authored, not a verbatim run. */
 const fixRunExcerpt = `{
-  "summary": "Fix 'quick fix: restore the failing login test': Added the fallback guard for the synthetic missing token path.",
-  "outcome": "partial",
+  "summary": "Fix 'customers get double-charged when checkout retries': capture now reuses the order's idempotency key, so a retry settles on the original charge.",
+  "outcome": "fixed",
+  "regression_status": "proved",
   "verification_status": "passed",
-  "change_set_status": "pass",
-  "review_status": "skipped",
-  "review_skip_reason": "Reviewer connector failed after proof passed; Fix closed with regression, verification, and change-set evidence.",
-  "residual_risks": [],
+  "review_status": "completed",
+  "residual_risks": ["The refund path bypasses the idempotency key; flagged, not changed here."],
   "evidence_links": [
     { "report_id": "fix.diagnosis", "path": "reports/fix/diagnosis.json" },
     { "report_id": "fix.regression-proof", "path": "reports/fix/regression-proof.json" },
@@ -147,6 +131,41 @@ const fixRunExcerpt = `{
   ]
 }`;
 
+/* The record is colored like a reviewer would read it: keys and structure
+   recede, values carry the ink, and real check outcomes light in the
+   signal color so "what passed" is answerable at a glance. */
+const recordStatusInk: Record<string, string> = {
+  passed: "text-signal",
+  pass: "text-signal",
+  fixed: "text-signal",
+  proved: "text-signal",
+  completed: "text-signal",
+  failed: "text-destructive",
+  skipped: "text-muted-foreground",
+};
+
+function RecordLine({ line }: { line: string }) {
+  const m = line.match(/^(\s*)"([^"]+)": (.*?)(,?)$/);
+  if (!m) {
+    return <span className="block text-muted-foreground/70">{line}</span>;
+  }
+  const [, indent, key, value, comma] = m;
+  const bareValue = value.match(/^"(.*)"$/)?.[1];
+  const ink =
+    bareValue !== undefined && recordStatusInk[bareValue]
+      ? recordStatusInk[bareValue]
+      : "text-foreground";
+  return (
+    <span className="block">
+      {indent}
+      <span className="text-muted-foreground">&quot;{key}&quot;</span>
+      <span className="text-muted-foreground/70">: </span>
+      <span className={ink}>{value}</span>
+      <span className="text-muted-foreground/70">{comma}</span>
+    </span>
+  );
+}
+
 function Label({
   children,
   as: Tag = "div",
@@ -155,7 +174,7 @@ function Label({
   as?: "div" | "h2";
 }) {
   return (
-    <Tag className="font-sans text-[15px] font-semibold tracking-tight text-foreground sm:text-[16px]">
+    <Tag className="font-sans text-[17px] font-semibold tracking-tight text-foreground sm:text-[19px]">
       {children}
     </Tag>
   );
@@ -165,7 +184,7 @@ function SectionDocsLink({ href, children }: { href: string; children: ReactNode
   return (
     <Link
       href={href}
-      className="text-[13px] font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      className="text-[14px] font-medium text-foreground underline decoration-foreground/40 underline-offset-4 hover:decoration-foreground"
     >
       {children}
     </Link>
@@ -231,6 +250,24 @@ function CodexLogo() {
   );
 }
 
+function OpenCodeLogo() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="opencode-logo"
+      viewBox="0 0 24 42"
+      focusable="false"
+    >
+      <path d="M18 30H6V18H18V30Z" fill="currentColor" opacity={0.35} />
+      <path
+        d="M18 12H6V30H18V12ZM24 36H0V6H24V36Z"
+        fill="currentColor"
+        opacity={0.9}
+      />
+    </svg>
+  );
+}
+
 function GithubLogo() {
   return (
     <svg
@@ -261,13 +298,15 @@ function XLogo() {
 
 function MastheadSection() {
   return (
-    <section
-      className="mt-4 flex flex-col gap-8 sm:mt-6"
-      data-site-hue-stop="0"
-    >
+    <section className="mt-4 flex flex-col gap-8 sm:mt-6">
       <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <Wordmark />
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-2.5 text-foreground">
+            <CircuitMark size={34} />
+            <span className="text-[30px] font-semibold leading-none tracking-tight">
+              circuit
+            </span>
+          </div>
           <p className="text-[11px] leading-none text-muted-foreground">
             a plugin for Claude Code and Codex
           </p>
@@ -290,11 +329,11 @@ function MastheadSection() {
         </div>
       </div>
 
-      <h1 className="max-w-2xl text-pretty text-base font-medium leading-tight tracking-tight sm:text-xl">
+      <h1 className="max-w-2xl text-pretty text-lg font-medium leading-tight tracking-tight sm:text-2xl">
         Coding agents aren&apos;t unreliable. Your process is.
       </h1>
 
-      <p className="max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+      <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
         Agents learned to work from us, and like us, they do their best work
         inside a real process. Circuit is that process.
       </p>
@@ -303,14 +342,14 @@ function MastheadSection() {
         <a
           href="#install"
           aria-label="Install for Claude Code and Codex"
-          className="soft-cta-primary inline-flex min-h-11 items-center gap-2.5 px-5 py-2 text-[13px] font-medium"
+          className="soft-cta-primary inline-flex min-h-11 items-center gap-2.5 px-5 py-2 text-[14px] font-semibold"
         >
           <span>Install</span>
           <InstallProviderIcons />
         </a>
         <Link
           href="/docs"
-          className="soft-cta-secondary inline-flex min-h-11 items-center px-5 py-2 text-[13px] font-medium text-foreground"
+          className="soft-cta-secondary inline-flex min-h-11 items-center px-5 py-2 text-[14px] font-medium text-foreground"
         >
           View Docs
         </Link>
@@ -321,25 +360,32 @@ function MastheadSection() {
 
 function GapSection() {
   return (
-    <section className="mt-28 flex flex-col" data-site-hue-stop="0.09">
-      <div className="flex max-w-3xl flex-col gap-5">
+    <section className="mt-28 flex flex-col gap-10">
+      <GapChapter />
+
+      {/* The heading lives with the prose it introduces, below the
+          visualization, so the stage opens the section on its own. */}
+      <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">What your agent works without</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
           <p>
             Watch your agent work. It reads the codebase and the AGENTS.md,
-            checks what CI will catch, and improvises a process on the spot. It
-            survives on notes to itself: plan files, scratchpads, a compressed
-            summary of what it had to forget. When the notes run out, you
-            become the working memory.
+            checks what CI will catch, and improvises a process on the spot.
+            It survives on notes to itself like Guy Pearce in{" "}
+            <em>Memento</em>: plan files, scratchpads, a compressed summary
+            of what it had to forget. When the notes run out, you become the
+            working memory.
           </p>
           <p>
-            An engineer joining a team gets more than that. The team supplies
-            an approach that fits the task, review at the right moments, a
-            paper trail, and a memory of what was decided and why.
+            Human engineers don&apos;t work this way. An engineer is a
+            specialist with a process for their role: the reviewer knows when
+            to look, the release engineer keeps the paper trail, the tech
+            lead remembers what was decided and why. Your agent is asked to
+            be every role at once.
           </p>
-          <p className="font-medium text-foreground">
-            Your agent learned this work from engineers who had all of that.
-            Every one of these gaps can be filled.
+          <p className="text-foreground">
+            Your agent learned this work from those specialists. Every one
+            of these gaps can be filled.
           </p>
         </div>
       </div>
@@ -349,14 +395,13 @@ function GapSection() {
 
 function FlowFlexSection() {
   return (
-    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.18">
+    <section className="mt-28 flex flex-col gap-10">
       {/* Header and lead live in the standard content column, aligned with the
           rest of the page. */}
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">A process that fits</Label>
         <p className="text-balance text-[15px] leading-relaxed text-muted-foreground">
-          You wouldn&apos;t run a hotfix like a redesign. Your agent
-          shouldn&apos;t have to. Point{" "}
+          A hotfix is not a redesign. Point{" "}
           <span className="font-mono font-medium text-foreground">
             /circuit:run
           </span>{" "}
@@ -379,10 +424,10 @@ function FlowFlexSection() {
 
 function BlockInternalsSection() {
   return (
-    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.27">
+    <section className="mt-28 flex flex-col gap-10">
       <div className="flex flex-col gap-10">
         <div className="flex max-w-3xl flex-col gap-3">
-          <Label as="h2">Inside a Block</Label>
+          <Label as="h2">What every flow is made of</Label>
           <p className="text-balance text-[15px] leading-relaxed text-muted-foreground">
             Blocks are the power units inside every flow. Each one has a typed
             input, a typed output, and a clear job, so flows can combine them
@@ -394,7 +439,7 @@ function BlockInternalsSection() {
           {blockInternals.map((block) => (
             <article
               key={block.name}
-              className="block-internal-card relative flex flex-col gap-4 bg-muted/70 p-5"
+              className="block-internal-card relative flex flex-col gap-2.5 bg-muted/70 p-5"
             >
               <span aria-hidden="true" className="block-edge block-edge-t">
                 <i />
@@ -409,7 +454,7 @@ function BlockInternalsSection() {
               <h3 className="text-balance text-[15px] font-medium leading-tight tracking-tight">
                 {block.name}
               </h3>
-              <p className="text-balance text-[12px] leading-relaxed text-muted-foreground">
+              <p className="text-pretty text-[13px] leading-relaxed text-muted-foreground">
                 {block.detail}
               </p>
             </article>
@@ -426,7 +471,7 @@ function BlockInternalsSection() {
 
 function RecordSection() {
   return (
-    <section className="mt-28 flex flex-col gap-8" data-site-hue-stop="0.45">
+    <section className="mt-28 flex flex-col gap-8">
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">Every run leaves a record</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -445,12 +490,16 @@ function RecordSection() {
       <figure className="flex w-full max-w-3xl flex-col gap-3">
         <div className="install-terminal-card overflow-hidden">
           <pre className="whitespace-pre-wrap break-words px-5 py-4 font-mono text-[12px] leading-6 text-foreground">
-            <code>{fixRunExcerpt}</code>
+            <code>
+              {fixRunExcerpt.split("\n").map((line, index) => (
+                <RecordLine key={index} line={line} />
+              ))}
+            </code>
           </pre>
         </div>
         <figcaption className="text-[12px] leading-relaxed text-muted-foreground">
-          The file a real Fix run left behind, condensed. Each evidence link
-          names a report the run wrote along the way.
+          What a Fix run leaves behind, condensed. Each evidence link names a
+          report the run wrote along the way.
         </figcaption>
       </figure>
 
@@ -461,9 +510,111 @@ function RecordSection() {
   );
 }
 
+/* The three quieter sections each carry one compact artifact: the product
+   surface the prose is describing, drawn in the page's own materials. They
+   are illustrative examples, not verbatim records, like the run record
+   above. */
+function CheckpointArtifact() {
+  return (
+    <aside
+      aria-label="Example checkpoint"
+      className="soft-info-card flex flex-col gap-4 p-5"
+    >
+      <p className="font-mono text-[12px] text-signal">decision needed</p>
+      <p className="text-[14px] leading-relaxed text-foreground">
+        The fix touches the session refresh path. Patch it in place, or hold
+        for the auth migration landing this week?
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <span className="soft-chip px-3 py-1.5 text-[12px] text-foreground">
+          1 · Patch in place
+        </span>
+        <span className="soft-chip px-3 py-1.5 text-[12px] text-foreground">
+          2 · Hold for the migration
+        </span>
+      </div>
+      <p className="text-[12px] leading-relaxed text-muted-foreground">
+        At high depth the run waits here. Otherwise it takes the safe default
+        and records it.
+      </p>
+    </aside>
+  );
+}
+
+function ContinuityArtifact() {
+  return (
+    <aside
+      aria-label="Example session brief"
+      className="soft-info-card flex flex-col gap-4 p-5"
+    >
+      <p className="font-mono text-[12px] text-muted-foreground">
+        next session opens with
+      </p>
+      <dl className="flex flex-col gap-3">
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-[12px] font-medium text-muted-foreground">
+            Goal
+          </dt>
+          <dd className="text-[13px] leading-relaxed text-foreground">
+            Ship the staged deploy behind a feature flag
+          </dd>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-[12px] font-medium text-muted-foreground">
+            Next
+          </dt>
+          <dd className="text-[13px] leading-relaxed text-foreground">
+            Wire the flag into the router, then rerun e2e
+          </dd>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-[12px] font-medium text-muted-foreground">
+            State
+          </dt>
+          <dd className="font-mono text-[12px] leading-relaxed text-foreground">
+            verify green · feat/staged-deploy · no PR yet
+          </dd>
+        </div>
+      </dl>
+    </aside>
+  );
+}
+
+function MemoryArtifact() {
+  return (
+    <aside
+      aria-label="Example recall hints"
+      className="soft-info-card flex flex-col gap-4 p-5"
+    >
+      <p className="font-mono text-[12px] text-muted-foreground">
+        recalled at run start
+      </p>
+      <ul className="flex flex-col gap-4">
+        <li className="flex flex-col gap-1">
+          <p className="text-[13px] leading-relaxed text-foreground">
+            The e2e suite is flaky on a cold start. Rerun once before trusting
+            a failure.
+          </p>
+          <p className="font-mono text-[11px] text-muted-foreground">
+            from a Fix run · 2 weeks ago
+          </p>
+        </li>
+        <li className="flex flex-col gap-1">
+          <p className="text-[13px] leading-relaxed text-foreground">
+            Auth is mocked in tests. Never point them at the live endpoint.
+          </p>
+          <p className="font-mono text-[11px] text-muted-foreground">
+            from a Build run · last month
+          </p>
+        </li>
+      </ul>
+    </aside>
+  );
+}
+
 function CheckpointsSection() {
   return (
-    <section className="mt-28 flex flex-col" data-site-hue-stop="0.55">
+    <section className="mt-28 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] lg:items-center">
       <div className="flex max-w-3xl flex-col gap-5">
         <Label as="h2">When to loop you in</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -483,13 +634,14 @@ function CheckpointsSection() {
           More on checkpoints →
         </SectionDocsLink>
       </div>
+      <CheckpointArtifact />
     </section>
   );
 }
 
 function ContinuitySection() {
   return (
-    <section className="mt-28 flex flex-col" data-site-hue-stop="0.64">
+    <section className="mt-28 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] lg:items-center">
       <div className="flex max-w-3xl flex-col gap-5">
         <Label as="h2">Tomorrow starts where today ended</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -508,13 +660,14 @@ function ContinuitySection() {
           More on continuity →
         </SectionDocsLink>
       </div>
+      <ContinuityArtifact />
     </section>
   );
 }
 
 function MemorySection() {
   return (
-    <section className="mt-28 flex flex-col" data-site-hue-stop="0.73">
+    <section className="mt-28 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] lg:items-center">
       <div className="flex max-w-3xl flex-col gap-5">
         <Label as="h2">The next run remembers</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
@@ -533,54 +686,14 @@ function MemorySection() {
           More on memory →
         </SectionDocsLink>
       </div>
-    </section>
-  );
-}
-
-function ComparisonSection() {
-  return (
-    <section className="mt-28 flex flex-col gap-10" data-site-hue-stop="0.82">
-      <div className="flex max-w-3xl flex-col gap-3">
-        <Label as="h2">Where It Fits</Label>
-        <p className="text-[15px] leading-relaxed text-foreground">
-          Circuit is not another agent. It is the process your agent follows.
-          That means the tools you already use still have their jobs. They
-          shape what the agent can do. Circuit shapes how the work moves and
-          what every step leaves behind.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-        {comparison.map((c) => (
-          <div key={c.name} className="soft-info-card flex flex-col gap-5 p-5">
-            <h3 className="text-[15px] font-medium tracking-tight">{c.name}</h3>
-            <div className="flex flex-col gap-2">
-              <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-                {c.approach}
-              </p>
-            </div>
-            <div className="mt-auto flex flex-col gap-2">
-              <p className="font-sans text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                How Circuit differs
-              </p>
-              <p className="text-balance text-[13px] leading-relaxed text-foreground">
-                {c.circuit}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
+      <MemoryArtifact />
     </section>
   );
 }
 
 function InstallSection() {
   return (
-    <section
-      id="install"
-      className="mt-28 flex flex-col gap-7"
-      data-site-hue-stop="0.91"
-    >
+    <section id="install" className="mt-28 flex flex-col gap-7">
       <div className="flex max-w-3xl flex-col gap-3">
         <Label as="h2">Get Started</Label>
         <p className="text-balance text-[15px] leading-relaxed text-foreground">
@@ -592,49 +705,57 @@ function InstallSection() {
         <CopyInstallInstructions text={agentInstallInstructions} />
       </div>
 
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
         {installTargets.map((target) => (
           <article
             key={target.name}
-            className="install-terminal-card flex flex-col overflow-hidden"
+            className={[
+              "install-terminal-card flex flex-col overflow-hidden",
+              target.comingSoon ? "md:col-span-2 lg:col-span-1" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
           >
             <div className="install-terminal-header flex items-center justify-between gap-3 px-5 py-4">
               <h3 className="install-terminal-title text-[15px] font-medium tracking-tight">
-                {target.name === "Claude Code" ? (
-                  <ClaudeCodeLogo />
-                ) : (
-                  <CodexLogo />
-                )}
+                {target.name === "Claude Code" ? <ClaudeCodeLogo /> : null}
+                {target.name === "Codex" ? <CodexLogo /> : null}
+                {target.name === "OpenCode" ? <OpenCodeLogo /> : null}
                 {target.name}
               </h3>
-              <CopyTextButton
-                text={target.commands.join("\n")}
-                className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
-              />
+              {target.commands ? (
+                <CopyTextButton
+                  text={target.commands.join("\n")}
+                  className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
+                />
+              ) : (
+                <span className="soft-chip inline-flex min-h-8 shrink-0 items-center justify-center px-3 py-1.5 text-[12px] font-medium text-muted-foreground">
+                  Soon
+                </span>
+              )}
             </div>
 
-            <pre className="whitespace-pre-wrap break-words px-5 pb-4 text-[13px] leading-7 text-foreground">
-              <code>
-                {target.commands.map((command) => `› ${command}`).join("\n")}
-              </code>
-            </pre>
+            {target.commands ? (
+              <pre className="whitespace-pre-wrap break-words px-5 pb-4 font-mono text-[13px] leading-7 text-foreground">
+                <code>
+                  {target.commands.map((command) => `› ${command}`).join("\n")}
+                </code>
+              </pre>
+            ) : (
+              <div className="flex flex-1 items-center justify-center px-5 pb-4 text-center text-[13px] leading-7 text-muted-foreground">
+                OpenCode support is coming.
+              </div>
+            )}
           </article>
         ))}
       </div>
-
-      <p className="text-[12px] leading-relaxed text-muted-foreground">
-        OpenCode support is coming.
-      </p>
     </section>
   );
 }
 
 function SiteFooter() {
   return (
-    <footer
-      className="mt-28 flex items-center justify-between gap-3 pt-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground"
-      data-site-hue-stop="1"
-    >
+    <footer className="mt-28 flex items-center justify-between gap-3 pt-8 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
       <div className="flex items-center gap-4">
         <a
           href="https://github.com/petekp/circuit"
@@ -673,7 +794,6 @@ export default function Home() {
       <CheckpointsSection />
       <ContinuitySection />
       <MemorySection />
-      <ComparisonSection />
       <InstallSection />
       <SiteFooter />
     </main>

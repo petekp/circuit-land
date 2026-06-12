@@ -174,52 +174,73 @@ export function ExampleRunSection() {
   const content = exampleRunModes[mode];
 
   return (
-    <section
-      id="see-one-run"
-      className="mt-28 flex flex-col gap-10"
-      data-site-hue-stop="0.36"
-    >
-      <div className="flex max-w-3xl flex-col gap-4">
-        <div className="flex flex-col gap-3">
-          <h2 className="font-sans text-[15px] font-semibold tracking-tight text-foreground sm:text-[16px]">
-            Example Run
-          </h2>
-          <p className="text-balance text-[15px] leading-relaxed text-foreground">
-            Most of us are steering our agents step-by-step in chat.
-          </p>
-          <ExampleRunToggle mode={mode} setMode={setMode} />
-        </div>
+    <section id="see-one-run" className="mt-28 flex flex-col gap-10">
+      <div className="flex max-w-3xl flex-col gap-3">
+        <h2 className="font-sans text-[17px] font-semibold tracking-tight text-foreground sm:text-[19px]">
+          Example Run
+        </h2>
+        <p className="text-balance text-[15px] leading-relaxed text-foreground">
+          Most of us are steering our agents step-by-step in chat.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-stretch">
-        <div className="flex min-w-0 flex-col gap-3">
-          <div className="run-terminal-stage flex w-full flex-col">
-            <div className="example-run-terminal run-terminal w-full overflow-x-hidden overflow-y-auto font-mono text-[13px] leading-7">
-              <RunTerminalBody content={content} />
-            </div>
-          </div>
+      {/* One panel, same construction as the flow explorer above: the control
+          sits in a header strip divided from the content it switches, so the
+          toggle reads as part of the thing it toggles. */}
+      <div className="example-run-panel">
+        <div className="example-run-panel-header">
+          <ExampleRunToggle mode={mode} setMode={setMode} />
         </div>
 
-        <ol className="example-run-beats grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:flex lg:max-w-[18rem] lg:flex-col lg:justify-self-end">
-          {content.beats.map((beat, index) => (
-            <li key={beat.label} className="flex gap-4">
-              <span
-                aria-hidden="true"
-                className="mt-px shrink-0 text-[12px] tabular-nums text-muted-foreground"
-              >
-                {index + 1}
-              </span>
-              <div className="flex flex-col gap-1">
-                <h3 className="text-balance text-[14px] font-medium tracking-tight">
-                  {beat.label}
-                </h3>
-                <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
-                  {beat.note}
-                </p>
+        <div
+          key={mode}
+          className="example-run-panel-content grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-stretch"
+        >
+            {/* The terminal is a real window: chrome strip, scrollable
+                body, visible scrollbar. It stretches to fill the left
+                column. */}
+            <div className="run-terminal-stage flex min-w-0 flex-col">
+              <div className="example-run-terminal run-terminal flex w-full flex-1 flex-col overflow-hidden">
+                <div
+                  className="example-run-terminal-chrome"
+                  aria-hidden="true"
+                >
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className="example-run-terminal-scroll overflow-x-hidden font-mono text-[13px] leading-7">
+                  <RunTerminalBody content={content} />
+                </div>
               </div>
-            </li>
-          ))}
-        </ol>
+            </div>
+
+            <div className="flex w-full flex-col gap-5 lg:max-w-[18rem] lg:justify-self-end">
+              <p className="text-[14px] leading-relaxed text-foreground">
+                {content.summary}
+              </p>
+              <ol className="example-run-beats grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:flex lg:flex-col">
+                {content.beats.map((beat, index) => (
+                  <li key={beat.label} className="flex gap-4">
+                    <span
+                      aria-hidden="true"
+                      className="mt-px flex size-[22px] shrink-0 items-center justify-center rounded-full border border-foreground/15 text-[11px] tabular-nums text-muted-foreground"
+                    >
+                      {index + 1}
+                    </span>
+                    <div className="flex flex-col gap-1">
+                      <h3 className="text-balance text-[14px] font-medium tracking-tight">
+                        {beat.label}
+                      </h3>
+                      <p className="text-balance text-[13px] leading-relaxed text-muted-foreground">
+                        {beat.note}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+        </div>
       </div>
     </section>
   );
