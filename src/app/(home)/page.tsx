@@ -94,17 +94,25 @@ const blockInternals = [
   },
 ];
 
+/* This prompt is pasted into an agent, so every step must be something the
+   agent can actually execute. Slash commands are user-typed, which is why
+   the Claude Code branch uses the \`claude plugin\` shell CLI and hands only
+   /reload-plugins back to the user. */
 const agentInstallInstructions = `Install Circuit, then hand it something real.
 
-If you are Claude Code, run:
-/plugin marketplace add petekp/circuit
-/plugin install circuit@circuit
-/reload-plugins
+If you are Claude Code, run these shell commands yourself:
+claude plugin marketplace add petekp/circuit
+claude plugin install circuit@circuit
+Then ask me to type /reload-plugins so this session picks it up.
 
 If you are Codex, run:
 ${codexInstallCommand}
 
-When the install finishes, suggest a first run, like:
+If you are another agent, stop and tell me — Circuit supports Claude Code and Codex today.
+
+Before reporting success, verify: list the installed plugins, confirm circuit is there, and show me what you ran. If a step failed, diagnose the cause instead of retrying blind.
+
+Once it's in, suggest a first run, like:
 /circuit:run fix the flakiest test in this repo
 /circuit:run review the changes on this branch before I open the PR
 
