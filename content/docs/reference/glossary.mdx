@@ -32,11 +32,13 @@ The terms Circuit uses, in the order you meet them. See
 - **Run folder** — the directory where a run stores its trace, reports, evidence, and resume state.
 - **Run id** — the UUID for one run.
 
-## Intensity
+## Dials
 
-- **Depth** — the compiled thoroughness value a run or step uses after Circuit combines rigor with mode flags such as tournament or autonomous.
-- **Rigor** — the operator-facing care axis for `--rigor`: `lite`, `standard`, or `deep`.
-- **Effort** — provider-level reasoning allocation.
+- **Depth** — the process dial: how much thoroughness and care a run spends. Set with `--depth`: `low`, `medium`, or `high`.
+- **Power** — the model dial: how much model each worker run gets. Set with `--power`: `auto`, `low`, `medium`, or `high`. With `auto`, the run's researcher recommends a tier, clamped to the `power_auto` bounds in config. Never names models; per-connector tier tables translate it at selection time.
+- **Compiled depth** — the single thoroughness value a run records after Circuit combines the depth dial with mode flags such as tournament or autonomous.
+- **Effort** — provider-level reasoning allocation. Not the power dial.
+- **Receipt** — the end-of-run line reporting depth, power, worker runs, escalations, and check results. An `auto` power dial reports its resolution here, such as `power low (auto)`.
 
 ## Relay
 

@@ -20,7 +20,9 @@ Pass the flow id as the first argument: `build`, `fix`, `explore`, `review`,
 | Flag | Description | Default |
 | --- | --- | --- |
 | `--goal <goal>` | The task to run. Required. | |
-| `--rigor <lite\|standard\|deep>` | Thoroughness of the flow. | flow default |
+| `--why <why>` | Why the task matters. Threaded into worker prompts. | |
+| `--depth <low\|medium\|high>` | Thoroughness of the flow. | `medium` |
+| `--power <auto\|low\|medium\|high>` | How much model each worker run gets. | `medium` |
 | `--tournament` | Run candidates in parallel and pick a winner. | off |
 | `--tournament-n <2\|3\|4>` | Number of tournament candidates. Requires `--tournament`. | `3` |
 | `--autonomous` | Drive the continuation loop instead of a single pass. | off |
@@ -30,9 +32,14 @@ Pass the flow id as the first argument: `build`, `fix`, `explore`, `review`,
 | `--progress <jsonl>` | Stream progress events as JSONL on stderr. | off |
 | `--include-untracked-content` | Include untracked file content in evidence. | off |
 
-Not every flow supports every axis. `--rigor`, `--tournament`, and
-`--autonomous` are rejected when the flow does not declare them. See
-[Modes](/docs/flows/modes).
+Not every flow supports every control. `--depth`, `--tournament`, and
+`--autonomous` are rejected when the flow does not declare them; `--power`
+works on every flow. See [Depth, power, and modes](/docs/flows/modes).
+
+`--power auto` lets the run pick the tier: the researcher recommends one and
+the engine clamps it to the `power_auto` bounds in
+[config](/docs/configuration/config-file). Checkpoint resume re-reads power
+from config, so omit `--power` when resuming.
 
 ## Examples
 
@@ -42,10 +49,10 @@ Run a named flow:
 circuit run fix --goal 'fix the off-by-one in pagination'
 ```
 
-Set rigor:
+Set the dials:
 
 ```bash
-circuit run build --goal 'add a rate limiter to the API' --rigor deep
+circuit run build --goal 'add a rate limiter to the API' --depth high --power low
 ```
 
 Run a tournament with three candidates:
@@ -57,5 +64,5 @@ circuit run explore --goal 'compare caching strategies' --tournament --tournamen
 ## Related
 
 - [Flows](/docs/flows/overview)
-- [Modes](/docs/flows/modes)
+- [Depth, power, and modes](/docs/flows/modes)
 - [circuit resume](/docs/cli/resume)
