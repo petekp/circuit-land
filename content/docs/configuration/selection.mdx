@@ -9,14 +9,21 @@ is optional. An override that sets nothing contributes nothing.
 
 ## Layers
 
-Overrides apply at four layers. Later layers win.
+Overrides apply at seven layers. Later layers win.
 
 | Layer | Where it lives |
 | --- | --- |
 | `default` | Circuit's built-in baseline. |
 | `user-global` | `~/.config/circuit/config.yaml`. |
 | `project` | `.circuit/config.yaml`. |
+| `flow` | Declared by the flow package. |
+| `stage` | Declared by the flow package, for one stage. |
+| `step` | Declared by the flow package, for one step. |
 | `invocation` | Passed on a single run. |
+
+The three middle layers are flow-authored: a flow can pin what a stage or step
+needs, and that declaration outranks your project config. Only `invocation`
+outranks the flow.
 
 In a config file, a selection override lives at `defaults.selection` (applies to
 every run) or under `circuits.<flow>.selection` (applies to one flow).

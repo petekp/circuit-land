@@ -101,7 +101,6 @@ const FLOWS: ComposerFlow[] = [
       "frame",
       "gather-context",
       "diagnose",
-      "human-decision",
       "act",
       "run-verification",
       "review",
@@ -133,8 +132,8 @@ const FLOWS: ComposerFlow[] = [
     accent: "var(--flow-explore-accent)",
     motif: FLOW_MOTIFS.explore,
     summary:
-      "Compare paths before the agent commits to one. With tournament enabled, option cases fan out, then rejoin for review.",
-    blocks: ["frame", "diagnose", "plan", "review", "human-decision", "close-with-evidence"],
+      "Compare paths before the agent commits to one. With tournament enabled, option cases fan out, then rejoin at the tradeoff checkpoint.",
+    blocks: ["frame", "diagnose", "plan", "review", "close-with-evidence"],
   },
   {
     key: "review",
@@ -157,7 +156,6 @@ const FLOWS: ComposerFlow[] = [
       "plan",
       "act",
       "run-verification",
-      "review",
       "human-decision",
       "close-with-evidence",
     ],
@@ -173,15 +171,16 @@ const FLOWS: ComposerFlow[] = [
   },
 ];
 
-// Explore renders a tournament fanout between Plan and Review. The "fanout"
-// pseudo-node is one wide cluster (a single list item); the verbatim aria-label
-// in FlowDiagram names the announced order including "fan out option cases".
+// Explore renders a tournament fanout between Plan and Human Decision: the
+// fanned-out cases are stressed and rejoin at the tradeoff checkpoint, with no
+// separate review block on that path. The "fanout" pseudo-node is one wide
+// cluster (a single list item); the aria-label in FlowDiagram derives the
+// announced order from this sequence, including "fan out option cases".
 const EXPLORE_SEQUENCE = [
   "frame",
   "diagnose",
   "plan",
   "fanout",
-  "review",
   "human-decision",
   "close-with-evidence",
 ] as const;

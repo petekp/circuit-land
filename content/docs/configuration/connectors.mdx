@@ -82,10 +82,11 @@ The `relay` block parses strictly: unknown keys are rejected.
 
 The [power dial](/docs/flows/modes#power) never names models. Each connector
 carries a tier table that translates `low`, `medium`, and `high` into a
-concrete model or reasoning effort. The builtins ship with defaults:
+concrete model or reasoning effort. Two of the builtins ship with defaults:
 `claude-code` maps the tiers to Anthropic's small, middle, and big model
-aliases; `codex` maps them to reasoning effort. A custom connector has no
-table until you declare one under the top-level `power_tiers` key:
+aliases; `codex` maps them to reasoning effort. `cursor-agent` and custom
+connectors have no table until you declare one under the top-level
+`power_tiers` key:
 
 ```yaml
 power_tiers:
