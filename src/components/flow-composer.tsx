@@ -388,28 +388,28 @@ function connectorGroupProps(reduceMotion: boolean, delay: number): MotionProps 
 
 // ---- Flow flexibility data --------------------------------------------------
 
-type Rigor = "lite" | "standard" | "deep";
+type Depth = "low" | "medium" | "high";
 
-// What each flow can flex, mirroring the support table in
-// circuit/docs/architecture/run-process.md. Only `tournament` actually reshapes
-// the block diagram (Explore and Prototype fan out into parallel option cases,
-// per their real tournament fixtures). `rigors` and `autonomous` change how a
-// run executes, not which blocks it has — verified against the fixtures: there
-// is no deep.json or autonomous.json, so they are stated, never animated as
-// fake block changes.
+// What each flow can flex, mirroring each flow's allowed_depths /
+// supports_tournament / supports_autonomous in circuit/src/flows/<id>/data.ts.
+// Only `tournament` actually reshapes the block diagram (Explore and Prototype
+// fan out into parallel option cases, per their real tournament fixtures).
+// `depths` and `autonomous` change how a run executes, not which blocks it
+// has — verified against the fixtures: there is no high.json or
+// autonomous.json, so they are stated, never animated as fake block changes.
 type AxisSupport = {
-  rigors: Rigor[];
+  depths: Depth[];
   tournament: boolean;
   autonomous: boolean;
 };
 
 const AXIS_SUPPORT: Record<Exclude<FlowKey, "custom">, AxisSupport> = {
-  build: { rigors: ["lite", "standard", "deep"], tournament: false, autonomous: true },
-  fix: { rigors: ["lite", "standard", "deep"], tournament: false, autonomous: true },
-  pursue: { rigors: ["standard"], tournament: false, autonomous: true },
-  explore: { rigors: ["lite", "standard", "deep"], tournament: true, autonomous: true },
-  review: { rigors: ["standard"], tournament: false, autonomous: false },
-  prototype: { rigors: ["standard", "deep"], tournament: true, autonomous: true },
+  build: { depths: ["low", "medium", "high"], tournament: false, autonomous: true },
+  fix: { depths: ["low", "medium", "high"], tournament: false, autonomous: true },
+  pursue: { depths: ["medium"], tournament: false, autonomous: true },
+  explore: { depths: ["low", "medium", "high"], tournament: true, autonomous: true },
+  review: { depths: ["medium"], tournament: false, autonomous: false },
+  prototype: { depths: ["medium", "high"], tournament: true, autonomous: true },
 };
 
 function supportFor(key: FlowKey): AxisSupport | null {
@@ -417,14 +417,14 @@ function supportFor(key: FlowKey): AxisSupport | null {
 }
 
 // A glance-level badge of what the active flow supports, shown opposite the
-// flow title. Rigor is always present (every flow has a rigor range); autonomy
+// flow title. Depth is always present (every flow has a depth range); autonomy
 // and tournament appear only when the flow actually supports them, so the badge
 // reads as a quick answer to "what can this flow do."
 function FlowSupportIndicator({ support }: { support: AxisSupport }) {
-  const rigorRange =
-    support.rigors.length > 1
-      ? `${support.rigors[0]}–${support.rigors[support.rigors.length - 1]}`
-      : support.rigors[0];
+  const depthRange =
+    support.depths.length > 1
+      ? `${support.depths[0]}–${support.depths[support.depths.length - 1]}`
+      : support.depths[0];
   const chipClass =
     "soft-chip px-2 py-1 text-[10px] font-medium uppercase tracking-[0.14em]";
   return (
@@ -433,7 +433,7 @@ function FlowSupportIndicator({ support }: { support: AxisSupport }) {
       className="flex flex-wrap items-center justify-end gap-1.5"
     >
       <li className={`${chipClass} flex items-center gap-1 text-muted-foreground`}>
-        Rigor <span className="text-foreground">{rigorRange}</span>
+        Depth <span className="text-foreground">{depthRange}</span>
       </li>
       {support.autonomous ? (
         <li className={`${chipClass} text-foreground`}>Autonomous</li>

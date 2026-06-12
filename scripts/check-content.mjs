@@ -9,11 +9,9 @@
 //       and content/ must equal CIRCUIT_RELEASE_TAG in
 //       src/lib/circuit-release.ts, and at least PIN_FLOOR occurrences must
 //       exist outside the constant file.
-//   (b) retired-token registry — vocabulary that was renamed away must not
-//       reappear. Active today: checkpoint_waiting -> waiting_checkpoint.
-//       The rigor -> depth/power entries are parked in
-//       RETIRED_TOKENS_NEXT_RELEASE until the site's pinned release tag
-//       moves past alpha.7 (the rename is not in the published release yet).
+//   (b) retired-token registry — vocabulary that was renamed away
+//       (rigor -> depth/power, lite|standard|deep -> low|medium|high,
+//       checkpoint_waiting -> waiting_checkpoint) must not reappear.
 //   (c) internal dead-link check — every ](/docs/...) target in
 //       content/docs/**/*.mdx must resolve to a real page under
 //       content/docs using fumadocs slug rules.
@@ -50,21 +48,15 @@ const BINARY_EXTENSIONS = new Set([
 const RETIRED_TOKENS = [
   {
     // checkpoint_waiting is a real attempt-outcome literal inside circuit;
-    // the run STATE the site documents is waiting_checkpoint. Wrong at every
-    // release tag, so this pattern is active now. If the site ever documents
-    // attempt outcomes, restrict this to run-state contexts.
+    // the run STATE the site documents is waiting_checkpoint. If the site
+    // ever documents attempt outcomes, restrict this to run-state contexts.
     pattern: /checkpoint_waiting/i,
     replacement: "waiting_checkpoint",
     note: "the runs-show engine state literal is waiting_checkpoint; checkpoint_waiting is the adjacent reason field",
   },
-];
-
-// The site documents the latest published release tag (CIRCUIT_RELEASE_TAG).
-// The rigor -> depth/power rename shipped on circuit main AFTER alpha.7, so
-// rigor vocabulary is still CORRECT here today. Move these entries into
-// RETIRED_TOKENS in the same commit that bumps CIRCUIT_RELEASE_TAG past
-// alpha.7 (when the PR #9 state-refresh content lands).
-const RETIRED_TOKENS_NEXT_RELEASE = [
+  // rigor -> depth/power rename (2026-06, circuit PRs #56/#59). The site
+  // tracks current terminology by operator decision (2026-06-12), even while
+  // the pinned install tag trails the rename.
   {
     pattern: /--rigor\b/i,
     replacement: "--depth",
@@ -94,11 +86,6 @@ const RETIRED_TOKENS_NEXT_RELEASE = [
     note: "depth values are low|medium|high",
   },
 ];
-// Referenced so the parked list is part of the module contract, not dead code
-// a linter or reader deletes.
-if (RETIRED_TOKENS_NEXT_RELEASE.length === 0) {
-  throw new Error("next-release registry must keep its parked entries");
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
