@@ -8,7 +8,8 @@
     "start": "next start",
     "postinstall": "fumadocs-mdx",
     "lint": "eslint",
-    "check": "tsc --noEmit && eslint"
+    "check": "tsc --noEmit && eslint",
+    "check:content": "node scripts/check-content.mjs"
   },
   "dependencies": {
     "@types/mdx": "^2.0.13",

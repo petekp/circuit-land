@@ -12,7 +12,7 @@ settling an ambiguous goal scope. The rest of a run advances on its own checks.
 
 ## How it works
 
-When a checkpoint pauses, the run stops in a `checkpoint_waiting` state. The run
+When a checkpoint pauses, the run stops in a `waiting_checkpoint` state. The run
 folder records the checkpoint request: the context to review and the allowed
 choices. Some checkpoints also declare a safe default — the choice Circuit takes
 when no operator answers.
