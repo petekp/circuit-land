@@ -1,11 +1,11 @@
 ---
 title: Troubleshooting
-description: Stuck checkpoints, connector errors, and inspecting a past run.
+description: Stuck checkpoints, connector errors, inspecting a past run, and removing a leftover instruction block.
 ---
 
-Three situations cover most of what goes wrong. Each one leaves evidence in the
-run folder, so the first move is always the same: find the run under
-`.circuit/runs/<run-id>` and read what it recorded.
+Most of what goes wrong leaves evidence in the run folder, so the first move is
+usually the same: find the run under `.circuit/runs/<run-id>` and read what it
+recorded.
 
 ## A run is stuck at a checkpoint
 
@@ -77,8 +77,16 @@ To search across many past runs instead of one folder, use the
 circuit history query <search text> --json
 ```
 
+## Circuit still runs after I removed the plugin
+
+Install adds an instruction block to `AGENTS.md` and `CLAUDE.md` that tells the
+agent to start every task with Circuit. That block lives in your project, not in
+the plugin, so removing the plugin leaves it behind and the agent keeps invoking
+Circuit. Strip it with [`circuit uninstall`](/docs/cli/uninstall).
+
 ## Related
 
 - [Checkpoints](/docs/concepts/checkpoints)
 - [Evidence and runs](/docs/concepts/evidence-and-runs)
 - [Connectors](/docs/configuration/connectors)
+- [circuit uninstall](/docs/cli/uninstall)
