@@ -1,0 +1,53 @@
+---
+title: circuit uninstall
+description: Remove Circuit's instruction block from a project and print the host removal commands.
+---
+
+CLI only.
+
+```bash
+circuit uninstall [--dir <path>] [--json]
+```
+
+Strip the Circuit instruction block from a project's `AGENTS.md` and `CLAUDE.md`, then print the commands that remove the plugin from your host. Install adds a marked block that tells the agent to start every task with Circuit; removing the plugin without removing that block leaves a dangling instruction in future sessions.
+
+The command removes every well-formed block between `<!-- circuit:start -->` and `<!-- circuit:end -->`, plus one blank line before it, and leaves the rest of the file alone. A file with malformed markers is reported and left untouched.
+
+## Flags
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--dir <path>` | Project directory to clean. | current directory |
+| `--json` | Print a machine-readable result. | |
+
+## Examples
+
+Clean the current project, then run the printed host commands:
+
+```bash
+circuit uninstall
+```
+
+Clean another checkout:
+
+```bash
+circuit uninstall --dir ~/code/other-project
+```
+
+Remove the plugin from the host. For Claude Code:
+
+```bash
+claude plugin uninstall circuit@circuit
+claude plugin marketplace remove circuit
+```
+
+For Codex:
+
+```bash
+codex plugin marketplace remove circuit
+```
+
+## Related
+
+- [Installation](/docs/getting-started/installation)
+- [circuit create](/docs/cli/create)

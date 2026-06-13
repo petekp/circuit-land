@@ -54,6 +54,23 @@ only if you use that connector:
 npm install -g @openai/codex
 ```
 
+## Removing Circuit
+
+Run [`circuit uninstall`](/docs/cli/uninstall) in a project to strip the Circuit
+instruction block from its `AGENTS.md` and `CLAUDE.md`. It then prints the
+commands that remove the plugin from your host. For Claude Code:
+
+```bash
+claude plugin uninstall circuit@circuit
+claude plugin marketplace remove circuit
+```
+
+For Codex:
+
+```bash
+codex plugin marketplace remove circuit
+```
+
 ## Next
 
 - [Quickstart](/docs/getting-started/quickstart) runs your first task.
