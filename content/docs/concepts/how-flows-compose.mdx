@@ -1,0 +1,96 @@
+---
+title: How flows compose
+description: How flows nest other flows, stay bounded, fit their shape to the task, and re-tool mid-run.
+---
+
+A flow runs one work pattern. Some work is bigger than one pattern: it needs
+another flow inside it, a shape that fits the task at hand, or a tool the run did
+not start with. Composition is how Circuit handles that, without giving up the
+typed steps and recorded evidence that make a run legible.
+
+This page builds on [How Circuit works](/docs/concepts/how-it-works). Read that
+first for stages, steps, and routes.
+
+## A flow can run another flow
+
+One of a step's kinds is a sub-run: a step that runs a whole child flow and waits
+for its result. The child runs end to end, with its own stages, steps, checks,
+and run folder. It hands its result back to the parent step, which routes on it
+like any other step.
+
+<Mermaid
+  label="A sub-run step runs a child flow, then the parent continues"
+  chart={`
+flowchart LR
+  S[Step] --> SR["Sub-run step"]
+  SR --> Child["Child flow runs Frame to Close"]
+  Child --> N["Next step"]
+`}
+/>
+
+This is how a larger flow reuses a smaller one instead of re-implementing it. A
+flow that has to build something as one part of a bigger objective can run the
+Build flow as a child step, then carry its evidence forward.
+
+A related kind, fanout, runs several branches at once and joins their outputs.
+The branches can be variants to compare and pick from, the pattern behind Explore
+and Prototype, or child flows that each do a piece of the work.
+
+## Nesting stays bounded
+
+A flow that can run a child flow could, in principle, recurse without end: a flow
+that calls itself, or two flows that call each other. Circuit bounds this so it
+cannot run away.
+
+- **A depth cap** — child runs may nest only so deep, eight levels. Past the cap,
+  the sub-run step fails its check instead of starting another child.
+- **A cycle guard** — a flow already in the current chain of parents cannot be
+  re-entered as its own descendant.
+
+Both are always on, with no flag to turn them off. A flow that names itself as a
+child is rejected at compile time when the reference is static, and stopped by
+the cycle guard at run time otherwise. The point is the same one behind the rest
+of Circuit: a run should be bounded and legible, never an open loop.
+
+## Circuit fits the shape to the task
+
+Flows are not one rigid template. When you start a task with `/circuit:run`, the
+agent reads your task and recommends one of the proven built-in flows — a repair
+flow for a defect, a review flow for checking work, a build flow for a new
+capability — and Circuit runs that whole flow. You can also name the flow
+yourself.
+
+When you author a new flow with [`circuit create`](/docs/cli/create), Circuit
+goes further: it reads your description and instantiates the proven shape that
+fits, then folds the build shape to match the task's grain — a thin spine for a
+small change, a full step-by-step spine for a large one.
+
+In both cases Circuit reuses shapes it already trusts rather than inventing new
+ones. It fits a proven pattern to your task; it does not generate a novel flow
+from scratch. That boundary is deliberate: every shape a run can take has already
+been proven, so the run stays inside known-good structure.
+
+## A run can re-tool itself mid-flight
+
+A worker sometimes discovers, partway through, that it needs a tool the run did
+not give it. Circuit can adjust: when a worker reports a confirmed need, the run
+re-resolves the tools for its remaining steps and continues with them.
+
+The adjustment is conservative by design.
+
+- **Additive only** — it grants tools for the steps still ahead. The run's
+  sequence, its routes, and where it is do not change.
+- **Confirmed only** — an unconfirmed hunch is recorded as a finding, not acted
+  on.
+- **Bounded** — re-tooling can happen only a small, fixed number of times in a
+  run.
+
+If no worker reports a need, nothing changes and the run is identical to one
+without the feature. It is a quiet self-correction, not a new degree of freedom.
+
+## Related
+
+- [How Circuit works](/docs/concepts/how-it-works)
+- [circuit create](/docs/cli/create)
+- [Evidence and runs](/docs/concepts/evidence-and-runs)
+- [Flows overview](/docs/flows/overview)

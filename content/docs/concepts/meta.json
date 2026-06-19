@@ -2,6 +2,7 @@
   "title": "Concepts",
   "pages": [
     "how-it-works",
+    "how-flows-compose",
     "checkpoints",
     "evidence-and-runs",
     "memory-and-history",
