@@ -9,7 +9,7 @@ Experimental. CLI only.
 circuit create --description '<flow idea>' [options]
 ```
 
-Create a new custom flow from the Build template, validate it, and optionally publish it. Each create writes a draft alongside a custom-flow descriptor; `--publish --yes` promotes the draft into a runnable flow, skill, and slash command.
+Create a new custom flow, validate it, and optionally publish it. Create reads your description and picks a flow shape that fits the task, then writes a draft alongside a custom-flow descriptor. `--publish --yes` promotes the draft into a runnable flow, skill, and slash command.
 
 ## Flags
 
@@ -18,10 +18,10 @@ Create a new custom flow from the Build template, validate it, and optionally pu
 | `--description <flow idea>` | What the flow is for. Required. | |
 | `--name <slug>` | Lowercase kebab-case name. Derived from the description if omitted. Reserved names are rejected. | |
 | `--home <path>` | Where drafts and published flows live. | `~/.config/circuit/custom` |
-| `--template-flow-root <path>` | Root containing the `build/circuit.json` template to start from. | |
 | `--created-at <iso>` | Publish timestamp. | current time |
 | `--publish` | Publish immediately. Requires `--yes`. | |
 | `--yes` | Confirm publication. | |
+| `--decompose` | When the task lands on the build shape, generate the full step-by-step spine instead of the thin default. | (off) |
 | `--progress <jsonl>` | Stream progress events as JSONL. | |
 
 ## Examples

@@ -69,7 +69,7 @@ A custom connector descriptor takes these fields:
 | `capabilities.filesystem` | `read-only` (the only value accepted for a custom connector) |
 | `capabilities.structured_output` | `json` |
 
-Two rules are enforced at parse time:
+These rules are enforced at parse time:
 
 - Custom connectors must declare `filesystem: read-only`. Writable custom workers are not yet supported.
 - The registry key and the descriptor `name` must match.

@@ -31,6 +31,7 @@ Pass the flow id as the first argument: `build`, `fix`, `explore`, `review`,
 | `--flow-root <path>` | Directory of compiled flows. | `generated/flows` |
 | `--progress <jsonl>` | Stream progress events as JSONL on stderr. | off |
 | `--include-untracked-content` | Include untracked file content in evidence. | off |
+| `--reuse-children-from <path>` | Reuse finished sub-runs from a prior crashed run folder instead of re-running them. Fresh runs only; rejected on resume. | |
 
 Not every flow supports every control. `--depth`, `--tournament`, and
 `--autonomous` are rejected when the flow does not declare them; `--power`
