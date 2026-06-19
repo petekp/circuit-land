@@ -1,0 +1,40 @@
+---
+title: circuit reclaim
+description: Remove leftover worktrees from interrupted runs.
+---
+
+CLI only.
+
+```bash
+circuit reclaim [--project-root <path>] [--json]
+```
+
+Some flows fan out into per-branch git worktrees under `.circuit/worktrees/`. A run
+killed mid-fanout skips the cleanup that normally removes them, leaving those
+worktrees behind. `reclaim` walks that directory, removes the worktrees whose runs
+have finished, keeps the ones still in use, and reports what it removed, kept, and
+could not process.
+
+The command is best-effort: a worktree it cannot remove is recorded in the result
+instead of failing the command. The result is always JSON, and it is the proof of
+what happened.
+
+Run `reclaim` from the project root. From a subdirectory, pass `--project-root` so
+it resolves the right project instead of silently reclaiming nothing.
+
+## Flags
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--project-root <path>` | Project to reclaim. | current directory |
+
+## Examples
+
+```bash
+circuit reclaim
+```
+
+## Related
+
+- [circuit runs](/docs/cli/runs)
+- [Evidence and runs](/docs/concepts/evidence-and-runs)

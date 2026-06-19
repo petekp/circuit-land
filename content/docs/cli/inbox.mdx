@@ -1,0 +1,47 @@
+---
+title: circuit inbox
+description: List runs parked at a checkpoint, waiting on a decision.
+---
+
+CLI only.
+
+```bash
+circuit inbox [--project-root <path>] [--runs-base <path>] [--json]
+```
+
+List every run that paused at an operator [checkpoint](/docs/concepts/checkpoints)
+and is waiting on a decision. For each waiting run, the inbox shows the fork it
+stopped on (what it asks and the choices it offers), a best-effort note on whether
+the run has gone stale, and the [`circuit resume`](/docs/cli/resume) command that
+answers it.
+
+The inbox is read-only. It never resumes a run: it is a read model over your saved
+run folders and a front door to `circuit resume`. You still answer one run at a
+time.
+
+## Flags
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--project-root <path>` | Project whose runs to read. | current directory |
+| `--runs-base <path>` | Runs root, when runs live outside the project. | project control plane |
+| `--json` | Print a machine-readable result. | |
+
+## Examples
+
+See what is waiting on you:
+
+```bash
+circuit inbox
+```
+
+Then answer one with the resume command the inbox prints for it:
+
+```bash
+circuit resume --run-folder .circuit/runs/<run-id> --checkpoint-choice <choice>
+```
+
+## Related
+
+- [circuit resume](/docs/cli/resume)
+- [Checkpoints](/docs/concepts/checkpoints)

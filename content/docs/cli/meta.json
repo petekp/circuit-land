@@ -4,12 +4,14 @@
     "overview",
     "run",
     "resume",
+    "inbox",
     "handoff",
     "history",
     "memory",
     "create",
     "uninstall",
     "runs",
+    "reclaim",
     "version"
   ]
 }
