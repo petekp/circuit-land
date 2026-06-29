@@ -9,7 +9,9 @@ Experimental. CLI only.
 circuit create --description '<flow idea>' [options]
 ```
 
-Create a new custom flow, validate it, and optionally publish it. Create reads your description and picks a flow shape that fits the task, then writes a draft alongside a custom-flow descriptor. `--publish --yes` promotes the draft into a runnable flow, skill, and slash command.
+Create a new custom flow, validate it, and optionally publish it. Create reads your description and picks a flow shape that fits the task, then writes a draft alongside a custom-flow descriptor. `--publish --yes` publishes the draft as a runnable custom flow you can invoke from the CLI with `circuit run <name> --flow-root ...`. Published flows are local CLI files, not host slash commands.
+
+To compose a flow block by block instead of fitting a proven shape, see [circuit generate](/docs/cli/generate).
 
 ## Flags
 
@@ -53,4 +55,5 @@ circuit run flake-hunter --flow-root ~/.config/circuit/custom/flows --goal '<tas
 ## Related
 
 - [circuit run](/docs/cli/run)
+- [circuit generate](/docs/cli/generate)
 - [Flows](/docs/flows/overview)

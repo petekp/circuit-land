@@ -35,11 +35,10 @@ import { RunStageReveal } from "./reveal";
 // as each new run enters, a COURIER — a copy of the record — lifts off
 // the stack (the consult ping flares as it departs) and flies across
 // the board to land on the entering run's document just as it seats
-// into its first step. The run compounds —
-// dwells shrink and segments quicken step over step (paceWeight), the
-// pulse's aura stretches into a streak — so four runs complete in the
-// time the lane above manages three. Tally ticks at the right edge of
-// each lane keep the score, so the lap advantage reads at a glance.
+// into its first step. The copy is a hint, not a command: it orients the
+// new run, it never overrides the run's own checks. Every with-run keeps
+// an even pace — no run is drawn faster than another — and the aura is a
+// steady working glow.
 //
 // All pulses share one bright ink: it is the same agent. Only the
 // world around it differs.
@@ -85,13 +84,10 @@ const RECORD_SETTLE = 0.9;
 const RECORD_RESIDUE = 0.35;
 const SEAT_SETTLE = 0.5;
 const SEAT_RESIDUE = 0.15;
-const DWELL_BASE = 0.3;
-
-// Tally ticks: a right-aligned scoreboard per lane. Both lanes end at
-// the same x, so "four ticks vs three" reads instantly.
-const TICK_EDGE = 28;
-const TICK_SPACING = 14;
-const TICK_RESIDUE = 0.25;
+// Every step on the with-lane dwells the same amount; the pace is even,
+// not accelerating. Sized so the run's total pause time leaves a
+// comfortable motion budget inside its travel window.
+const DWELL_BASE = 0.188;
 
 // Skill slots: a socket on a stem above select pads. The socket is
 // fixed furniture, like the pads; the chip inside snaps in as the run
@@ -151,9 +147,10 @@ type StageConfig = {
     // lastTravel lands its record just before the seam.
     travel: number;
     lastTravel: number;
-    // Compounding is carried by the numbers: every pad's dwell is
-    // shorter and every segment's paceWeight smaller than the one
-    // before.
+    // Held at 0: every pad dwells the same and every on-board segment
+    // carries the same paceWeight, so the run keeps an even pace instead
+    // of accelerating. exitPace stays light so the pulse clears the board
+    // before the next run enters.
     dwellStep: number;
     paceStep: number;
     exitPace: number;
@@ -262,8 +259,8 @@ const WIDE: StageConfig = {
   laneB: {
     travel: 6.3,
     lastTravel: 5.9,
-    dwellStep: 0.032,
-    paceStep: 0.08,
+    dwellStep: 0,
+    paceStep: 0,
     exitPace: 0.38,
     docLinePads: [0, 2, 4, 6],
     courierFlight: 0.55,
@@ -351,8 +348,8 @@ const NARROW: StageConfig = {
   laneB: {
     travel: 6.2,
     lastTravel: 5.8,
-    dwellStep: 0.06,
-    paceStep: 0.16,
+    dwellStep: 0,
+    paceStep: 0,
     exitPace: 0.45,
     docLinePads: [0, 1, 2, 3],
     courierFlight: 0.45,
@@ -487,8 +484,8 @@ function cardKeyframes(name: string, land: number) {
 }
 
 // The consult ping: a ring around the stack that flares and expands as
-// each new run passes its first pad — the stack is being read, which is
-// why this lane is fast.
+// each new run passes its first pad — the stack is being read, so the new
+// run starts with a hint from the ones before it.
 function pingKeyframes(name: string, consults: number[]) {
   const frames = consults
     .map(
@@ -553,24 +550,10 @@ function noteKeyframes(name: string, at: number) {
 }`;
 }
 
-// A tally tick pops bright the moment its run finishes and holds for
-// the rest of the loop; the whole scoreboard starts the loop bright
-// (last cycle's score) and dims as the first run enters.
-function tickKeyframes(name: string, at: number, settle: number) {
-  return `@keyframes ${name} {
-  0% { opacity: ${settle}; transform: scale(1); }
-  ${pct(0.3)}% { opacity: ${TICK_RESIDUE}; transform: scale(1); }
-  ${pct(at - 0.02)}% { opacity: ${TICK_RESIDUE}; transform: scale(1); }
-  ${pct(at)}% { opacity: 1; transform: scale(1.4); }
-  ${pct(at + 0.14)}% { opacity: ${settle}; transform: scale(1); }
-  100% { opacity: ${settle}; transform: scale(1); }
-}`;
-}
-
 // An error pops bright at the collision, then settles to a dimmer mark
 // that stays put while its run is still on the board — long enough to
-// hover. It fades only once the run has left: in this lane even the
-// mistakes leave nothing for the next run to learn from.
+// hover. It fades only once the run has left: in this lane nothing is
+// kept, so the next run starts from the same blank board.
 function errorKeyframes(name: string, hitSeconds: number, endSeconds: number) {
   const dim = Math.min(hitSeconds + 1.6, endSeconds - 0.2);
   const gone = Math.min(endSeconds + 0.8, LOOP_SECONDS - 0.1);
@@ -612,11 +595,11 @@ function joltKeyframes(
 }`;
 }
 
-// The aura around a with-pulse stretches into a horizontal streak and
-// brightens with each seated step — the run visibly picks up speed,
-// drawing strength from the record it is writing — then resets
-// off-board before the next run begins. Step sizes scale to the pad
-// count so both boards reach the same final streak.
+// The aura around a with-pulse is a steady working glow: it holds the
+// same size and brightness across every step, then resets off-board
+// before the next run begins. The streak step sizes are held at 0 so the
+// glow never grows — no "picks up speed" reading. (The per-step stops are
+// still emitted, all identical, to keep the keyframe shape stable.)
 function auraKeyframes(
   name: string,
   journey: Journey,
@@ -625,9 +608,9 @@ function auraKeyframes(
   travel: number,
 ) {
   const start = runIndex * LANE_B_PERIOD;
-  const sx = 1.44 / padCount;
-  const sy = 0.36 / padCount;
-  const so = 0.184 / padCount;
+  const sx = 0;
+  const sy = 0;
+  const so = 0;
   const streak = (n: number) =>
     `transform: scale(${(1 + n * sx).toFixed(2)}, ${(1 + n * sy).toFixed(3)}); opacity: ${(0.12 + n * so).toFixed(3)};`;
   const stops = Array.from(
@@ -827,7 +810,8 @@ function GapStage({
     }),
   );
 
-  // When each without-run leaves the board — its tally moment.
+  // When each without-run leaves the board — used to fade its error
+  // marks out as the run exits.
   const laneAEnds = laneA.runs.map(
     (_, i) =>
       i * LANE_A_WINDOW + (i === lastRunA ? laneA.lastTravel : laneA.travel),
@@ -1015,19 +999,6 @@ ${dropKeyframes(name, courierDeparts[k], arrive, courierDx, courierDy)}`;
   const pingCss = `.${p}-ping { animation: ${p}-ping ${LOOP_SECONDS}s linear infinite; transform-box: fill-box; transform-origin: center; }
 ${pingKeyframes(`${p}-ping`, courierDeparts)}`;
 
-  const tallyCss = [
-    ...laneA.runs.map((_, i) => {
-      const name = `${p}-tick-a${i}`;
-      return `.${name} { animation: ${name} ${LOOP_SECONDS}s linear infinite; transform-box: fill-box; transform-origin: center; }
-${tickKeyframes(name, laneAEnds[i], 0.8)}`;
-    }),
-    ...lands.map((land, k) => {
-      const name = `${p}-tick-b${k}`;
-      return `.${name} { animation: ${name} ${LOOP_SECONDS}s linear infinite; transform-box: fill-box; transform-origin: center; }
-${tickKeyframes(name, land, 0.95)}`;
-    }),
-  ].join("\n");
-
   // The entrance: once the reveal wrapper goes live, the rail draws in
   // from the left, pads pop on in order (delays set inline per pad),
   // the lane tags fade up, and only then do the actors fade in over a
@@ -1067,7 +1038,6 @@ ${cardCss}
 ${ghostCss}
 ${courierCss}
 ${pingCss}
-${tallyCss}
 ${entranceCss}
 }
 `;
@@ -1079,12 +1049,10 @@ ${entranceCss}
     ).toFixed(3),
   );
   const padStagger = Number((0.48 / pads.length).toFixed(3));
-  const tickX = (index: number, count: number) =>
-    frame.width - TICK_EDGE - (count - 1 - index) * TICK_SPACING;
 
   // The hover layer's zones, anchored to the stage's fixed furniture
-  // (labels, notes, error marks, rail, slots, stack, tallies). Later
-  // entries paint on top where zones overlap.
+  // (labels, notes, error marks, rail, slots, stack). Later entries
+  // paint on top where zones overlap.
   const inkB = "var(--signal)";
   const tips: StageTip[] = [
     {
@@ -1128,16 +1096,6 @@ ${entranceCss}
         ink: INK_A,
       })),
     ),
-    {
-      id: "tally-a",
-      title: "The score",
-      lines: ["Three runs finish in this loop."],
-      cx: tickX(1, laneA.runs.length),
-      cy: 32,
-      rx: 34,
-      ry: 16,
-      ink: INK_A,
-    },
     {
       id: "label-b",
       title: "The same agent, on a flow",
@@ -1187,16 +1145,6 @@ ${entranceCss}
       ry: 30,
       ink: inkB,
     },
-    {
-      id: "tally-b",
-      title: "The score",
-      lines: ["Four runs finish in the same loop."],
-      cx: tickX(1, LANE_B_RUN_COUNT) + TICK_SPACING / 2,
-      cy: 208,
-      rx: 36,
-      ry: 16,
-      ink: inkB,
-    },
   ];
 
   return (
@@ -1204,7 +1152,7 @@ ${entranceCss}
       viewBox={`0 0 ${frame.width} ${frame.height}`}
       className={className}
       role="img"
-      aria-label="An endless procession of runs, shown in two lanes; each lane's next run is already entering as the last one finishes. Without Circuit, each agent improvises a different route in white, flashes red when it hits an error, waits for the user to steer it onward, detours past markdown notes scattered around the board to re-read context, and its route evaporates behind it; nothing carries over to the next run. With Circuit, every run rides the same rail and writes a small document as it works, one line per completed step. Sockets above some steps show a skill chip snapping in as the run reaches them: the capability a step needs arrives exactly there. When the run finishes, the document drops onto a growing stack of records, and a copy flies from the stack to meet each new run as it enters: every run starts briefed by the ones before it, and gains speed as it goes. Tally marks at the right edge keep score: four runs finish with Circuit in the time three finish without."
+      aria-label="An endless procession of runs, shown in two lanes; each lane's next run is already entering as the last one finishes. Without Circuit, each agent improvises a different route in white, flashes red when it hits an error, waits for the user to steer it onward, detours past markdown notes scattered around the board to re-read context, and its route evaporates behind it; nothing carries over to the next run. With Circuit, every run rides the same rail at an even pace and writes a small document as it works, one line per completed step. Sockets above some steps show a skill chip snapping in as the run reaches them: the capability a step needs arrives exactly there. When the run finishes, the document drops onto a growing stack of records, and a copy flies from the stack to meet each new run as it enters: each run starts with a hint from the ones before it. The hint orients the new run; it never overrides the run's own checks."
     >
       <style>{css}</style>
 
@@ -1305,27 +1253,12 @@ ${entranceCss}
               </g>
             )),
           )}
-          {laneA.runs.map((_, i) => {
-            const x = tickX(i, laneA.runs.length);
-            return (
-              <rect
-                key={`tick-a-${x}`}
-                className={`${p}-tick-a${i}`}
-                x={x - 1.25}
-                y={27}
-                width={2.5}
-                height={10}
-                rx={1.25}
-                fill="currentColor"
-                opacity={0.3}
-              />
-            );
-          })}
         </g>
       </g>
 
       {/* Lane B: with. The rail is laid out in advance; run after
-          run seats each step, writes its record, and accelerates. */}
+          run seats each step, writes its record, and files it to the
+          stack — every run at the same even pace. */}
       <g className="rs-gap2-with">
         <text
           className={`${p}-tag`}
@@ -1593,22 +1526,6 @@ ${entranceCss}
               <Pulse auraClassName={`${p}-aura-b${k}`} />
             </g>
           ))}
-          {lands.map((_, k) => {
-            const x = tickX(k, LANE_B_RUN_COUNT);
-            return (
-              <rect
-                key={`tick-b-${x}`}
-                className={`${p}-tick-b${k}`}
-                x={x - 1.25}
-                y={203}
-                width={2.5}
-                height={10}
-                rx={1.25}
-                fill="currentColor"
-                opacity={0.3}
-              />
-            );
-          })}
         </g>
       </g>
 

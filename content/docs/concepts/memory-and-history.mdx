@@ -1,6 +1,6 @@
 ---
 title: Memory and history
-description: How Circuit recalls what past runs learned and ranks it for the next run.
+description: How Circuit indexes evidence from past runs and project facts, then ranks hint-only candidates for the next run.
 ---
 
 Every run leaves evidence behind in its run folder. Circuit indexes those past
@@ -67,8 +67,10 @@ flowchart TD
 `}
 />
 
-So recall sharpens over time. A hint earns its slot by matching the goal and not
-correlating with worse outcomes, and the budget stays small.
+So each run's hints are earned, not just inherited. A hint takes a slot by
+matching the goal and not correlating with worse outcomes, and the budget stays
+small. This makes a single run better informed; it does not make the flow itself
+smarter.
 
 ## Querying history
 

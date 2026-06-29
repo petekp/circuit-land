@@ -63,11 +63,20 @@ type ComposerFlow = {
   accent: string;
   motif: readonly MotifCell[];
   blocks: BlockId[];
-  // One-line statement of what the flow is for, shown when it is selected.
-  summary?: string;
+  // Per-block annotation marks, keyed by block id and shown on the matching
+  // tile: the check that must pass, the read-only step, the human decision.
+  // The chassis stays the same; this is where its teeth show.
+  annotations?: Partial<Record<BlockId, TileAnnotation>>;
   // Forward-looking entry. Has no fixed composition; shown as a planned state.
   planned?: boolean;
 };
+
+// A small mark on a tile, with one meaning each: a check that must pass before
+// the run can close (gate), a read-only or scoped step (lock), and a point
+// where a person decides (decision). `tag` is the team-specific detail, e.g.
+// which check the gate runs.
+type TileMarkKind = "gate" | "lock" | "decision";
+type TileAnnotation = { mark: TileMarkKind; tag: string };
 
 // Keep these named by flow so identical-looking icons can still be edited
 // independently without patching the wrong repeated array.
@@ -91,7 +100,10 @@ const FLOWS: ComposerFlow[] = [
     color: "var(--flow-build)",
     accent: "var(--flow-build-accent)",
     motif: FLOW_MOTIFS.build,
-    summary: "Turn a clear brief into a reviewed change, backed by evidence.",
+    annotations: {
+      "run-verification": { mark: "gate", tag: "token lint" },
+      review: { mark: "lock", tag: "read-only" },
+    },
     blocks: ["frame", "gather-context", "plan", "act", "run-verification", "review", "close-with-evidence"],
   },
   {
@@ -100,7 +112,10 @@ const FLOWS: ComposerFlow[] = [
     color: "var(--flow-fix)",
     accent: "var(--flow-fix-accent)",
     motif: FLOW_MOTIFS.fix,
-    summary: "Find the cause, make the fix, keep the evidence attached.",
+    annotations: {
+      "run-verification": { mark: "gate", tag: "PII snapshot" },
+      review: { mark: "lock", tag: "read-only" },
+    },
     blocks: [
       "frame",
       "gather-context",
@@ -117,8 +132,10 @@ const FLOWS: ComposerFlow[] = [
     color: "var(--flow-pursue)",
     accent: "var(--flow-pursue-accent)",
     motif: FLOW_MOTIFS.pursue,
-    summary:
-      "Coordinate several related changes without pretending they run at once.",
+    annotations: {
+      "run-verification": { mark: "gate", tag: "per slice" },
+      review: { mark: "lock", tag: "read-only" },
+    },
     blocks: [
       "pursue",
       "coordinate-pursuits",
@@ -135,8 +152,10 @@ const FLOWS: ComposerFlow[] = [
     color: "var(--flow-explore)",
     accent: "var(--flow-explore-accent)",
     motif: FLOW_MOTIFS.explore,
-    summary:
-      "Compare paths before the agent commits to one. With tournament enabled, option cases fan out, then rejoin at the tradeoff checkpoint.",
+    annotations: {
+      review: { mark: "lock", tag: "read-only" },
+      "human-decision": { mark: "decision", tag: "you pick" },
+    },
     blocks: ["frame", "diagnose", "plan", "review", "close-with-evidence"],
   },
   {
@@ -145,7 +164,9 @@ const FLOWS: ComposerFlow[] = [
     color: "var(--flow-review)",
     accent: "var(--flow-review-accent)",
     motif: FLOW_MOTIFS.review,
-    summary: "Judge a scoped change against evidence, not guesswork.",
+    annotations: {
+      review: { mark: "lock", tag: "read-only" },
+    },
     blocks: ["frame", "review", "close-with-evidence"],
   },
   {
@@ -154,7 +175,10 @@ const FLOWS: ComposerFlow[] = [
     color: "var(--flow-prototype)",
     accent: "var(--flow-prototype-accent)",
     motif: FLOW_MOTIFS.prototype,
-    summary: "Build a disposable, local version to learn from before committing.",
+    annotations: {
+      "run-verification": { mark: "gate", tag: "smoke check" },
+      "human-decision": { mark: "decision", tag: "graduate?" },
+    },
     blocks: [
       "frame",
       "plan",
@@ -515,13 +539,55 @@ function sequenceFor(
   return flow.blocks;
 }
 
+// Shared stroke recipe for the three tile marks, kept module-level so the SVGs
+// stay light and consistent. currentColor inherits the tag's muted color.
+const TILE_MARK_STROKE = {
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.4,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+} as const;
+
+// gate = shield-check (a check that must pass), lock = padlock (read-only or
+// scoped), decision = diamond (a person decides). One glyph per structural
+// property, so the same mark always means the same thing across flows.
+function TileMark({ kind }: { kind: TileMarkKind }) {
+  if (kind === "gate") {
+    return (
+      <svg aria-hidden="true" width="12" height="12" viewBox="0 0 14 14" className="shrink-0">
+        <path
+          d="M7 1.3 L11.7 3.2 L11.7 7.1 C11.7 9.8 9.6 11.7 7 12.7 C4.4 11.7 2.3 9.8 2.3 7.1 L2.3 3.2 Z"
+          {...TILE_MARK_STROKE}
+        />
+        <path d="M4.9 7.1 L6.3 8.6 L9.2 5.4" {...TILE_MARK_STROKE} />
+      </svg>
+    );
+  }
+  if (kind === "lock") {
+    return (
+      <svg aria-hidden="true" width="12" height="12" viewBox="0 0 14 14" className="shrink-0">
+        <rect x="3.2" y="6.3" width="7.6" height="5.7" rx="1.3" {...TILE_MARK_STROKE} />
+        <path d="M4.9 6.3 L4.9 4.8 a2.1 2.1 0 0 1 4.2 0 L9.1 6.3" {...TILE_MARK_STROKE} />
+      </svg>
+    );
+  }
+  return (
+    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 14 14" className="shrink-0">
+      <path d="M7 1.7 L12.3 7 L7 12.3 L1.7 7 Z" {...TILE_MARK_STROKE} />
+    </svg>
+  );
+}
+
 function BlockTile({
   block,
+  annotation,
   motionProps,
   registerNode,
   ref,
 }: {
   block: BlockId;
+  annotation?: TileAnnotation;
   motionProps: MotionProps;
   registerNode: (id: string) => (el: HTMLElement | null) => void;
   ref?: Ref<HTMLElement>;
@@ -540,12 +606,20 @@ function BlockTile({
       layout
       layoutId={block}
       {...motionProps}
-      className="flow-block-tile relative z-10 flex w-full list-none flex-col items-center justify-center gap-2 p-4 text-center text-foreground sm:w-auto sm:min-w-[108px]"
+      // A uniform min-height keeps annotated and plain tiles the same size, so
+      // a row's connectors stay flat and the FLIP morph never jumps height.
+      className="flow-block-tile relative z-10 flex min-h-[72px] w-full list-none flex-col items-center justify-center gap-1.5 p-4 text-center text-foreground sm:w-auto sm:min-w-[112px]"
       style={{ backgroundColor: TILE_FILL }}
     >
       <span className="text-[15px] font-medium leading-tight tracking-tight">
         {BLOCK_LABEL[block]}
       </span>
+      {annotation ? (
+        <span className="flex items-center gap-1 whitespace-nowrap text-[10px] font-medium uppercase leading-none tracking-[0.1em] text-muted-foreground">
+          <TileMark kind={annotation.mark} />
+          {annotation.tag}
+        </span>
+      ) : null}
     </m.li>
   );
 }
@@ -880,6 +954,7 @@ function FlowDiagram({
               <BlockTile
                 key={id}
                 block={id as BlockId}
+                annotation={flow.annotations?.[id as BlockId]}
                 motionProps={motionProps}
                 registerNode={registerNode}
               />
@@ -1007,17 +1082,12 @@ export function FlowComposer() {
               </div>
             ) : (
               <>
-                <div className="mb-2 flex items-start justify-between gap-4">
+                <div className="mb-6 flex items-start justify-between gap-4">
                   <div className="text-[18px] font-medium leading-tight tracking-tight text-foreground">
                     {flow.name}
                   </div>
                   {support ? <FlowSupportIndicator support={support} /> : null}
                 </div>
-                {flow.summary ? (
-                  <p className="mb-5 max-w-xl text-[16px] leading-relaxed text-muted-foreground">
-                    {flow.summary}
-                  </p>
-                ) : null}
 
                 {canTournament ? (
                   <div className="flow-flex mb-7">

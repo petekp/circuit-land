@@ -37,9 +37,11 @@ export const PADS = [
 export const PORT_STUB_X = 630;
 
 // paceWeight scales the TIME cost of the segment that arrives at this
-// waypoint (default 1, time stays proportional to Manhattan length).
-// Weights below 1 make the pulse cover that segment faster — a run that
-// compounds in effectiveness is a sequence of shrinking weights.
+// waypoint (default 1, time stays proportional to Manhattan length). It
+// is a rhythm knob: a weight below 1 covers that segment in less time, a
+// weight above 1 lingers. The with-lane keeps every step at weight 1 so
+// the pace is even; only the off-board exit segment uses a lighter weight
+// to clear the pulse before the next run enters.
 export type Waypoint = {
   x: number;
   y: number;

@@ -19,7 +19,7 @@ type InstallTarget = {
 };
 
 const codexInstallCommand =
-  "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.7";
+  "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.8";
 
 export const metadata: Metadata = {
   title: "Circuit - the process your coding agent follows",
@@ -350,12 +350,14 @@ function MastheadSection() {
       </div>
 
       <h1 className="max-w-2xl text-pretty text-lg font-medium leading-tight tracking-tight sm:text-2xl">
-        Coding agents aren&apos;t unreliable. Your process is.
+        Your agent said it was done. It wasn&apos;t.
       </h1>
 
       <p className="max-w-2xl text-base leading-relaxed text-muted-foreground">
-        Agents learned to work from us, and like us, they do their best work
-        inside a real process. Circuit is that process.
+        A CLAUDE.md file can tell your agent to verify before it closes. It
+        can&apos;t stop the agent from closing anyway. Circuit won&apos;t let a
+        step close until the checks it owes have actually run and produced their
+        outputs, enforced by the engine, not requested of the model.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -373,6 +375,88 @@ function MastheadSection() {
         >
           View Docs
         </Link>
+      </div>
+    </section>
+  );
+}
+
+function SpineSection() {
+  return (
+    <section className="mt-28 flex flex-col gap-10">
+      <div className="flex max-w-3xl flex-col gap-3">
+        <Label as="h2">What a rules file can&apos;t do</Label>
+        <p className="text-balance text-[15px] leading-relaxed text-muted-foreground">
+          You already encode how you want your agent to work, in a CLAUDE.md
+          file and a pile of skills. They tell the agent what you want. They
+          can&apos;t make the steps run in order, and they can&apos;t check the
+          work was really done. Two struggles fall straight through that gap.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <article className="soft-info-card flex flex-col gap-4 p-6">
+          <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
+            The struggle
+          </p>
+          <h3 className="text-[17px] font-semibold tracking-tight text-foreground">
+            It said done. It wasn&apos;t.
+          </h3>
+          <p className="text-[14px] leading-relaxed text-muted-foreground">
+            The agent reports success, or quietly skips a step you asked for,
+            and you find out when you run the code. A CLAUDE.md can say
+            &quot;always verify before closing.&quot; Nothing in it can stop the
+            agent from closing anyway.
+          </p>
+          <div className="mt-1 flex flex-col gap-2 border-t border-foreground/10 pt-4">
+            <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-signal">
+              What Circuit does
+            </p>
+            <p className="text-[14px] leading-relaxed text-foreground">
+              The check is mechanical, not textual. Each step&apos;s output is
+              parsed by the engine against a schema and acceptance criteria
+              before the run can advance. A Fix run can&apos;t close as
+              &quot;fixed&quot; until the verification and regression outputs are
+              actually present and pass.
+            </p>
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
+              That proves the work is well formed and a check ran and passed,
+              not that the idea behind it was right. A separate reviewer step
+              judges that, treating every upstream report as a claim to verify.
+            </p>
+          </div>
+        </article>
+
+        <article className="soft-info-card flex flex-col gap-4 p-6">
+          <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
+            The struggle
+          </p>
+          <h3 className="text-[17px] font-semibold tracking-tight text-foreground">
+            Context rot.
+          </h3>
+          <p className="text-[14px] leading-relaxed text-muted-foreground">
+            The longer a session runs, the more the agent forgets your
+            standards, mixes concerns, and drifts. Piling more into CLAUDE.md
+            makes it worse: every instruction competes for the same crowded
+            context.
+          </p>
+          <div className="mt-1 flex flex-col gap-2 border-t border-foreground/10 pt-4">
+            <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-signal">
+              What Circuit does
+            </p>
+            <p className="text-[14px] leading-relaxed text-foreground">
+              Each step runs isolated: its own role, its own clean context built
+              only from the inputs it declares, not the full transcript of every
+              step before it. The reviewer judges the change without having sat
+              inside the work that produced it.
+            </p>
+            <p className="text-[13px] leading-relaxed text-muted-foreground">
+              This isolation always holds. Steps can also be locked to specific
+              tools, but that hard wall is for the implementer step and only on a
+              connector that can enforce it, like Claude Code. Elsewhere it
+              becomes guidance, and the run record says which.
+            </p>
+          </div>
+        </article>
       </div>
     </section>
   );
@@ -689,11 +773,13 @@ function MemorySection() {
   return (
     <section className="mt-28 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] lg:items-center">
       <div className="flex max-w-3xl flex-col gap-5">
-        <Label as="h2">The next run remembers</Label>
+        <Label as="h2">The next run starts informed</Label>
         <div className="flex flex-col gap-5 text-[15px] leading-relaxed text-muted-foreground">
           <p>
-            Teams write things down so no one pays for the same lesson twice.
-            Your agent has been working without that record. Circuit keeps it.
+            Teams keep notes so the next person doesn&apos;t start from a blank
+            page. Your agent has been starting cold every time. Circuit hands
+            each new run a few hints drawn from past runs and the project facts
+            you&apos;ve filed.
           </p>
           <p>
             Every run leaves a structured record you can search from the
@@ -807,6 +893,7 @@ export default function Home() {
     <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-16">
       <MastheadSection />
       <GapSection />
+      <SpineSection />
       <FlowFlexSection />
       <BlockInternalsSection />
       <ExampleRunSection />

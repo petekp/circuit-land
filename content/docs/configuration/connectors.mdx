@@ -13,6 +13,8 @@ A connector is the backend that runs a relay step. Three are builtin:
 
 You can also register custom connectors that run your own command.
 
+Connectors differ in one capability that matters for [tool scope](/docs/concepts/tool-scope): whether they can hard-enforce a step's allowed tools. Only `claude-code` can, through its session tool list, so an enforced scope is a real wall there. On `codex`, `cursor-agent`, and custom connectors an enforced scope downgrades to guidance, and the [trace](/docs/concepts/evidence-and-runs) records the downgrade. Enforcement applies to the implementer step, the one that writes code.
+
 ## Where it lives
 
 Connectors are configured under `relay` in the config file. The block has four keys:
@@ -68,10 +70,12 @@ A custom connector descriptor takes these fields:
 | `output` | `{ kind: output-file }` |
 | `capabilities.filesystem` | `read-only` (the only value accepted for a custom connector) |
 | `capabilities.structured_output` | `json` |
+| `capabilities.tool_scope` | `none` (the only value accepted for a custom connector) |
 
 These rules are enforced at parse time:
 
 - Custom connectors must declare `filesystem: read-only`. Writable custom workers are not yet supported.
+- Custom connectors must declare `tool_scope: none`. Hard-enforcing a tool allow-list needs a builtin connector that can restrict its worker's tools.
 - The registry key and the descriptor `name` must match.
 
 Because a custom connector is read-only, it cannot fill the `implementer` role — that role writes. Use a builtin for `implementer`; use custom connectors for `researcher` and `reviewer`.

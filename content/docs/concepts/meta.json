@@ -3,6 +3,7 @@
   "pages": [
     "how-it-works",
     "how-flows-compose",
+    "tool-scope",
     "checkpoints",
     "evidence-and-runs",
     "memory-and-history",

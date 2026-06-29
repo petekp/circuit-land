@@ -1,0 +1,90 @@
+---
+title: circuit generate
+description: Compose a custom flow from a description, block by block.
+---
+
+Experimental. CLI only.
+
+```bash
+circuit generate --description '<flow idea>' [options]
+```
+
+Generate composes a new flow for your task. It is the composing sibling of
+[circuit create](/docs/cli/create): where create fits a proven flow shape to your
+task, generate has a model propose an ordered set of steps and assembles that
+arrangement block by block.
+
+A model reads your description and proposes a flow. Circuit then checks the
+proposal against an offline floor, feeds any failures back for a few repair
+rounds, and assembles what survives. What you get is a flow that is **runnable by
+construction**, or an honest failure.
+
+## What it can compose
+
+Generate works within a small, validated set of blocks and four shapes:
+
+| Shape | What it is |
+| --- | --- |
+| Linear | Frame, analyze, act, verify, close. The default. |
+| Loop | A linear flow whose verification can send the change back to act and retry. |
+| Fanout | An act step that runs several child flows at once and keeps the survivors. |
+| Sub-run | A step that runs one whole child flow, like Fix or Build, as a delegated stage. |
+
+Each step also gets a tool scope picked from a fixed menu: read-only, editor,
+tester, or full. See [Tool scope](/docs/concepts/tool-scope).
+
+## What the floor proves, and what it does not
+
+The floor proves the flow is **valid**: it compiles, every block is real, and no
+step reads a result that nothing upstream produced. It does not prove the flow is
+a *good process*. A valid flow can still be a poor plan. Generate gives you a flow
+that will run end to end; whether it is the right shape for the work is still your
+call.
+
+## Flags
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--description <flow idea>` | What the flow is for. Required. | |
+| `--name <slug>` | Lowercase kebab-case name. Derived from the proposal if omitted. | |
+| `--publish` | Publish the composed flow. Requires `--yes`. | |
+| `--yes` | Confirm publication. | |
+| `--max-repair <n>` | How many repair rounds to allow. | `4` |
+| `--timeout-ms <ms>` | Proposer timeout. | `90000` |
+| `--home <path>` | Where drafts and published flows live. | `~/.config/circuit/custom` |
+| `--created-at <iso>` | Publish timestamp. | current time |
+| `--progress <jsonl>` | Stream progress events as JSONL. | |
+
+## Examples
+
+Compose a draft:
+
+```bash
+circuit generate --description 'triage and fix a failing flaky test'
+```
+
+Compose and publish in one step:
+
+```bash
+circuit generate --description 'triage and fix a failing flaky test' --publish --yes
+```
+
+Run a published flow:
+
+```bash
+circuit run flake-triage --flow-root ~/.config/circuit/custom/flows --goal '<task>'
+```
+
+## When it cannot
+
+Generate can fail honestly. If the model cannot produce a runnable flow within its
+repair rounds, it stops and reports why instead of publishing something broken.
+When that happens, [circuit create](/docs/cli/create) is the reliable fallback: it
+fits a proven shape rather than composing a new one.
+
+## Related
+
+- [circuit create](/docs/cli/create)
+- [How flows compose](/docs/concepts/how-flows-compose)
+- [Tool scope](/docs/concepts/tool-scope)
+- [circuit run](/docs/cli/run)

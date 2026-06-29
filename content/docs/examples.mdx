@@ -1,0 +1,98 @@
+---
+title: Examples
+description: Concrete tasks, the flow that fits each, and the discipline that makes the run worth more than a bare prompt.
+---
+
+Circuit earns its keep on work you repeat, where skipping a step has a real cost.
+Each example below is a task, the flow that fits it, and the one piece of
+discipline that makes the run trustworthy: a mechanical check, an isolated role,
+a stated limit. None of these need Circuit to *work*. They need Circuit to make
+sure each step actually ran and produced the required evidence, the same way,
+every time.
+
+Every flow below runs the same way: start it with `/circuit:run` in the host, or
+with [circuit run](/docs/cli/run) from the CLI. The last example is an
+experimental authoring command that *makes* a flow, not one you run.
+
+## Fix a flaky test without guessing
+
+```bash
+circuit run fix --goal "the auth integration test fails about one run in ten; find the cause and fix it"
+```
+
+Fix proves the failure first, names a cause, makes the smallest change, and runs
+the test to confirm. The diagnosis step reads and reasons; it does not edit. A
+separate reviewer who did not write the change signs off before the run closes. So
+you get a fix that is verified, not a fix that was *claimed*.
+
+## Ship a small change inside stated limits
+
+```bash
+circuit run build --goal "add a --json flag to the status command"
+```
+
+Build opens by stating its limits: what must keep working, and the files it may
+touch. It pauses there for you to agree before any code is written. The run then
+stays inside those limits, verifies the change, and has it reviewed. The value is
+not the code; it is that the change could not quietly grow past what you approved.
+
+## Audit a change without touching it
+
+```bash
+circuit run review --goal "review the pending migration in db/ for data-loss risks"
+```
+
+Review is read-only by design. It produces a verdict backed by evidence and never
+edits the work it is judging. Use it on a pull request, a migration, or a release
+candidate when you want a second set of eyes that cannot be tempted to "just fix
+it" mid-audit.
+
+## Compare a few approaches and pick one
+
+```bash
+circuit run explore --goal "find the best way to cache the rates table" --tournament --tournament-n 3
+```
+
+Explore can fan out several candidate approaches at once, then stop at a
+checkpoint and let you pick. Each candidate is worked independently, so you are
+choosing between real attempts, not talking yourself into the first idea.
+
+## Land a change across many files, in order
+
+```bash
+circuit run pursue --goal "rename the Account.owner field to Account.holder everywhere it is used"
+```
+
+Pursue coordinates a spread-out change. It orders the work, moves through it one
+step at a time, and verifies as it goes rather than at the very end. For a change that
+touches many files, that is the difference between a clean sweep and a half-done
+rename that compiles but breaks at run time.
+
+## Try a throwaway, then decide
+
+```bash
+circuit run prototype --goal "sketch a websocket version of the notifications feed"
+```
+
+Prototype builds a throwaway version in its own scratch space, gives it a smoke
+check, and stops at a checkpoint: graduate it or throw it away. It keeps the
+exploration off your real tree until you have decided it is worth keeping.
+
+## Encode a process you repeat
+
+```bash
+circuit create --description "tighten a flaky test: prove the flake, fix it, prove it is gone"
+```
+
+When your team has a process you run again and again, you can author it as its own
+flow. [circuit create](/docs/cli/create) fits a proven shape to your description;
+[circuit generate](/docs/cli/generate) composes one block by block. Both are
+experimental CLI commands today. Published flows run with
+`circuit run <name> --flow-root ...`.
+
+## Related
+
+- [Flows overview](/docs/flows/overview)
+- [Depth, power, and modes](/docs/flows/modes)
+- [Tool scope](/docs/concepts/tool-scope)
+- [circuit run](/docs/cli/run)

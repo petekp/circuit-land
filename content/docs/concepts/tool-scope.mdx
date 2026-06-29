@@ -1,0 +1,76 @@
+---
+title: Tool scope
+description: How a step limits the tools its worker can use, and when that limit is a real wall.
+---
+
+Each step in a flow runs with a role and a clean context. A step can also declare
+its **tool scope**: the set of tools its worker is allowed to use. This is part of
+how a step stays isolated. A worker gets the tools its job needs, not the whole
+toolbox.
+
+This page builds on [How Circuit works](/docs/concepts/how-it-works). Read that
+first for steps, roles, and relays.
+
+## Two levels: guidance and a wall
+
+A tool scope has two enforcement levels.
+
+- **Trusted** is the default. The allowed tools are written into the worker's
+  prompt as guidance: use only these. Nothing stops a trusted worker from
+  reaching for another tool. It is a request, in the same family as a CLAUDE.md
+  instruction.
+- **Enforced** is a real boundary. The engine removes every tool outside the list
+  from the worker's session before it starts. A tool that is not on the list is
+  not there to call.
+
+A flow declares trusted or enforced per step. The enforced level, the hard wall,
+is reserved for the implementer step, the one that writes code. A step that
+declares nothing runs trusted with the full toolbox, exactly as it would without
+the feature.
+
+## Where an enforced scope is a real wall
+
+An enforced scope is only as hard as the connector underneath it. The wall is
+real on a connector that can restrict tools, which Claude Code can, through its
+session tool list. On a connector that cannot, an enforced scope **downgrades to
+guidance**, and the [trace](/docs/concepts/evidence-and-runs) records the
+downgrade. A run never shows a boundary it did not actually impose.
+
+So an enforced scope is a real wall on Claude Code and an honest request
+elsewhere. It is reserved for the implementer step, the one that writes code, and
+it needs an explicit list of allowed tools; you cannot enforce "everything". The
+researcher and reviewer steps stay read-only by their role, not by an enforced
+wall.
+
+## What it does and does not do
+
+An enforced scope limits **which tools** a worker can reach. It is the structural
+version of "this step should not touch the shell" or "this step should only
+read".
+
+It does not judge the work. A worker held to read-only tools still writes its
+report, and that report is checked the same way as any other, against a typed
+schema and the step's
+[acceptance criteria](/docs/concepts/evidence-and-runs). A tool scope decides
+capability; the check decides whether the result may advance.
+
+It also does not make a worker's self-report true. If a step reports the files it
+changed, the tool scope bounds what it *could* change, not whether it described
+the change honestly. That is a separate check.
+
+## In the built-in flows
+
+The Fix flow's implementer step runs under an enforced scope: it gets the tools a
+code change needs and nothing else. The researcher and reviewer steps read and
+judge; they change nothing, because their role does not.
+
+A run can also gain a tool partway through, when a worker reports a confirmed
+need. That path is covered in
+[How flows compose](/docs/concepts/how-flows-compose).
+
+## Related
+
+- [How Circuit works](/docs/concepts/how-it-works)
+- [How flows compose](/docs/concepts/how-flows-compose)
+- [Connectors](/docs/configuration/connectors)
+- [Fix](/docs/flows/fix)
