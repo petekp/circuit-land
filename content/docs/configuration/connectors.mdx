@@ -74,7 +74,7 @@ These rules are enforced at parse time:
 - Custom connectors must declare `filesystem: read-only`. Writable custom workers are not yet supported.
 - The registry key and the descriptor `name` must match.
 
-Because a custom connector is read-only, it cannot fill the `implementer` role — that role writes. Use a builtin for `implementer`; use custom connectors for `researcher` and `reviewer`.
+Because a custom connector is read-only, it cannot fill the `implementer` role: that role writes. Use a builtin for `implementer`; use custom connectors for `researcher` and `reviewer`.
 
 The `relay` block parses strictly: unknown keys are rejected.
 

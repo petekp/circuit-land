@@ -68,7 +68,7 @@ export default function Image() {
               color: MUTED,
             }}
           >
-            Coding agents aren&apos;t unreliable. Your process is.
+            The antidote for your ad-hoc, improvised workflow.
           </div>
         </div>
         <div

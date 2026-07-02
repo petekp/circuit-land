@@ -1,5 +1,9 @@
 # Circuit messaging kernel — workshop result, 2026-06-09
 
+> **SUPERSEDED (2026-07-02).** The live messaging is the encoded-process framing
+> in the circuit repo's `docs/positioning.md` and the current home page
+> components under `src/components/home/`. Kept for history only.
+
 Process: six writers worked distinct angles (work-layer, amnesia, instruments,
 supported-engineer, environment-as-gift, wildcard). Every candidate passed
 through three kill-test critics (universality + skeptic rebuttal,

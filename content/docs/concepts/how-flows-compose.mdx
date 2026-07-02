@@ -42,9 +42,9 @@ A flow that can run a child flow could, in principle, recurse without end: a flo
 that calls itself, or two flows that call each other. Circuit bounds this so it
 cannot run away.
 
-- **A depth cap** — child runs may nest only so deep, eight levels. Past the cap,
+- **A depth cap**: child runs may nest only so deep, eight levels. Past the cap,
   the sub-run step fails its check instead of starting another child.
-- **A cycle guard** — a flow already in the current chain of parents cannot be
+- **A cycle guard**: a flow already in the current chain of parents cannot be
   re-entered as its own descendant.
 
 Both are always on, with no flag to turn them off. A flow that names itself as a
@@ -55,20 +55,22 @@ of Circuit: a run should be bounded and legible, never an open loop.
 ## Circuit fits the shape to the task
 
 Flows are not one rigid template. When you start a task with `/circuit:run`, the
-agent reads your task and recommends one of the proven built-in flows — a repair
+agent reads your task and recommends one of the proven built-in flows: a repair
 flow for a defect, a review flow for checking work, a build flow for a new
-capability — and Circuit runs that whole flow. You can also name the flow
+capability. Circuit then runs that whole flow. You can also name the flow
 yourself.
 
 When you author a new flow with [`circuit create`](/docs/cli/create), Circuit
 goes further: it reads your description and instantiates the proven shape that
-fits, then folds the build shape to match the task's grain — a thin spine for a
+fits, then folds the build shape to match the task's grain: a thin spine for a
 small change, a full step-by-step spine for a large one.
 
-In both cases Circuit reuses shapes it already trusts rather than inventing new
-ones. It fits a proven pattern to your task; it does not generate a novel flow
-from scratch. That boundary is deliberate: every shape a run can take has already
-been proven, so the run stays inside known-good structure.
+The experimental [`circuit generate`](/docs/cli/generate) goes one step further
+still: a model authors the flow from your description. What the model writes is
+not exempt from the boundary. The draft must pass the same schema checks and
+safety floor as the built-in flows, with a bounded repair loop when it fails,
+before it can run. Every flow a run executes has passed that validation, so the
+run stays inside known-good structure.
 
 ## A run can re-tool itself mid-flight
 
@@ -78,11 +80,11 @@ re-resolves the tools for its remaining steps and continues with them.
 
 The adjustment is conservative by design.
 
-- **Additive only** — it grants tools for the steps still ahead. The run's
+- **Additive only**: it grants tools for the steps still ahead. The run's
   sequence, its routes, and where it is do not change.
-- **Confirmed only** — an unconfirmed hunch is recorded as a finding, not acted
+- **Confirmed only**: an unconfirmed hunch is recorded as a finding, not acted
   on.
-- **Bounded** — re-tooling can happen only a small, fixed number of times in a
+- **Bounded**: re-tooling can happen only a small, fixed number of times in a
   run.
 
 If no worker reports a need, nothing changes and the run is identical to one
@@ -92,5 +94,6 @@ without the feature. It is a quiet self-correction, not a new degree of freedom.
 
 - [How Circuit works](/docs/concepts/how-it-works)
 - [circuit create](/docs/cli/create)
+- [circuit generate](/docs/cli/generate)
 - [Evidence and runs](/docs/concepts/evidence-and-runs)
 - [Flows overview](/docs/flows/overview)

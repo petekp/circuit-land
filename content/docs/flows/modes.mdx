@@ -46,6 +46,11 @@ steers the run is the wrong place to save. A worker retry automatically runs
 one tier up, capped at high. Explicit model or effort config always wins over
 the dial.
 
+To see what the dial resolves to before spending anything,
+[`circuit preview <flow> --matrix`](/docs/cli/preview) prints the connector,
+model, and effort each step would get at every dial position, without
+spawning a worker.
+
 Every flow supports the dial. Persist a default with `defaults.power` in
 [config](/docs/configuration/config-file); the flag wins over config. Both
 accept `auto`; the `power_auto` floor and ceiling bounds in config only apply
@@ -85,5 +90,6 @@ falls back to its defaults when you pass nothing.
 ## Related
 
 - [run](/docs/cli/run)
+- [preview](/docs/cli/preview)
 - [Selection](/docs/configuration/selection)
 - [Connectors](/docs/configuration/connectors)

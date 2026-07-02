@@ -1,6 +1,7 @@
 # Example Run Toggle Spec
 
-Status: proposed
+Status: superseded (2026-07-02). Specced against the old Example Run section,
+which the rebuilt home page no longer has. Kept for history only.
 Date: 2026-06-01
 
 ## Purpose

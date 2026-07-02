@@ -24,19 +24,19 @@ flowchart LR
 
 Build runs seven stages, carrying each report forward to the next:
 
-- **Frame** — confirms the Build brief: scope, constraints, and how the change
+- **Frame**: confirms the Build brief: scope, constraints, and how the change
   will be proven. This is a [checkpoint](/docs/concepts/checkpoints).
-- **Analyze** — a read-only relay reads the codebase so the plan is grounded in
+- **Analyze**: a read-only relay reads the codebase so the plan is grounded in
   the real source, not the brief alone. It also proposes the change's limits from
   what it reads.
-- **Plan** — produces an ordered plan plus the verification commands to run, and
+- **Plan**: produces an ordered plan plus the verification commands to run, and
   carries the change's limits forward.
-- **Act** — relays the implementation to a worker.
-- **Verify** — runs the planned verification commands and records exit status
+- **Act**: relays the implementation to a worker.
+- **Verify**: runs the planned verification commands and records exit status
   and output.
-- **Review** — relays the change to a separate worker for an independent review,
+- **Review**: relays the change to a separate worker for an independent review,
   which also checks that the change stayed inside its limits.
-- **Close** — writes the Build result file and the chain of
+- **Close**: writes the Build result file and the chain of
   [evidence](/docs/concepts/evidence-and-runs). It will not mark the build
   complete if the change went outside its limits.
 

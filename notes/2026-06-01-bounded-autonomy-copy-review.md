@@ -1,6 +1,7 @@
 # Circuit Landing Page Copy Review: Bounded Autonomy
 
-Status: recommendation report
+Status: superseded (2026-07-02). Reviewed copy that no longer exists; the home
+page was rebuilt on the encoded-process framing. Kept for history only.
 Date: 2026-06-01
 Scope: `src/app/page.tsx` landing-page copy only. This does not edit the site.
 

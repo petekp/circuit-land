@@ -1,17 +1,12 @@
 /* The mechanisms that are Circuit's and not a chat window's. Three primary
-   cards carry the load: the honesty gate, the compiled process, and the
-   bounded loop. A quieter row underneath names the rest of the surface for
+   cards carry the load in the framing-ladder order: the encoded process
+   leads, the multi-model dial is the co-pillar, and the evidence gate is
+   the floor. A quieter row underneath names the rest of the surface for
    readers who want it, without competing for the eye. Each primary card ends
    in a small evidence line in the mono face, the same register the product
    uses for real run output. */
 
 const PRIMARY = [
-  {
-    title: "It can't fake done",
-    body:
-      "The check that lets a step advance is run by the engine, not the model. A run can't reach complete by giving up or by running out of tries.",
-    tell: "outcome: blocked until verified",
-  },
   {
     title: "A process, not a chat",
     body:
@@ -19,14 +14,25 @@ const PRIMARY = [
     tell: "frame · plan · act · verify · review",
   },
   {
-    title: "It loops until it's proven",
+    title: "One dial, models by role",
     body:
-      "Some work isn't one pass. Circuit can repeat a set of steps until the goal is met and confirmed, inside hard caps on tries and spend.",
-    tell: "repeat until met · capped",
+      "Circuit picks model, effort, and tool per step from the step's role and one power dial. Turn the dial down and the step that edits code gets cheaper while research stays on the high tier. After a run, the receipt shows spend per role.",
+    tell: "--power low · researcher stays high",
+  },
+  {
+    title: "It can't skip the proof",
+    body:
+      "The check that lets a step advance is run by the engine, not the model. A run can't reach complete by giving up or by running out of tries.",
+    tell: "outcome: blocked until verified",
   },
 ];
 
 const SECONDARY = [
+  {
+    title: "It loops until it's proven",
+    body:
+      "Some work isn't one pass. Circuit can repeat a set of steps until the goal is met and confirmed, inside hard caps on tries and spend.",
+  },
   {
     title: "Tools it can't reach",
     body:
@@ -35,7 +41,7 @@ const SECONDARY = [
   {
     title: "Compose a flow from a description",
     body:
-      "Describe a process and Circuit assembles a flow from existing blocks, checked runnable before it runs.",
+      "Describe a process and Circuit assembles a flow from existing blocks, checked runnable before it runs. Today it's an experimental CLI on your machine, not a host command.",
   },
   {
     title: "Every feature is a command",
@@ -89,7 +95,7 @@ export function WhatMakesItDifferent() {
           </span>
           <span className="h-px flex-1 bg-border" />
         </div>
-        <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
           {SECONDARY.map((item) => (
             <div key={item.title} className="flex flex-col gap-1.5">
               <h3 className="text-[14px] font-medium tracking-tight text-foreground">

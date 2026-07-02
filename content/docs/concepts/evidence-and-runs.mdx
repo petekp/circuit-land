@@ -9,7 +9,7 @@ everything the run produced: its trace, reports, evidence, and resume state.
 The default location is `.circuit/runs/<run-id>`. Inside it, the **trace** is
 the ordered record of what happened: step entry, relay requests, checkpoints,
 and completion. A **report** is the typed output a step or the close stage
-writes — a named, versioned contract such as `fix.brief@v1`, `build.plan@v1`, or
+writes: a named, versioned contract such as `fix.brief@v1`, `build.plan@v1`, or
 `explore.analysis@v1`, and the [typed input a later step
 reads](/docs/concepts/how-it-works#typed-inputs-and-outputs). **Evidence** is the
 supporting files, checks, and reports a run produces or consumes, used to verify

@@ -1,5 +1,9 @@
 # Bounded-Autonomy Messaging Assessment: circuit-land
 
+> **SUPERSEDED (2026-07-02).** The "disciplined autonomy" hero frame this note
+> assessed is gone; the live framing is encoded process (see the circuit repo's
+> `docs/positioning.md`). Kept for history only.
+
 ## Applied (2026-06-01)
 
 The hero frame landed on **"disciplined autonomy"** rather than "bounded

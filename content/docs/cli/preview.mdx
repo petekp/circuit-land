@@ -1,0 +1,42 @@
+---
+title: circuit preview
+description: See connector, model, and effort per step before a run.
+---
+
+Experimental. CLI only.
+
+```bash
+circuit preview <flow> [options]
+```
+
+Show what a run would do before anything runs. For each step that spawns a
+worker, preview prints the connector, model, and reasoning effort the run
+would select, using the same selection logic a real run uses. Nothing is
+spawned and no model is called, so it costs nothing.
+
+## Flags
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--power <tier>` | Preview one power setting: `auto`, `low`, `medium`, or `high`. | the run default |
+| `--matrix` | Show every power setting side by side, high tier first. | (off) |
+| `--json` | Machine-readable output. | |
+
+## Examples
+
+See how the Build flow allocates models across all power settings:
+
+```bash
+circuit preview build --matrix
+```
+
+Check what a cheap Fix run would use before starting it:
+
+```bash
+circuit preview fix --power low
+```
+
+## Related
+
+- [circuit run](/docs/cli/run)
+- [Modes](/docs/flows/modes)
