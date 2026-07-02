@@ -5,6 +5,7 @@ import {
 import { circuitFlowProseList } from "@/lib/circuit-flows";
 import { siteUrl } from "@/lib/site-url";
 
+import { DocsLink } from "./docs-link";
 import { ClaudeCodeLogo, CodexLogo } from "./host-logos";
 
 type InstallTarget = {
@@ -110,6 +111,10 @@ export function GetStarted() {
           </article>
         ))}
       </div>
+
+      <DocsLink href="/docs/getting-started/quickstart">
+        Installed? The quickstart walks your first run
+      </DocsLink>
     </section>
   );
 }
