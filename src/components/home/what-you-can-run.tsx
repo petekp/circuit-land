@@ -1,9 +1,13 @@
+import { DocsLink } from "./docs-link";
+
 /* The widening end of the funnel: concrete work, mostly coding, some not.
    Each card is honest about its state. "Ships today" is a flow that comes
    with Circuit and runs as written. "You compose it" is a shape Circuit can
    run once you assemble it from existing blocks, not a built-in flow. The tag
    is the promise, so it has to stay true: keep ships-today for flows actually
-   in the host bundle, and compose-it for everything you'd describe and build. */
+   in the host bundle, and compose-it for everything you'd describe and build.
+   Ships-today cards link to the flow's docs page; compose-it cards share one
+   link to the composing guide at the end of their row. */
 
 type RunTag = "ships today" | "you compose it";
 
@@ -11,6 +15,7 @@ type RunExample = {
   name: string;
   body: string;
   tag: RunTag;
+  link?: { href: string; label: string };
 };
 
 const CODING: RunExample[] = [
@@ -18,21 +23,25 @@ const CODING: RunExample[] = [
     name: "Fix a flaky test without guessing",
     body: "Prove the failure, name the cause, make the smallest change, re-run to confirm.",
     tag: "ships today",
+    link: { href: "/docs/flows/fix", label: "How Fix runs" },
   },
   {
     name: "Ship a change inside set limits",
     body: "State what must keep working, pause for your call, stay in bounds, verify, then review.",
     tag: "ships today",
+    link: { href: "/docs/flows/build", label: "How Build runs" },
   },
   {
     name: "Compare a few approaches",
     body: "Fan out candidates in a tournament and stop for you to pick the winner.",
     tag: "ships today",
+    link: { href: "/docs/flows/modes#tournament", label: "Tournament mode" },
   },
   {
     name: "Review a change before the PR",
     body: "A read-only, evidence-backed verdict on behavior, scope, and risk. It never edits the code.",
     tag: "ships today",
+    link: { href: "/docs/flows/review", label: "How Review runs" },
   },
 ];
 
@@ -71,9 +80,12 @@ function RunCard({ example }: { example: RunExample }) {
       <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-foreground">
         {example.name}
       </h3>
-      <p className="text-[13px] leading-relaxed text-muted-foreground">
+      <p className="flex-1 text-[13px] leading-relaxed text-muted-foreground">
         {example.body}
       </p>
+      {example.link ? (
+        <DocsLink href={example.link.href}>{example.link.label}</DocsLink>
+      ) : null}
     </article>
   );
 }
@@ -81,9 +93,11 @@ function RunCard({ example }: { example: RunExample }) {
 function RunGroup({
   label,
   examples,
+  footerLink,
 }: {
   label: string;
   examples: RunExample[];
+  footerLink?: { href: string; label: string };
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -98,6 +112,9 @@ function RunGroup({
           <RunCard key={example.name} example={example} />
         ))}
       </div>
+      {footerLink ? (
+        <DocsLink href={footerLink.href}>{footerLink.label}</DocsLink>
+      ) : null}
     </div>
   );
 }
@@ -113,10 +130,20 @@ export function WhatYouCanRun() {
           Mostly coding. Not only coding. Some flows come with Circuit; the rest
           you describe and compose.
         </p>
+        <DocsLink href="/docs/flows/overview">
+          Every flow that ships, in detail
+        </DocsLink>
       </div>
 
       <RunGroup label="Coding" examples={CODING} />
-      <RunGroup label="Beyond coding" examples={BEYOND} />
+      <RunGroup
+        label="Beyond coding"
+        examples={BEYOND}
+        footerLink={{
+          href: "/docs/concepts/how-flows-compose",
+          label: "How you'd compose these",
+        }}
+      />
     </section>
   );
 }
