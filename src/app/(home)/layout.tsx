@@ -20,7 +20,7 @@ const evidence = Fragment_Mono({
 
 const siteTitle = "Circuit - the process your coding agent follows";
 const siteDescription =
-  "Coding agents do their best work inside a real process. Circuit moves the work step to step and keeps a written record. Tomorrow starts where today ended.";
+  "Encode how you want agent work done into repeatable flows for Claude Code and Codex. Circuit routes each step to the right model, and no step can close without the evidence its checks require.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -47,11 +47,23 @@ export const metadata: Metadata = {
     siteName: "Circuit",
     type: "website",
     url: "/",
+    // The explicit openGraph object shallow-replaces the file-convention
+    // image from src/app/opengraph-image.tsx, so the image must be named
+    // here or the home page ships no og:image at all.
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Circuit - the process your coding agent follows. For Claude Code and Codex.",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: siteTitle,
     description: siteDescription,
+    images: ["/opengraph-image"],
   },
 };
 

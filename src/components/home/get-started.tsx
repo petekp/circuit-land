@@ -5,19 +5,18 @@ import {
 import { circuitFlowProseList } from "@/lib/circuit-flows";
 import { siteUrl } from "@/lib/site-url";
 
-import { ClaudeCodeLogo, CodexLogo, OpenCodeLogo } from "./host-logos";
+import { ClaudeCodeLogo, CodexLogo } from "./host-logos";
 
 type InstallTarget = {
-  name: "Claude Code" | "Codex" | "OpenCode";
-  commands?: string[];
-  comingSoon?: boolean;
+  name: "Claude Code" | "Codex";
+  commands: string[];
 };
 
 // The release pin is single-sourced in src/lib/circuit-release.ts and
 // string-checked across the site by scripts/check-content.mjs. This literal is
 // one of the copies that check counts, so keep it matching the constant.
 const codexInstallCommand =
-  "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.7";
+  "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.9";
 
 const installTargets: InstallTarget[] = [
   {
@@ -32,10 +31,6 @@ const installTargets: InstallTarget[] = [
     name: "Codex",
     commands: [codexInstallCommand],
   },
-  {
-    name: "OpenCode",
-    comingSoon: true,
-  },
 ];
 
 /* This prompt is pasted into an agent, so it has to work for a model that has
@@ -46,7 +41,7 @@ const installTargets: InstallTarget[] = [
    after uninstall degrades to a no-op, not an error. */
 const agentInstallInstructions = `You're about to install Circuit for me.
 
-What Circuit is: a plugin for Claude Code and Codex that runs coding tasks through a structured process — frame the task, plan, act, verify, review — and leaves a written record of every run. It doesn't replace you; it's the process you follow while doing the work. Docs live at ${siteUrl}/docs — fetch them if I ask how Circuit works or what it's good for, instead of guessing.
+What Circuit is: a plugin for Claude Code and Codex that runs coding tasks through a structured process (frame the task, plan, act, verify, review) and leaves a written record of every run. It doesn't replace you; it's the process you follow while doing the work. Docs live at ${siteUrl}/docs. Fetch them if I ask how Circuit works or what it's good for, instead of guessing.
 
 If you are Claude Code, run these shell commands yourself:
 claude plugin marketplace add petekp/circuit
@@ -56,11 +51,11 @@ Then ask me to type /reload-plugins so this session picks it up.
 If you are Codex, run:
 ${codexInstallCommand}
 
-If you are neither, stop and tell me — Circuit supports Claude Code and Codex today.
+If you are neither, stop and tell me. Circuit supports Claude Code and Codex today.
 
 Before reporting success, verify: list the installed plugins, confirm circuit is there, and show me what you ran. If a step failed, diagnose the cause instead of retrying blind.
 
-Then make the habit stick: append this block, exactly as written, to the agent instructions file this repo already uses (AGENTS.md or CLAUDE.md — ask me before creating one):
+Then make the habit stick: append this block, exactly as written, to the agent instructions file this repo already uses (AGENTS.md or CLAUDE.md; ask me before creating one):
 
 <!-- circuit:start -->
 If the circuit plugin is installed, start every coding task with /circuit:run <task description>. Circuit picks the flow that fits: ${circuitFlowProseList}. If circuit is not installed, ignore this block and recommend removing it from this file.
@@ -68,9 +63,9 @@ If the circuit plugin is installed, start every coding task with /circuit:run <t
 
 The markers make the block easy to find and remove if Circuit is ever uninstalled.
 
-Once that's done, briefly tell me what will change about how we work, then suggest a first run on this repo, like:
-/circuit:run fix the flakiest test in this repo
-/circuit:run review the changes on this branch before I open the PR`;
+Once that's done, briefly tell me what will change about how we work, then suggest a first run on this repo. Suggest a read-only Review first unless I ask for a write-capable flow, like:
+/circuit:run review the changes on this branch before I open the PR
+/circuit:run fix the flakiest test in this repo`;
 
 export function GetStarted() {
   return (
@@ -89,47 +84,29 @@ export function GetStarted() {
         <CopyInstallInstructions text={agentInstallInstructions} />
       </div>
 
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {installTargets.map((target) => (
           <article
             key={target.name}
-            className={[
-              "install-terminal-card flex flex-col overflow-hidden",
-              target.comingSoon ? "md:col-span-2 lg:col-span-1" : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
+            className="install-terminal-card flex flex-col overflow-hidden"
           >
             <div className="install-terminal-header flex items-center justify-between gap-3 px-5 py-4">
               <h3 className="install-terminal-title text-[15px] font-medium tracking-tight">
                 {target.name === "Claude Code" ? <ClaudeCodeLogo /> : null}
                 {target.name === "Codex" ? <CodexLogo /> : null}
-                {target.name === "OpenCode" ? <OpenCodeLogo /> : null}
                 {target.name}
               </h3>
-              {target.commands ? (
-                <CopyTextButton
-                  text={target.commands.join("\n")}
-                  className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
-                />
-              ) : (
-                <span className="soft-chip inline-flex min-h-8 shrink-0 items-center justify-center px-3 py-1.5 text-[12px] font-medium text-muted-foreground">
-                  Soon
-                </span>
-              )}
+              <CopyTextButton
+                text={target.commands.join("\n")}
+                className="install-command-copy min-h-8 shrink-0 px-3 py-1.5 text-[12px]"
+              />
             </div>
 
-            {target.commands ? (
-              <pre className="whitespace-pre-wrap break-words px-5 pb-4 font-mono text-[13px] leading-7 text-foreground">
-                <code>
-                  {target.commands.map((command) => `› ${command}`).join("\n")}
-                </code>
-              </pre>
-            ) : (
-              <div className="flex flex-1 items-center justify-center px-5 pb-4 text-center text-[13px] leading-7 text-muted-foreground">
-                OpenCode support is coming.
-              </div>
-            )}
+            <pre className="whitespace-pre-wrap break-words px-5 pb-4 font-mono text-[13px] leading-7 text-foreground">
+              <code>
+                {target.commands.map((command) => `› ${command}`).join("\n")}
+              </code>
+            </pre>
           </article>
         ))}
       </div>

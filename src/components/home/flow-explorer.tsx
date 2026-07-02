@@ -194,7 +194,7 @@ const FLOWS: ExampleFlow[] = [
         {
           id: "verify",
           name: "Verify",
-          role: "build, lint, and tests — the mechanical gate",
+          role: "build, lint, and tests: the mechanical gate",
           model: "deterministic",
           tier: "none",
           note: "no model opinion",
@@ -242,7 +242,7 @@ const FLOWS: ExampleFlow[] = [
     accent: "var(--flow-fix-accent)",
     prompt: "the checkout test fails about one run in five",
     summary:
-      "A leaner shape. No fan-out, no subflow — just find the cause, make the fix, and prove it with the evidence attached.",
+      "A leaner shape. No fan-out, no subflow: just find the cause, make the fix, and prove it with the evidence attached.",
     rows: [
       [
         {
@@ -295,7 +295,7 @@ const FLOWS: ExampleFlow[] = [
         {
           id: "verify",
           name: "Verify",
-          role: "reruns it 50 times — the mechanical gate",
+          role: "reruns it 50 times: the mechanical gate",
           model: "deterministic",
           tier: "none",
           note: "no model opinion",
@@ -435,7 +435,7 @@ const FEATURES: Feature[] = [
     key: "tool-scope",
     label: "Tool scope",
     blurb:
-      "A step is granted only the tools it needs, and the rest are blocked. The step that writes code can edit and run; the steps that research and review stay read-only.",
+      "The step that writes code can be walled to just its editor tools (a hard wall on Claude Code); the research and review steps stay read-only by role.",
     stepIds: ["implement"],
     element: "tools",
   },
@@ -454,14 +454,6 @@ const FEATURES: Feature[] = [
       "review",
     ],
     element: "model",
-  },
-  {
-    key: "skills-per-step",
-    label: "Skills per step",
-    blurb:
-      "A step can pull in specific skill files so the relevant guidance is in context exactly where it's used, and nowhere it isn't.",
-    stepIds: ["implement"],
-    element: "skills",
   },
   {
     key: "fan-out",
@@ -2299,7 +2291,7 @@ export function FlowExplorer({
         /circuit:run
       </span>
       <span className="text-[12px] text-muted-foreground/70">
-        prototype-react · select a feature to highlight where it lives
+        an example flow · select a feature to highlight where it lives
       </span>
       <PowerDial dial={dial} onChange={setDial} />
     </div>
@@ -2309,9 +2301,11 @@ export function FlowExplorer({
     <div className="flex flex-col gap-2 border-t border-border/40 pt-4">
       <Legend />
       <p className="text-[11px] leading-relaxed text-muted-foreground/70">
-        One example flow. Each step carries its own model, effort, tools, and
-        skills. Power is one dial over all of them: turn it down and the bulk
-        work goes cheap, while the steps that decide direction hold their model.
+        An illustrative composition, drawn to show every control shape in one
+        picture; the built-in flows each use a subset. Each step carries its
+        own model, effort, tools, and skills. Power is one dial over all of
+        them: turn it down and the bulk work goes cheap, while the steps that
+        decide direction hold their model.
       </p>
     </div>
   );

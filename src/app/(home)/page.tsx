@@ -9,7 +9,7 @@ import { WhatYouCanRun } from "@/components/home/what-you-can-run";
 export const metadata: Metadata = {
   title: "Circuit - the process your coding agent follows",
   description:
-    "Coding agents do their best work inside a real process. Circuit moves the work step to step and keeps a written record. Tomorrow starts where today ended.",
+    "Encode how you want agent work done into repeatable flows for Claude Code and Codex. Circuit routes each step to the right model, and no step can close without the evidence its checks require.",
 };
 
 /* The home page is a funnel. It narrows to one idea in the hero, widens to the

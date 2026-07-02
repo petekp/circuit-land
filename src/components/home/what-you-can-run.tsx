@@ -38,11 +38,6 @@ const CODING: RunExample[] = [
 
 const BEYOND: RunExample[] = [
   {
-    name: "Turn a research paper into an interactive explainer",
-    body: "Digest the paper, shape the concepts, run a tournament, harden the winner, build the site, and verify it teaches the right idea.",
-    tag: "ships today",
-  },
-  {
     name: "Scrape pages into one clean dataset",
     body: "Pull each source, normalize to a typed shape, and reject the rows that don't match.",
     tag: "you compose it",
