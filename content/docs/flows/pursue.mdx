@@ -25,17 +25,17 @@ flowchart LR
 
 Pursue runs six stages, carrying each report forward to the next:
 
-- **Frame** — turns the ideas into a pursuit contract: the objective, the
+- **Frame**: turns the ideas into a pursuit contract: the objective, the
   pursuits, and candidate verification commands.
-- **Coordinate** — builds a pursuit graph (dependencies, serial groups, and
+- **Coordinate**: builds a pursuit graph (dependencies, serial groups, and
   read-only groups that can run in parallel), then orders the pursuits into
   execution waves.
-- **Execute** — relays the work to a worker and runs the code-changing pursuits
+- **Execute**: relays the work to a worker and runs the code-changing pursuits
   serially, never writing in parallel.
-- **Verify** — runs the proof commands and records exit status and output.
-- **Review** — relays the result to a separate worker to check the coordination
+- **Verify**: runs the proof commands and records exit status and output.
+- **Review**: relays the result to a separate worker to check the coordination
   across the changes.
-- **Close** — writes the Pursue result file with the outcome, the chain of
+- **Close**: writes the Pursue result file with the outcome, the chain of
   [evidence](/docs/concepts/evidence-and-runs), and residual risks.
 
 Pursue has no [checkpoints](/docs/concepts/checkpoints).

@@ -1,0 +1,56 @@
+---
+title: circuit generate
+description: Have a model author a custom flow from a task description.
+---
+
+Experimental. CLI only.
+
+```bash
+circuit generate --description '<task>' [options]
+```
+
+Generate asks a model to author a new custom flow for the task you describe.
+Where [create](/docs/cli/create) picks from known flow shapes without calling
+a model, generate writes the flow itself, validates the result against the
+same schema and safety floor as the built-in flows, and repairs it when
+validation fails. It spends model time.
+
+## Flags
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--description <task>` | What the flow is for. Required. | |
+| `--name <slug>` | Lowercase kebab-case name. Derived from the description if omitted. | |
+| `--home <path>` | Where drafts and published flows live. | `~/.config/circuit/custom` |
+| `--created-at <iso>` | Publish timestamp. | current time |
+| `--publish` | Publish immediately. Requires `--yes`. | |
+| `--yes` | Confirm publication. | |
+| `--max-repair <n>` | How many repair passes to attempt when validation fails. | `4` |
+| `--timeout-ms <ms>` | Timeout for each model call, in milliseconds. | `90000` |
+| `--progress <jsonl>` | Stream progress events as JSONL. | |
+
+## Examples
+
+Draft a flow:
+
+```bash
+circuit generate --description 'migrate a REST endpoint to GraphQL with contract tests'
+```
+
+Publish in one step:
+
+```bash
+circuit generate --description 'migrate a REST endpoint to GraphQL with contract tests' --publish --yes
+```
+
+Run a published custom flow:
+
+```bash
+circuit run <name> --flow-root ~/.config/circuit/custom/flows --goal '<task>'
+```
+
+## Related
+
+- [circuit create](/docs/cli/create)
+- [circuit run](/docs/cli/run)
+- [How flows compose](/docs/concepts/how-flows-compose)

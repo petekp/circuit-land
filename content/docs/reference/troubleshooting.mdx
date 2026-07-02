@@ -9,7 +9,7 @@ recorded.
 
 ## A run is stuck at a checkpoint
 
-A run that stops mid-flow is usually not stuck — it is waiting. Check its state:
+A run that stops mid-flow is usually not stuck; it is waiting. Check its state:
 
 ```bash
 circuit runs show --run-folder .circuit/runs/<run-id> --json
@@ -27,7 +27,7 @@ circuit resume --run-folder .circuit/runs/<run-id> --checkpoint-choice <choice>
 Two things to know:
 
 - The choice must be one the checkpoint allows. An unrecognized or stale choice
-  is rejected — reread the recorded request rather than guessing.
+  is rejected. Reread the recorded request rather than guessing.
 - Some checkpoints declare a safe default. At low and medium depth they
   auto-resolve with it. Under [autonomous](/docs/flows/modes) mode the
   checkpoint resolves with the flow's shipped policy when it carries one
@@ -43,7 +43,7 @@ step. When one fails, check these in order:
 
 1. **Is the backend installed?** The builtin `codex` connector shells out to
    the Codex CLI. If it is missing, install it: `npm install -g @openai/codex`.
-2. **Does the config parse?** The `relay` block parses strictly — unknown keys
+2. **Does the config parse?** The `relay` block parses strictly: unknown keys
    are rejected, and a `named` reference must point at a connector registered
    under `connectors`. A typo in either fails before any work runs.
 3. **Is a custom connector in a role it cannot fill?** Custom connectors are
@@ -56,10 +56,10 @@ see exactly what the connector was asked and what came back.
 ## Inspecting a past run
 
 Every run keeps its full record in its [run
-folder](/docs/concepts/evidence-and-runs) — trace, reports, and evidence stay
+folder](/docs/concepts/evidence-and-runs): trace, reports, and evidence stay
 on disk after the run closes.
 
-Project a run's status — engine state, current step, terminal outcome:
+Project a run's status (engine state, current step, terminal outcome):
 
 ```bash
 circuit runs show --run-folder .circuit/runs/<run-id> --json

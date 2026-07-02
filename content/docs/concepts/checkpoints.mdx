@@ -7,14 +7,14 @@ A checkpoint is a pause where a run waits for operator input or applies a
 declared safe default. It is a step-level pause, not a separate flow.
 
 Checkpoints are rare. A flow only declares one where human judgment materially
-improves the outcome — choosing a UI variant, approving a risky direction, or
+improves the outcome: choosing a UI variant, approving a risky direction, or
 settling an ambiguous goal scope. The rest of a run advances on its own checks.
 
 ## How it works
 
 When a checkpoint pauses, the run stops in a `waiting_checkpoint` state. The run
 folder records the checkpoint request: the context to review and the allowed
-choices. Some checkpoints also declare a safe default — the choice Circuit takes
+choices. Some checkpoints also declare a safe default: the choice Circuit takes
 when no operator answers.
 
 A checkpoint pauses for an operator at high depth and in tournament runs. At

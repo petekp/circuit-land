@@ -9,6 +9,8 @@
     "history",
     "memory",
     "create",
+    "generate",
+    "preview",
     "uninstall",
     "runs",
     "reclaim",

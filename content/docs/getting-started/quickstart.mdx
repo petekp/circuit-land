@@ -8,20 +8,27 @@ it stops for your call when the result depends on it.
 
 ## Run a task
 
+A real run spawns worker steps that spend model time: a small first task
+typically takes several minutes end to end and costs a few dollars at the
+default dials. Flows that can edit files (Build, Fix, Prototype, Pursue) say
+so before the work starts; Review and Explore never edit code. If you want to
+see what a run would do before spending anything, jump to
+[preview](#see-the-plan-before-you-spend-anything) below.
+
 In your coding agent, describe the task:
 
 ```text
 /circuit:run add a rate limit to the login endpoint
 ```
 
-The agent reads the task and recommends a flow — Build, Fix, Explore, Review,
+The agent reads the task and recommends a flow: Build, Fix, Explore, Review,
 Prototype, or Pursue. You do not pick it; Circuit records the selected flow when
 the run starts, then runs it step by step.
 
 ## Respond to a checkpoint
 
 A flow may pause at a [checkpoint](/docs/concepts/checkpoints) when it needs your
-decision — for example, to confirm the brief before it starts changing code.
+decision, for example to confirm the brief before it starts changing code.
 Circuit shows the prompt and the choices. Pick one to continue.
 
 At low and medium depth, a checkpoint that declares a safe default resolves
@@ -38,10 +45,26 @@ the task as `--goal`:
 ./bin/circuit run fix --goal 'login fails when the email has a plus sign'
 ```
 
-The CLI requires an explicit flow name. Routing is model-only, so the agent
-front door is what chooses a flow for you.
+The CLI requires an explicit flow name. It never guesses a flow from your
+words; in the agent, the agent is what recommends a flow for you.
+
+Add `--power low` to a CLI run to spend less: the steps that write code drop
+to a cheaper model while the steps that decide direction keep theirs. See
+[Modes](/docs/flows/modes) for the dial.
+
+## See the plan before you spend anything
+
+From a checkout, the experimental `preview` command shows what a flow would
+do before anything runs: which connector, model, and effort each step gets,
+at every power setting, without spawning a worker.
+
+```bash
+./bin/circuit preview build --matrix
+```
+
+It costs nothing to run. When the readout looks right, run the real task.
 
 ## Next
 
-- [Flows](/docs/flows/overview) — the six flows and when each one fits.
-- [Checkpoints](/docs/concepts/checkpoints) — how pauses and choices work.
+- [Flows](/docs/flows/overview): the six flows and when each one fits.
+- [Checkpoints](/docs/concepts/checkpoints): how pauses and choices work.

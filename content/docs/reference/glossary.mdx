@@ -8,66 +8,66 @@ The terms Circuit uses, in the order you meet them. See
 
 ## Flow language
 
-- **Flow** — a named kind of work Circuit can run, such as Build, Fix, Explore, or Review.
-- **Schematic** — the authored definition of a flow.
-- **Block** — a reusable kind of work that can appear in a schematic.
-- **Contract** — the typed input or output a block declares, named and versioned, such as `plan.strategy@v1`.
-- **Stage** — a grouped part of a flow, such as Frame, Analyze, Plan, Act, Verify, Review, or Close.
-- **Step** — one executable use of a block inside a schematic or compiled flow.
-- **Route** — a named outcome path from one step to the next.
-- **Run** — one execution of a flow.
-- **Mode** — a named flow entry option, often paired with a depth.
+- **Flow**: a named kind of work Circuit can run, such as Build, Fix, Explore, or Review.
+- **Schematic**: the authored definition of a flow.
+- **Block**: a reusable kind of work that can appear in a schematic.
+- **Contract**: the typed input or output a block declares, named and versioned, such as `plan.strategy@v1`.
+- **Stage**: a grouped part of a flow, such as Frame, Analyze, Plan, Act, Verify, Review, or Close.
+- **Step**: one executable use of a block inside a schematic or compiled flow.
+- **Route**: a named outcome path from one step to the next.
+- **Run**: one execution of a flow.
+- **Mode**: a named flow entry option, often paired with a depth.
 
 ## Checks and evidence
 
-- **Checkpoint** — a pause where Circuit needs operator input or a declared safe default.
-- **Check** — validation that decides whether a step may continue.
-- **Acceptance criteria** — flow-authored deterministic checks that a relay step's result must pass before the run may advance.
-- **Trace** — the ordered record of what happened during a run.
-- **Report** — a typed output written by a step or close stage.
-- **Evidence** — supporting facts, files, checks, and reports produced or consumed by a run.
+- **Checkpoint**: a pause where Circuit needs operator input or a declared safe default.
+- **Check**: validation that decides whether a step may continue.
+- **Acceptance criteria**: flow-authored deterministic checks that a relay step's result must pass before the run may advance.
+- **Trace**: the ordered record of what happened during a run.
+- **Report**: a typed output written by a step or close stage.
+- **Evidence**: supporting facts, files, checks, and reports produced or consumed by a run.
 
 ## Runs on disk
 
-- **Run folder** — the directory where a run stores its trace, reports, evidence, and resume state.
-- **Run id** — the UUID for one run.
+- **Run folder**: the directory where a run stores its trace, reports, evidence, and resume state.
+- **Run id**: the UUID for one run.
 
 ## Dials
 
-- **Depth** — the process dial: how much thoroughness and care a run spends. Set with `--depth`: `low`, `medium`, or `high`.
-- **Power** — the model dial: how much model each worker run gets. Set with `--power`: `auto`, `low`, `medium`, or `high`. With `auto`, the run's researcher recommends a tier, clamped to the `power_auto` bounds in config. Never names models; per-connector tier tables translate it at selection time.
-- **Compiled depth** — the single thoroughness value a run records after Circuit combines the depth dial with mode flags such as tournament or autonomous.
-- **Effort** — provider-level reasoning allocation. Not the power dial.
-- **Receipt** — the end-of-run line reporting depth, power, worker runs, escalations, and check results. An `auto` power dial reports its resolution here, such as `power low (auto)`.
+- **Depth**: the process dial: how much thoroughness and care a run spends. Set with `--depth`: `low`, `medium`, or `high`.
+- **Power**: the model dial: how much model each worker run gets. Set with `--power`: `auto`, `low`, `medium`, or `high`. With `auto`, the run's researcher recommends a tier, clamped to the `power_auto` bounds in config. Never names models; per-connector tier tables translate it at selection time.
+- **Compiled depth**: the single thoroughness value a run records after Circuit combines the depth dial with mode flags such as tournament or autonomous.
+- **Effort**: provider-level reasoning allocation. Not the power dial.
+- **Receipt**: the end-of-run line reporting depth, power, worker runs, escalations, and check results. An `auto` power dial reports its resolution here, such as `power low (auto)`.
 
 ## Relay
 
-- **Relay** — a handoff from Circuit to another worker or host.
-- **Connector** — a backend or host that can run relayed work.
-- **Role** — the worker responsibility for a relay, such as researcher, implementer, or reviewer.
+- **Relay**: a handoff from Circuit to another worker or host.
+- **Connector**: a backend or host that can run relayed work.
+- **Role**: the worker responsibility for a relay, such as researcher, implementer, or reviewer.
 
 ## Step kinds
 
-- **Relay step** — a runtime step where Circuit delegates work to a worker.
-- **Compose step** — a runtime step where the orchestrator writes a report.
-- **Verification step** — a runtime step where the orchestrator runs verification commands.
-- **Checkpoint step** — a runtime step where Circuit pauses for a checkpoint decision.
-- **Sub-run step** — a runtime step that executes a child flow.
-- **Fanout step** — a runtime step that runs multiple branches and joins their outputs.
+- **Relay step**: a runtime step where Circuit delegates work to a worker.
+- **Compose step**: a runtime step where the orchestrator writes a report.
+- **Verification step**: a runtime step where the orchestrator runs verification commands.
+- **Checkpoint step**: a runtime step where Circuit pauses for a checkpoint decision.
+- **Sub-run step**: a runtime step that executes a child flow.
+- **Fanout step**: a runtime step that runs multiple branches and joins their outputs.
 
 ## Fanout and tournament
 
-- **Rubric** — the scoring sheet that compares fanout branches.
-- **Tournament** — the fan-out-and-select pattern: Explore fans out decision options and selects one; Prototype fans out implementation variants and asks which to keep.
+- **Rubric**: the scoring sheet that compares fanout branches.
+- **Tournament**: the fan-out-and-select pattern: Explore fans out decision options and selects one; Prototype fans out implementation variants and asks which to keep.
 
 ## Continuity
 
-- **Continuity record** — a cross-session handoff record for resuming work.
-- **Continuity index** — the resolver file that chooses the active continuity record and attached run.
-- **Resume contract** — the declared posture for how the next session should resume.
+- **Continuity record**: a cross-session handoff record for resuming work.
+- **Continuity index**: the resolver file that chooses the active continuity record and attached run.
+- **Resume contract**: the declared posture for how the next session should resume.
 
 ## Skills and plugins
 
-- **Skill** — a discoverable capability with trigger metadata and optional supporting files.
-- **Skill slot** — an optional flow-authored placeholder that an operator may bind to one of their local skills.
-- **Plugin** — the host-installable surface Circuit ships into Claude Code or Codex.
+- **Skill**: a discoverable capability with trigger metadata and optional supporting files.
+- **Skill slot**: an optional flow-authored placeholder that an operator may bind to one of their local skills.
+- **Plugin**: the host-installable surface Circuit ships into Claude Code or Codex.
