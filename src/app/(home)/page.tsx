@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { DialSection } from "@/components/home/dial-section";
 import { GetStarted } from "@/components/home/get-started";
 import { Hero } from "@/components/home/hero";
 import { SiteFooter } from "@/components/home/site-footer";
@@ -13,14 +14,16 @@ export const metadata: Metadata = {
 };
 
 /* The home page is a funnel. It narrows to one idea in the hero, widens to the
-   three mechanisms that are Circuit's alone, widens again to the work you can
-   run, and ends at one place to install. Each beat is its own component under
-   src/components/home so this file stays a readable table of contents. */
+   three mechanisms that are Circuit's alone, deep-dives the one mechanism that
+   needs demonstrating (the role and dial system), widens again to the work you
+   can run, and ends at one place to install. Each beat is its own component
+   under src/components/home so this file stays a readable table of contents. */
 export default function Home() {
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-16">
       <Hero />
       <WhatMakesItDifferent />
+      <DialSection />
       <WhatYouCanRun />
       <GetStarted />
       <SiteFooter />
