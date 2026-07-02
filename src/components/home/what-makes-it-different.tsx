@@ -54,6 +54,7 @@ const SECONDARY: Array<{
     title: "It loops until it's proven",
     body:
       "Some work isn't one pass. Circuit can repeat a set of steps until the goal is met and confirmed, inside hard caps on tries and spend.",
+    link: { href: "/docs/concepts/until-loop", label: "How the loop works" },
   },
   {
     title: "Tools it can't reach",
