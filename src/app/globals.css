@@ -349,6 +349,8 @@
 .flow-picker-button,
 .flow-composer-panel,
 .flow-block-tile,
+.flow-step-tile,
+.flow-explorer-tab,
 .block-internal-card,
 .block-internals-section,
 .section-artwork {
@@ -516,6 +518,470 @@
 .flow-block-tile {
   border-radius: 20px;
   box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.05);
+}
+
+/* The detail tile in the flow explorer: same soft material as the old block
+   tile, but it carries a step's full scope (model, effort, tools, context,
+   skills) instead of just a label, so it reads as a card. Checkpoint and loop
+   variants override the fill inline. */
+.flow-step-tile {
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.05);
+}
+
+/* The diagram is a responsive flow grid. It packs more steps onto a row as the
+   space allows, so the diagram stays short instead of running long: one column
+   on a phone, two when there is room, three when there is a lot. The column
+   count keys off the DIAGRAM's own width via a container query, not the
+   viewport — so it still wraps correctly when the diagram sits in the narrow
+   right-hand column of the focus layout, where the viewport is wide but the
+   diagram is not. Same-row tiles are centered vertically (align-items: center)
+   so the wire between them stays a straight horizontal. The entry step and the
+   fan-out span the full width (set inline); everything else flows in source
+   order, which keeps the connectors and the reading order identical to the
+   stacked column. */
+.flow-diagram-canvas {
+  container-type: inline-size;
+}
+
+.flow-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  justify-content: center;
+  column-gap: 2rem;
+  row-gap: 2.75rem;
+}
+
+/* Grid items default to min-width: auto, which lets a wide chip row push a
+   column past its track. Pin to 0 so columns hold their size and tiles wrap
+   their own content instead. */
+.flow-grid-item {
+  min-width: 0;
+}
+
+@container (min-width: 32rem) {
+  .flow-grid {
+    grid-template-columns: repeat(2, minmax(0, 16rem));
+  }
+}
+
+@container (min-width: 50rem) {
+  .flow-grid {
+    grid-template-columns: repeat(3, minmax(0, 16rem));
+  }
+}
+
+/* The flow-selector tabs along the top of the explorer. The selected tab's
+   fill is set inline from the active flow color; this just carries the shape. */
+.flow-explorer-tab {
+  border-radius: 13px;
+}
+
+.flow-explorer-tab:hover {
+  color: var(--foreground);
+}
+
+/* ---- Feature tour --------------------------------------------------------- */
+
+/* The named-feature tabs. Same soft pill as the flow tab; the selected fill is
+   set inline from the active flow color. */
+.flow-feature-tab {
+  border-radius: 11px;
+}
+
+/* The "focus" variant groups its tabs into one segmented control. */
+.flow-feature-tabs--segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.3rem;
+  border-radius: 16px;
+  corner-shape: squircle;
+  background: color-mix(in oklab, var(--muted) 45%, transparent);
+}
+
+/* The blurb container for the "glow" variant (a bordered card beside the tabs)
+   and the "focus" variant (a callout pinned below the diagram). */
+.flow-info-card {
+  border-radius: 14px;
+  corner-shape: squircle;
+  padding: 0.8rem 1rem;
+  background: color-mix(in oklab, var(--flow-color) 7%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--flow-color) 22%, transparent);
+}
+
+.flow-info-callout {
+  border-radius: 14px;
+  corner-shape: squircle;
+  padding: 0.85rem 1.1rem;
+  background: color-mix(in oklab, var(--muted) 40%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+/* The "focus" variant lays the tour out as three columns on desktop: a vertical
+   feature nav, the explanation, then the diagram filling the rest. The nav and
+   explanation pin (sticky) so the active feature and its blurb stay in view as
+   you read down the diagram — you never scroll up to switch features and back
+   down to see what changed, which is the whole reason the diagram sat too tall.
+   Below the lg breakpoint it stacks: nav (as wrapping pills), explanation, then
+   the diagram. */
+.flow-focus-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* The button rail. Wrapping pills when stacked; a stretched vertical list when
+   it becomes the left-hand column. */
+.flow-feature-nav {
+  display: flex;
+  flex-flow: row wrap;
+  gap: 0.5rem;
+}
+
+.flow-focus-info {
+  min-height: 5rem;
+}
+
+@media (min-width: 1024px) {
+  .flow-focus-shell {
+    display: grid;
+    /* nav | diagram | blurb. The DOM order stays nav, blurb, diagram (so the
+       mobile stack reads tabs -> blurb -> diagram); the columns below re-place
+       them, putting the diagram in the center and the explanation on the right. */
+    grid-template-columns: minmax(9rem, 10.5rem) minmax(0, 1fr) minmax(12rem, 15rem);
+    gap: 1.75rem;
+    align-items: start;
+  }
+
+  /* All three share grid row 1. The DOM order is nav, blurb, diagram (so the
+     mobile stack reads tabs -> blurb -> diagram), but the columns place them
+     nav | diagram | blurb. Without an explicit row, the default (sparse)
+     auto-placement puts the blurb in row 1 / col 3, then can't move the cursor
+     back to col 2 for the diagram — so the diagram dropped to row 2, leaving a
+     tall gap above it. Pinning all three to row 1 keeps them aligned. */
+  .flow-focus-nav {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .flow-focus-diagram {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .flow-focus-info {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .flow-feature-nav {
+    flex-flow: column nowrap;
+    align-items: stretch;
+    gap: 0.4rem;
+  }
+
+  .flow-focus-nav,
+  .flow-focus-info {
+    position: sticky;
+    top: 1.5rem;
+    align-self: start;
+  }
+
+  .flow-focus-info {
+    min-height: 0;
+  }
+}
+
+/* The focus diagram sits in a fixed-height frame the user can scroll natively;
+   selecting a feature or clicking a step scrolls it into view, and scrolling by
+   hand clears the selection (logic in flow-explorer.tsx). Two layers: .flow-window
+   is a non-scrolling wrapper that holds the edge fades pinned to the frame edges,
+   and .flow-window-scroll inside it is the actual scroll container. Keeping the
+   fades on the non-scrolling wrapper is what stops them scrolling away with the
+   content. A soft fade at whichever edge still hides content signals there's more
+   to see. The chrome (nav, blurb) lives outside the frame and never moves.
+   On desktop the frame is generous and the diagram mostly shows; on mobile it
+   opens fully and scrolls with the page (no inner scroll trap on a phone). */
+.flow-window {
+  position: relative;
+}
+
+.flow-window-scroll {
+  /* Mobile: no frame, no inner scroll. The diagram expands to its full height and
+     scrolls with the page — a nested scroll region on a phone is a trap. */
+  overflow: visible;
+}
+
+@media (min-width: 1024px) {
+  .flow-window-scroll {
+    /* Desktop: the real scroll frame. max-height (not height) lets a short diagram
+       size to its own content with no dead space; a tall one is capped here and
+       scrolls within. overscroll-behavior:contain stops the page from scroll-
+       chaining when the frame hits its end. overflow-anchor:none keeps the browser
+       from re-anchoring scrollTop on reflow (which would fight the focus scroll).
+       scrollbar-width:thin (and overlay scrollbars on macOS) avoids reserving a
+       gutter, which would re-trigger the container-query column reflow. */
+    max-height: clamp(30rem, 76vh, 50rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    overflow-anchor: none;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 22%, transparent)
+      transparent;
+  }
+}
+
+/* Edge fades: pseudo-elements pinned to the frame's top and bottom that fade in
+   only when there is still clipped content in that direction (data-clip-top /
+   data-clip-bottom, set from JS). They sit above the layer and ignore pointer
+   events. The transparent stop keeps the background hue at zero alpha so the
+   dissolve has no gray fringe. */
+.flow-window::before,
+.flow-window::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2.75rem;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.flow-window::before {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--background),
+    rgb(from var(--background) r g b / 0)
+  );
+}
+
+.flow-window::after {
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    var(--background),
+    rgb(from var(--background) r g b / 0)
+  );
+}
+
+.flow-window[data-clip-top]::before,
+.flow-window[data-clip-bottom]::after {
+  opacity: 1;
+}
+
+/* ---- Prompt node (terminal bar) ------------------------------------------- */
+
+/* The diagram's first node: the prompt the run started from, drawn as a small
+   terminal window. A title bar (dots + the command) sits above one input line
+   (a caret, the prompt text, a blinking block cursor). It is intentionally
+   denser than a step tile — it carries no model/tools/skills, just the input. */
+.flow-prompt-node {
+  display: flex;
+  flex-direction: column;
+  /* The diagram sits directly on the darkest page background, so the terminal is
+     a slightly LIFTED neutral panel (not darker — that would vanish) with a
+     defined ring. Neutral grey, not flow-color tinted, so it reads as terminal
+     chrome distinct from the colored step tiles. */
+  width: 100%;
+  max-width: 32rem;
+  overflow: hidden;
+  border-radius: 14px;
+  corner-shape: squircle;
+  background: color-mix(in oklab, var(--foreground) 6%, var(--background));
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--foreground) 13%, transparent);
+}
+
+.flow-prompt-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid
+    color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+.flow-prompt-dots {
+  display: inline-flex;
+  gap: 0.34rem;
+}
+
+.flow-prompt-dots > span {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 22%, transparent);
+}
+
+.flow-prompt-cmd {
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: color-mix(in oklab, var(--foreground) 45%, transparent);
+}
+
+.flow-prompt-line {
+  display: flex;
+  /* center, not baseline: the block cursor is a fixed-height box, so a baseline
+     line would float it above the text. Caret, text, and cursor are all 13px, so
+     centering reads clean on the single-line prompt. */
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.72rem 0.85rem 0.8rem;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.flow-prompt-caret {
+  flex: none;
+  font-weight: 600;
+  color: var(--flow-color);
+}
+
+.flow-prompt-text {
+  color: color-mix(in oklab, var(--foreground) 92%, transparent);
+  overflow-wrap: anywhere;
+}
+
+/* A block cursor that blinks at the end of the prompt line. Decorative, so it is
+   aria-hidden in the markup; the blink is pure CSS and stops under
+   prefers-reduced-motion. */
+.flow-prompt-cursor {
+  flex: none;
+  width: 0.5rem;
+  height: 1.05em;
+  background: var(--flow-color);
+  animation: flow-cursor-blink 1.05s steps(1, end) infinite;
+}
+
+@keyframes flow-cursor-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-prompt-cursor {
+    animation: none;
+  }
+}
+
+/* Full-bleed click/keyboard target overlaying a tile. position:absolute so it
+   never enters the measured connector box; z-index above the content and the
+   highlight ring (z-20). Transparent, so the ring and content read through it;
+   border-radius:inherit so its focus outline follows the tile's rounding. */
+.flow-tile-hit {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.flow-tile-hit:focus-visible {
+  outline: 2px solid var(--flow-color);
+  outline-offset: 3px;
+}
+
+/* Highlight chrome. Every rule below is composited-only (box-shadow, opacity,
+   filter) so a highlight never changes a tile's box and the measured connectors
+   never re-route. The whole-tile ring is an absolutely-positioned overlay; the
+   sub-element halos are outset box-shadows that hug an inner block without
+   resizing it. */
+.flow-tile-ring {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+.flow-tile-ring--spotlight {
+  box-shadow:
+    inset 0 0 0 1.5px var(--flow-color),
+    0 0 22px -6px var(--flow-color);
+}
+
+.flow-tile-ring--glow {
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in oklab, var(--flow-color) 80%, transparent),
+    0 0 34px -4px var(--flow-color);
+}
+
+.flow-tile-ring--focus {
+  box-shadow: inset 0 0 0 1.5px var(--flow-color);
+}
+
+/* A detail row the active feature points at, and the siblings it quiets. */
+.flow-row-hot {
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 5px color-mix(in oklab, var(--flow-color) 12%, transparent),
+    0 0 0 6px color-mix(in oklab, var(--flow-color) 50%, transparent);
+}
+
+.flow-row-cool {
+  opacity: 0.4;
+}
+
+/* Inner blocks the active feature points at: the model badge, the subrun pill,
+   the checkpoint options, the fan-out branches. Outset halo, no reflow. */
+.flow-badge-hot {
+  box-shadow:
+    0 0 0 1.5px var(--flow-color),
+    0 0 14px -4px var(--flow-color);
+}
+
+.flow-note-hot,
+.flow-branches-hot,
+.flow-options-hot {
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 4px color-mix(in oklab, var(--flow-color) 12%, transparent),
+    0 0 0 5px color-mix(in oklab, var(--flow-color) 48%, transparent);
+}
+
+.flow-feature-tab,
+.flow-row-hot,
+.flow-row-cool,
+.flow-badge-hot,
+.flow-note-hot,
+.flow-branches-hot,
+.flow-options-hot {
+  transition:
+    box-shadow 200ms ease,
+    opacity 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-feature-tab,
+  .flow-row-hot,
+  .flow-row-cool,
+  .flow-badge-hot,
+  .flow-note-hot,
+  .flow-branches-hot,
+  .flow-options-hot {
+    transition: none;
+  }
 }
 
 /* ---- Run command framing -------------------------------------------------- */
