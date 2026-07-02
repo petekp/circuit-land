@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 /* The mechanisms that are Circuit's and not a chat window's. Three primary
    cards carry the load in the framing-ladder order: the encoded process
    leads, the multi-model dial is the co-pillar, and the evidence gate is
@@ -27,11 +29,16 @@ const PRIMARY = [
   },
 ];
 
-const SECONDARY = [
+const SECONDARY: {
+  title: string;
+  body: string;
+  link?: { href: string; label: string };
+}[] = [
   {
     title: "It loops until it's proven",
     body:
       "Some work isn't one pass. Circuit can repeat a set of steps until the goal is met and confirmed, inside hard caps on tries and spend.",
+    link: { href: "/docs/concepts/until-loop", label: "How the loop works" },
   },
   {
     title: "Tools it can't reach",
@@ -104,6 +111,15 @@ export function WhatMakesItDifferent() {
               <p className="text-[13px] leading-relaxed text-muted-foreground">
                 {item.body}
               </p>
+              {item.link ? (
+                <Link
+                  href={item.link.href}
+                  className="mt-0.5 flex w-fit items-center gap-1 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {item.link.label}
+                  <span className="text-signal">›</span>
+                </Link>
+              ) : null}
             </div>
           ))}
         </div>

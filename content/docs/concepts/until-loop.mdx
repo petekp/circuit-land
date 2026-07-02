@@ -1,0 +1,84 @@
+---
+title: The until loop
+description: Repeat a set of steps until the goal is met and confirmed, inside hard caps on tries and spend.
+---
+
+A flow normally runs each step once. The until loop is the shape for work that
+is not one pass: a flow declares a span of steps as a loop body, and the run
+re-enters that body, pass after pass, until the goal is met and the engine
+confirms it. A flow built on the loop converges on proven done, so the shape is
+called Converge.
+
+The loop activates only on an [autonomous run](/docs/flows/modes#autonomous);
+at any other depth the body runs once. It is not the continuation loop that
+autonomous mode adds when a run falls short. The until loop repeats steps
+inside a single run.
+
+<Mermaid
+  label="One pass of a Converge body; the engine, not the judge, decides the exit"
+  chart={`
+flowchart TD
+  A[Act] --> V[Verify]
+  V --> J["Judge: is the goal met?"]
+  J -->|"met, and the evidence confirms"| C["@complete"]
+  J -->|"otherwise, within bounds"| A
+  J -->|"any bound hit"| S["@stop"]
+`}
+/>
+
+## The judge proposes, the engine decides
+
+Each pass ends at a judge step: a reviewer that writes whether the goal is met,
+plus a short lesson. That is a proposal, not a verdict. The engine reads only
+the goal-met boolean, never the goal text, and checks the claim against its own
+evidence: the pass's verification result and the honesty ledger. A met claim
+the evidence does not back is blocked, and the loop runs another pass. A
+missing or unreadable judgment reads as not met. Each pass's judgment and what
+the engine did with it are recorded in the trace.
+
+## The honesty ledger
+
+A step in the body can overclaim: say it did work the evidence does not show,
+or exhaust its retries without a clean check. The run does not abort. The
+engine records an open latch in `honesty-ledger.json` in the run folder and
+moves on to the next pass. The latch clears only when a later pass re-runs that
+step and its check passes clean. While any latch is open the run cannot close
+complete: the close path downgrades it to stopped and names the open latches in
+the result.
+
+## Hard bounds
+
+Every bound exits through a route that cannot reach complete. The loop never
+reports success by running out.
+
+- **A cap on passes.** Required. A loop cannot be declared without one.
+- **A cap on spend**, in dollars or tokens, summed from what the run's workers
+  report. Optional. It fails closed: if any worker reported no usage, spend
+  cannot be proven under the cap, and the loop stops.
+- **A no-progress ceiling.** Optional. The judge writes a progress marker each
+  pass, and the engine compares it for equality only. When too many passes in
+  a row leave the marker unchanged, the loop stops rather than spins.
+
+## What carries between passes
+
+The judge's lesson from each pass is appended to a notes file in the run
+folder, and the next pass reads it before starting. The engine's steers ride
+along: a warning at 80% of a spend cap to prioritize closing out, and a nudge
+to try a different approach after the first stalled pass. The file keeps the
+most recent 20 notes, each capped in length, so a long loop cannot grow an
+unbounded prompt. A loop that only repeats would retry the same failure; the
+notes are what let it learn.
+
+## What ships today
+
+The loop is engine machinery a flow opts into on its schematic. The flows that
+declare it today are internal, not in the public catalog. Fix Until Green is
+the canonical one: attempt a fix, verify, judge, and repeat until the checks
+pass. None of the public flows carry the loop yet.
+
+## Related
+
+- [Depth, power, and modes](/docs/flows/modes)
+- [Evidence and runs](/docs/concepts/evidence-and-runs)
+- [How Circuit works](/docs/concepts/how-it-works)
+- [How flows compose](/docs/concepts/how-flows-compose)
