@@ -14,7 +14,9 @@ Other artifacts (README, etc.) will be derived from these docs.
 - Canonical source: a pinned ref of the circuit repo — the latest published
   release tag by default, or a stated commit when intentionally documenting
   pre-release changes.
-- **Never** use the README or other top-level prose in that repo — they are stale.
+- Do not treat the README or other top-level prose in that repo as ground
+  truth. They are derived surfaces, kept in step with these docs but verified
+  against source, not the other way around.
 - Authorities: source under `src/cli`, `src/flows`, `src/schemas`, `schemas/`,
   `plugins/`, and `UBIQUITOUS_LANGUAGE.md` (terminology).
 - **Invent nothing.** Every command, subcommand, flag, default, config key, flow,
