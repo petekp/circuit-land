@@ -19,4 +19,5 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run check:content
+      - run: npm run check:dial-matrix
       - run: npm run build

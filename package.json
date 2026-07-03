@@ -9,7 +9,8 @@
     "postinstall": "fumadocs-mdx",
     "lint": "eslint",
     "check": "tsc --noEmit && eslint",
-    "check:content": "node scripts/check-content.mjs"
+    "check:content": "node scripts/check-content.mjs",
+    "check:dial-matrix": "node scripts/check-dial-matrix.mjs"
   },
   "dependencies": {
     "@types/mdx": "^2.0.13",
