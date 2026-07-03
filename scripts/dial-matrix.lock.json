@@ -1,0 +1,55 @@
+{
+  "tag": "circuit--v0.1.0-alpha.9",
+  "sha256": "4c46099dff9de88ff06c4c2183815469506d70320edaea9eeeab1c23d799b7c1",
+  "matrix": {
+    "relays": [
+      {
+        "step": "analyze-step",
+        "role": "researcher",
+        "low": "opus",
+        "medium": "opus",
+        "high": "opus"
+      },
+      {
+        "step": "act-step",
+        "role": "implementer",
+        "low": "haiku",
+        "medium": "sonnet",
+        "high": "opus"
+      },
+      {
+        "step": "review-step",
+        "role": "reviewer",
+        "low": "sonnet",
+        "medium": "sonnet",
+        "high": "opus"
+      }
+    ],
+    "nonRelaySteps": [
+      {
+        "stepId": "frame-step",
+        "kind": "checkpoint"
+      },
+      {
+        "stepId": "plan-step",
+        "kind": "compose"
+      },
+      {
+        "stepId": "build-baseline",
+        "kind": "verification"
+      },
+      {
+        "stepId": "verify-step",
+        "kind": "verification"
+      },
+      {
+        "stepId": "build-touch-area",
+        "kind": "verification"
+      },
+      {
+        "stepId": "close-step",
+        "kind": "compose"
+      }
+    ]
+  }
+}
