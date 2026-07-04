@@ -64,10 +64,12 @@
 
    Every color on the site derives from these raw tokens (directly or via
    the semantic vars they feed below). To try a new theme, edit ONLY this
-   block. Two companion surfaces restate values outside CSS:
-   - fonts: src/app/(home)/layout.tsx (next/font)
+   block. Three companion surfaces restate values outside this file:
+   - fonts: src/app/(home)/layout.tsx and src/app/(docs)/layout.tsx (next/font)
    - favicon/OG hex colors: src/lib/brand-mark.tsx, src/app/opengraph-image.tsx
      (ImageResponse can't read CSS vars)
+   - docs palette: src/app/(docs)/docs.css (separate root layout; restates
+     these values as Fumadocs --color-fd-* tokens)
    The six --flow-* colors further down are content colors for the flow
    diagrams, deliberately not part of the brand theme.
    ========================================================================== */
@@ -89,6 +91,8 @@
   --brand-paper: hsl(180 20% 97%);
   --brand-paper-ink: hsl(220 10% 15%);
   --brand-highlight: hsl(160 85% 62%);
+  /* Third-party ink: the Claude Code mark renders in its own brand orange. */
+  --brand-claude-code: #d97757;
 }
 
 :root {
@@ -442,7 +446,7 @@
 }
 
 .claude-code-logo {
-  color: #d97757;
+  color: var(--brand-claude-code);
 }
 
 .codex-logo {
