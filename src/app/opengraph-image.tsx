@@ -8,7 +8,7 @@ export const size = {
 export const contentType = "image/png";
 
 export const alt =
-  "Circuit - the process your coding agent follows. For Claude Code and Codex.";
+  "Circuit — the process your coding agent follows. For Claude Code and Codex.";
 
 // Brand hex values mirror the BRAND THEME block in globals.css
 // (ImageResponse can't read CSS vars). Re-theming means updating these.
@@ -68,7 +68,7 @@ export default function Image() {
               color: MUTED,
             }}
           >
-            The antidote for your ad-hoc, improvised workflow.
+            The process your coding agent follows.
           </div>
         </div>
         <div

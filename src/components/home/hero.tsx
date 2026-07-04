@@ -6,8 +6,9 @@ import { FlowExplorer } from "./flow-explorer";
 import { GithubLogo, InstallProviderIcons, XLogo } from "./host-logos";
 
 /* The hero: the whole page narrows to one idea here. Wordmark and links on
-   top, then one line that names the problem in the reader's own words, one
-   line that says what Circuit is, and one place to install. Below the
+   top, then one line that says what Circuit is (the same line the tab title,
+   OG card, and docs intro lead with), one line that names what the reader's
+   current setup can't do, and one place to install. Below the
    masthead, the flow explorer runs against the background in its focus layout:
    a vertical feature nav on the left, the diagram in the center, the
    explanation on the right. Pick a feature and the diagram slides to bring its
@@ -53,11 +54,12 @@ export function Hero() {
 
       <div className="flex flex-col py-12 sm:py-16">
         <h1 className="max-w-2xl text-balance text-[2rem] font-medium leading-[1.08] tracking-tight sm:text-[2.7rem]">
-          The antidote for your ad-hoc, improvised workflow.
+          The process your coding agent follows.
         </h1>
         <p className="mt-6 max-w-xl text-pretty text-[16px] leading-relaxed text-muted-foreground sm:text-[17px]">
-          Go beyond AGENTS.md and a pile of skill files. Circuit levels up your
-          process by structuring it, verifying it, and making it repeatable.
+          AGENTS.md and a pile of skill files can only suggest. Circuit encodes
+          the process itself: typed steps, mechanical checks, a written record
+          of every run.
         </p>
         <div className="mt-9 flex flex-wrap items-center gap-3">
           <a

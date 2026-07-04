@@ -18,7 +18,7 @@ const evidence = Fragment_Mono({
   subsets: ["latin"],
 });
 
-const siteTitle = "Circuit - the process your coding agent follows";
+const siteTitle = "Circuit — the process your coding agent follows";
 const siteDescription =
   "Encode how you want agent work done into repeatable flows for Claude Code and Codex. Circuit routes each step to the right model, and no step can close without the evidence its checks require.";
 
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "Circuit - the process your coding agent follows. For Claude Code and Codex.",
+        alt: "Circuit — the process your coding agent follows. For Claude Code and Codex.",
       },
     ],
   },
