@@ -33,8 +33,10 @@ import {
    everything a step is scoped on: its model and effort, its allowed tools, the
    context it sees, and the skills it pulls in. Switch flows along the top; the
    diagram morphs. The whole point is legible in one read: expensive judgment
-   (Fable 5, high effort) sits at the few steps that decide direction, and the
-   bulk work runs on cheap models, sometimes many at once in a fan-out.
+   (opus, high effort) sits at the few steps that decide direction, and the
+   bulk work runs on cheap models, sometimes many at once in a fan-out. Model
+   names use the same lowercase tier vocabulary as `circuit preview` output
+   and the dial section's matrix.
 
    These are EXAMPLE flows. The per-step model, effort, tools, and skills are a
    real Circuit capability (each step is configured on its own); the specific
@@ -107,7 +109,7 @@ const FLOWS: ExampleFlow[] = [
           id: "frame",
           name: "Frame",
           role: "turns the prompt into a spec and acceptance criteria",
-          model: "Fable 5",
+          model: "opus",
           tier: "strategic",
           effort: "high",
           context: ["prompt", "constraints"],
@@ -120,7 +122,7 @@ const FLOWS: ExampleFlow[] = [
           name: "Research",
           role: "explores the space in parallel, then merges one brief",
           shape: "fanout",
-          model: "Haiku",
+          model: "haiku",
           tier: "execution",
           effort: "low",
           branches: [
@@ -138,7 +140,7 @@ const FLOWS: ExampleFlow[] = [
           id: "synthesize",
           name: "Synthesize",
           role: "reduces the research to two or three viable approaches",
-          model: "Fable 5",
+          model: "opus",
           tier: "strategic",
           effort: "high",
           context: ["research brief"],
@@ -148,7 +150,7 @@ const FLOWS: ExampleFlow[] = [
           id: "plan",
           name: "Plan",
           role: "turns the direction into a build plan",
-          model: "Fable 5",
+          model: "opus",
           tier: "strategic",
           effort: "high",
           context: ["approaches", "repo map"],
@@ -176,7 +178,7 @@ const FLOWS: ExampleFlow[] = [
           name: "Implement",
           role: "builds the prototype",
           shape: "subrun",
-          model: "Sonnet",
+          model: "sonnet",
           tier: "balanced",
           effort: "medium",
           note: "sub-run → child build flow",
@@ -207,7 +209,7 @@ const FLOWS: ExampleFlow[] = [
           role: "reworks and re-checks until the gate passes",
           shape: "loop",
           loopTo: "implement",
-          model: "Sonnet",
+          model: "sonnet",
           tier: "balanced",
           effort: "medium",
           note: "loops back until the check passes",
@@ -218,7 +220,7 @@ const FLOWS: ExampleFlow[] = [
           id: "review",
           name: "Review",
           role: "reads the prototype against the original intent",
-          model: "Fable 5",
+          model: "opus",
           tier: "strategic",
           effort: "high",
           context: ["diff", "intent"],
@@ -249,7 +251,7 @@ const FLOWS: ExampleFlow[] = [
           id: "frame",
           name: "Frame",
           role: "scopes the failing test",
-          model: "Sonnet",
+          model: "sonnet",
           tier: "balanced",
           effort: "medium",
           context: ["report", "test id"],
@@ -261,7 +263,7 @@ const FLOWS: ExampleFlow[] = [
           id: "reproduce",
           name: "Reproduce",
           role: "runs it until it fails, captures the flake",
-          model: "Haiku",
+          model: "haiku",
           tier: "execution",
           effort: "low",
           context: ["test", "seed"],
@@ -271,7 +273,7 @@ const FLOWS: ExampleFlow[] = [
           id: "diagnose",
           name: "Diagnose",
           role: "finds the race or the shared state",
-          model: "Fable 5",
+          model: "opus",
           tier: "strategic",
           effort: "high",
           context: ["trace", "test"],
@@ -283,7 +285,7 @@ const FLOWS: ExampleFlow[] = [
           id: "fix",
           name: "Fix",
           role: "makes the change",
-          model: "Sonnet",
+          model: "sonnet",
           tier: "balanced",
           effort: "medium",
           context: ["diagnosis", "target files"],
@@ -308,7 +310,7 @@ const FLOWS: ExampleFlow[] = [
           id: "review",
           name: "Review",
           role: "reads the fix against the cause",
-          model: "Fable 5",
+          model: "opus",
           tier: "strategic",
           effort: "high",
           context: ["diff", "diagnosis"],
@@ -351,14 +353,14 @@ const DIAL_TABLE: Record<
   Record<Dial, { model: string; effort: Effort; tier: Tier }>
 > = {
   balanced: {
-    low: { model: "Haiku", effort: "low", tier: "execution" },
-    medium: { model: "Sonnet", effort: "medium", tier: "balanced" },
-    high: { model: "Fable 5", effort: "high", tier: "strategic" },
+    low: { model: "haiku", effort: "low", tier: "execution" },
+    medium: { model: "sonnet", effort: "medium", tier: "balanced" },
+    high: { model: "opus", effort: "high", tier: "strategic" },
   },
   execution: {
-    low: { model: "Haiku", effort: "minimal", tier: "execution" },
-    medium: { model: "Haiku", effort: "low", tier: "execution" },
-    high: { model: "Sonnet", effort: "medium", tier: "balanced" },
+    low: { model: "haiku", effort: "minimal", tier: "execution" },
+    medium: { model: "haiku", effort: "low", tier: "execution" },
+    high: { model: "sonnet", effort: "medium", tier: "balanced" },
   },
 };
 
@@ -2071,12 +2073,16 @@ function PowerDial({
               onClick={() => onChange(d)}
               className="flow-feature-tab inline-flex min-h-8 items-center px-3 py-1 text-[12px] font-medium capitalize transition-colors"
               style={{
+                // The active state speaks the brand signal, not the flow's
+                // content color: controls are chrome, and the dial section
+                // renders the same control in the same ink. Diagrams keep
+                // their flow colors.
                 color: selected ? "var(--foreground)" : "var(--muted-foreground)",
                 background: selected
-                  ? "color-mix(in oklab, var(--flow-color) 22%, var(--muted))"
+                  ? "color-mix(in oklab, var(--signal) 22%, var(--muted))"
                   : "color-mix(in oklab, var(--muted) 38%, transparent)",
                 boxShadow: selected
-                  ? "inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 45%, transparent)"
+                  ? "inset 0 0 0 1px color-mix(in oklab, var(--signal) 45%, transparent)"
                   : "none",
               }}
             >

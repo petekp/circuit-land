@@ -73,8 +73,8 @@ export function CopyInstallInstructions({ text }: { text: string }) {
 
   return (
     <div className="install-terminal-card flex flex-col gap-4 p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-[26px] font-medium leading-tight tracking-tight">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="text-balance text-[26px] font-medium leading-tight tracking-tight">
           Let your agent install it
         </h3>
         <CopyTextButton
