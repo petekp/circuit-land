@@ -49,3 +49,8 @@ next-env.d.ts
 .circuit-build-surface.log
 .devserver.log
 .claude/scheduled_tasks.lock
+
+# Working notes: stay on disk, out of the public repo
+landing-page-analysis-2026-06-09.md
+messaging-kernel-2026-06-09.md
+svg-visual-system-2026-06-09.md
