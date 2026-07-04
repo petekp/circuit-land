@@ -48,6 +48,12 @@ the task as `--goal`:
 The CLI requires an explicit flow name. It never guesses a flow from your
 words; in the agent, the agent is what recommends a flow for you.
 
+Running from a shell does not drop the agent dependency. Worker steps still
+route through a [connector](/docs/configuration/connectors), and the default
+one spawns the `claude` CLI for each step, so keep that binary installed. Set
+`relay.default` with [`circuit config`](/docs/cli/config) to route steps
+elsewhere.
+
 Add `--power low` to a CLI run to spend less: the steps that write code drop
 to a cheaper model while the steps that decide direction keep theirs. See
 [Modes](/docs/flows/modes) for the dial.

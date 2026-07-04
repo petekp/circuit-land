@@ -1,0 +1,64 @@
+---
+title: circuit config
+description: Read and edit the layered config.
+---
+
+```bash
+circuit config <subcommand> [options]
+```
+
+Read and edit the two config layers: `./.circuit/config.yaml` for the project,
+`~/.config/circuit/config.yaml` for your user. Every write re-validates the
+whole file against the config schema before saving, so a bad edit fails
+instead of landing on disk. Comments in the file survive edits.
+
+## show
+
+```bash
+circuit config show
+```
+
+Print each layer and the effective values for the common keys, with the layer
+each value comes from. A key you never set reports its default:
+`defaults.power` is `medium`, `relay.default` is `auto`.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--json` | JSON output. | |
+
+## set
+
+```bash
+circuit config set <key> <value>
+```
+
+Set one key by dotted path. The value parses as YAML, so `low`, `3`, and
+`true` keep their types.
+
+| Flag | Description | Default |
+| --- | --- | --- |
+| `--project` | Write the project file. | on |
+| `--global` | Write the user file instead. | |
+
+## unset
+
+```bash
+circuit config unset <key>
+```
+
+Remove one key by dotted path. Takes the same `--project` and `--global`
+flags as `set`, and reports when there is nothing to remove.
+
+## Examples
+
+```bash
+circuit config show
+circuit config set defaults.power low
+circuit config set defaults.power high --global
+circuit config unset defaults.power
+```
+
+## Related
+
+- [Config file](/docs/configuration/config-file)
+- [Selection](/docs/configuration/selection)

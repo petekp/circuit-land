@@ -8,6 +8,7 @@
     "handoff",
     "history",
     "memory",
+    "config",
     "create",
     "generate",
     "preview",

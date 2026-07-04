@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description: Stuck checkpoints, connector errors, inspecting a past run, and removing a leftover instruction block.
+description: Failed installs, stuck checkpoints, connector errors, inspecting a past run, and removing a leftover instruction block.
 ---
 
 Most of what goes wrong leaves evidence in the run folder, so the first move is
@@ -77,6 +77,24 @@ To search across many past runs instead of one folder, use the
 circuit history query <search text> --json
 ```
 
+## The marketplace add fails
+
+`/plugin marketplace add petekp/circuit` fetches the marketplace from GitHub,
+so it needs network access and a reachable github.com. If the short form
+fails, try the full URL:
+
+```text
+/plugin marketplace add https://github.com/petekp/circuit
+```
+
+A marketplace you added earlier can serve stale entries; remove it and add it
+again:
+
+```text
+/plugin marketplace remove circuit
+/plugin marketplace add petekp/circuit
+```
+
 ## Circuit still runs after I removed the plugin
 
 Install adds an instruction block to `AGENTS.md` and `CLAUDE.md` that tells the
@@ -86,6 +104,7 @@ Circuit. Strip it with [`circuit uninstall`](/docs/cli/uninstall).
 
 ## Related
 
+- [Installation](/docs/getting-started/installation)
 - [Checkpoints](/docs/concepts/checkpoints)
 - [Evidence and runs](/docs/concepts/evidence-and-runs)
 - [Connectors](/docs/configuration/connectors)
