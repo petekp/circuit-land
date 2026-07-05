@@ -659,6 +659,10 @@ function withDim(
 const TILE_FILL = "color-mix(in oklab, var(--flow-color) 16%, var(--muted))";
 const CONNECTOR_STROKE =
   "color-mix(in oklab, var(--flow-color) 60%, var(--border))";
+// The loop's return edge sits under the sequential wires: dimmer and dashed,
+// so "again" never outshouts "then".
+const RETURN_STROKE =
+  "color-mix(in oklab, var(--flow-color) 42%, var(--border))";
 
 const ROW_EPSILON = 18;
 const EDGE_INSET = 6;
@@ -676,7 +680,12 @@ type Anchor = {
 type Segment = {
   id: string;
   d: string;
-  head: { x: number; y: number; dir: "right" | "down" };
+  head: { x: number; y: number; dir: "right" | "down" | "up" | "left" };
+  // Where the wire leaves its source tile. Drawn as a port dot; the head's
+  // chevron already marks the arrival end.
+  tail: { x: number; y: number };
+  // "return" is the loop's back edge; absent means a sequential wire.
+  kind?: "return";
 };
 
 const useIsomorphicLayoutEffect =
@@ -717,6 +726,7 @@ function connectorSegment(a: Anchor, b: Anchor): Omit<Segment, "id"> {
     return {
       d: `M ${x1} ${y1} C ${x1 + k} ${y1}, ${x2 - k} ${y2}, ${x2} ${y2}`,
       head: { x: x2, y: y2, dir: "right" },
+      tail: { x: x1, y: y1 },
     };
   }
   const x1 = a.cx;
@@ -727,6 +737,7 @@ function connectorSegment(a: Anchor, b: Anchor): Omit<Segment, "id"> {
     return {
       d: `M ${x1} ${y1} L ${x2} ${y2}`,
       head: { x: x2, y: y2, dir: "down" },
+      tail: { x: x1, y: y1 },
     };
   }
   const midY = (a.bottom + b.top) / 2;
@@ -744,7 +755,55 @@ function connectorSegment(a: Anchor, b: Anchor): Omit<Segment, "id"> {
     ` L ${x2 - dir * r} ${midY}` +
     ` Q ${x2} ${midY} ${x2} ${midY + r}` +
     ` L ${x2} ${y2}`;
-  return { d, head: { x: x2, y: y2, dir: "down" } };
+  return { d, head: { x: x2, y: y2, dir: "down" }, tail: { x: x1, y: y1 } };
+}
+
+// The loop's return edge, from the loop tile back to the step it reworks.
+// The route depends on how the responsive grid arranged the two tiles:
+// side by side (two- and three-up), the wire dips under the row and rises
+// into the target's bottom edge, exiting off-center so it never shares the
+// forward wire's port; stacked, it bows around the right margin into the
+// target's right edge. The one-column phone layout leaves no margin to bow
+// through, so the wire is skipped and the loop tile's note carries it.
+function returnSegment(
+  a: Anchor,
+  b: Anchor,
+  canvasW: number,
+): Omit<Segment, "id"> | null {
+  const sameRow = Math.abs(a.cy - b.cy) < ROW_EPSILON && b.right < a.left;
+  if (sameRow) {
+    // Both ends sit off-center: the tail clear of the forward wire leaving
+    // this tile's bottom, the head clear of the lane where the next
+    // sequential wire descends past the target's bottom-center.
+    const x1 = a.cx - 16;
+    const y1 = a.bottom + EDGE_INSET;
+    const x2 = b.cx + 24;
+    const y2 = b.bottom + EDGE_INSET;
+    // Deep enough that the long middle run clears the forward elbow that
+    // shares this row gap; the tiles' center-alignment keeps the two rows
+    // far apart at these depths.
+    const k = 40;
+    return {
+      d: `M ${x1} ${y1} C ${x1} ${y1 + k}, ${x2} ${y2 + k}, ${x2} ${y2}`,
+      head: { x: x2, y: y2, dir: "up" },
+      tail: { x: x1, y: y1 },
+      kind: "return",
+    };
+  }
+  const edge = Math.max(a.right, b.right);
+  const bow = 26;
+  if (canvasW - edge < bow + 10) return null;
+  const x1 = a.right + EDGE_INSET;
+  const y1 = a.cy;
+  const x2 = b.right + EDGE_INSET;
+  const y2 = b.cy;
+  const xc = edge + bow;
+  return {
+    d: `M ${x1} ${y1} C ${xc} ${y1}, ${xc} ${y2}, ${x2} ${y2}`,
+    head: { x: x2, y: y2, dir: "left" },
+    tail: { x: x1, y: y1 },
+    kind: "return",
+  };
 }
 
 function verticalCubic(x1: number, y1: number, x2: number, y2: number): string {
@@ -755,6 +814,8 @@ function verticalCubic(x1: number, y1: number, x2: number, y2: number): string {
 function chevron(head: Segment["head"]): string {
   const { x, y, dir } = head;
   if (dir === "right") return `M ${x - 5} ${y - 3} L ${x} ${y} L ${x - 5} ${y + 3}`;
+  if (dir === "left") return `M ${x + 5} ${y - 3} L ${x} ${y} L ${x + 5} ${y + 3}`;
+  if (dir === "up") return `M ${x - 3} ${y + 5} L ${x} ${y} L ${x + 3} ${y + 5}`;
   return `M ${x - 3} ${y - 5} L ${x} ${y} L ${x + 3} ${y - 5}`;
 }
 
@@ -1691,6 +1752,23 @@ function FlowDiagram({
       const seg = connectorSegment(toAnchor(elA, origin), toAnchor(elB, origin));
       next.push({ id: `${flow.key}:${seq[i].id}->${seq[i + 1].id}`, ...seg });
     }
+    // The loop's back edge. Sequential wires say "then"; this one says
+    // "again", so it reads from the same measured boxes but routes and
+    // dresses differently.
+    for (const step of seq) {
+      if (step.shape !== "loop" || !step.loopTo) continue;
+      const elFrom = nodeRefMap.get(step.id);
+      const elTo = nodeRefMap.get(step.loopTo);
+      if (!elFrom || !elTo) continue;
+      const seg = returnSegment(
+        toAnchor(elFrom, origin),
+        toAnchor(elTo, origin),
+        origin.width,
+      );
+      if (seg) {
+        next.push({ id: `${flow.key}:${step.id}~>${step.loopTo}`, ...seg });
+      }
+    }
     const sig = `${flow.key}|${origin.width}x${origin.height}|${next.map((s) => s.d).join("|")}`;
     if (sig === lastSig.current) return;
     lastSig.current = sig;
@@ -1924,40 +2002,75 @@ function FlowDiagram({
         style={{ color: CONNECTOR_STROKE }}
       >
         <AnimatePresence initial={false}>
-          {segments.map((seg, i) => (
-            <m.g key={seg.id} {...connectorGroupProps(reduceMotion, i * 0.05)}>
-              <m.path
-                d={seg.d}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.25}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={
-                  reduceMotion
-                    ? { duration: 0 }
-                    : { delay: i * 0.05, duration: 0.45, ease: "easeOut" }
-                }
-              />
-              <m.path
-                d={chevron(seg.head)}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.25}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={
-                  reduceMotion
-                    ? { duration: 0 }
-                    : { delay: i * 0.05 + 0.32, duration: 0.2 }
-                }
-              />
-            </m.g>
-          ))}
+          {segments.map((seg, i) => {
+            const isReturn = seg.kind === "return";
+            const stroke = isReturn ? RETURN_STROKE : "currentColor";
+            const width = isReturn ? 1.1 : 1.25;
+            return (
+              <m.g key={seg.id} {...connectorGroupProps(reduceMotion, i * 0.05)}>
+                {/* The port: a small socket where the wire leaves its tile. */}
+                <m.circle
+                  cx={seg.tail.x}
+                  cy={seg.tail.y}
+                  r={2.4}
+                  fill="var(--background)"
+                  stroke={stroke}
+                  strokeWidth={1.25}
+                  initial={reduceMotion ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={
+                    reduceMotion
+                      ? { duration: 0 }
+                      : { delay: i * 0.05, duration: 0.2 }
+                  }
+                />
+                {/* A return wire carries a static dash pattern, so it fades
+                    in whole: Framer's pathLength trick drives
+                    stroke-dasharray itself and the two would fight. */}
+                <m.path
+                  d={seg.d}
+                  fill="none"
+                  stroke={stroke}
+                  strokeWidth={width}
+                  strokeDasharray={isReturn ? "4 5" : undefined}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  initial={
+                    reduceMotion
+                      ? false
+                      : isReturn
+                        ? { opacity: 0 }
+                        : { pathLength: 0, opacity: 0 }
+                  }
+                  animate={
+                    isReturn
+                      ? { opacity: 1 }
+                      : { pathLength: 1, opacity: 1 }
+                  }
+                  transition={
+                    reduceMotion
+                      ? { duration: 0 }
+                      : { delay: i * 0.05, duration: 0.45, ease: "easeOut" }
+                  }
+                />
+                <m.path
+                  d={chevron(seg.head)}
+                  fill="none"
+                  stroke={stroke}
+                  strokeWidth={width}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  initial={reduceMotion ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={
+                    reduceMotion
+                      ? { duration: 0 }
+                      : { delay: i * 0.05 + 0.32, duration: 0.2 }
+                  }
+                />
+              </m.g>
+            );
+          })}
         </AnimatePresence>
       </svg>
 
