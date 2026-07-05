@@ -2305,62 +2305,6 @@ function FlowDiagram({
   return canvas;
 }
 
-// ---- Legend -----------------------------------------------------------------
-
-// The legend reads the tiers by what they MEAN, not by a pinned model name, so
-// it stays true for any flow added later (a flow that routes a tier to a
-// different model isn't contradicted). The specific models live in the tiles as
-// illustrative examples; the brightness here teaches the encoding.
-function Legend() {
-  const items: { label: string; meaning: string; swatch: CSSProperties }[] = [
-    {
-      label: "strategic",
-      meaning: "top model, high effort",
-      swatch: {
-        background: "color-mix(in oklab, var(--signal) 16%, transparent)",
-        boxShadow: "inset 0 0 0 1px var(--signal)",
-      },
-    },
-    {
-      label: "balanced",
-      meaning: "mid model",
-      swatch: {
-        background: "color-mix(in oklab, var(--brand-second) 20%, transparent)",
-      },
-    },
-    {
-      label: "execution",
-      meaning: "fast model, in parallel",
-      swatch: {
-        boxShadow: "inset 0 0 0 1px color-mix(in oklab, var(--foreground) 22%, transparent)",
-      },
-    },
-    {
-      label: "deterministic",
-      meaning: "no model",
-      swatch: { background: "transparent" },
-    },
-  ];
-  return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-      <span className="text-[11px] text-muted-foreground">Model routing</span>
-      {items.map((it) => (
-        <span
-          key={it.label}
-          className="inline-flex items-center gap-2 text-[11px] text-muted-foreground"
-        >
-          <span
-            className="h-3 w-5 rounded-full"
-            style={it.swatch}
-            aria-hidden="true"
-          />
-          {it.label} · {it.meaning}
-        </span>
-      ))}
-    </div>
-  );
-}
-
 // ---- Explorer shell ---------------------------------------------------------
 
 function blurbMotion(reduceMotion: boolean): MotionProps {
@@ -2711,19 +2655,6 @@ export function FlowExplorer({
     </div>
   );
 
-  const legend = (
-    <div className="flex flex-col gap-2 border-t border-border/40 pt-4">
-      <Legend />
-      <p className="max-w-3xl text-[11px] leading-relaxed text-muted-foreground">
-        An illustrative composition, drawn to show every control shape in one
-        picture; the built-in flows each use a subset. Each step is a
-        micro-harness with its own model, effort, tools, and skills. Power is
-        one dial over all of them: turn it down and the bulk work goes cheap,
-        while the steps that decide direction hold their model.
-      </p>
-    </div>
-  );
-
   let body: ReactNode;
   if (variant === "glow") {
     // Tabs on the left, blurb in a bordered card on the right; diagram below.
@@ -2775,7 +2706,6 @@ export function FlowExplorer({
         style={{ "--flow-color": flow.color } as CSSProperties}
       >
         {body}
-        {legend}
       </div>
     </LazyMotion>
   );
