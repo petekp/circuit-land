@@ -19,8 +19,13 @@ import {
   LayoutGroup,
   domMax,
   m,
+  useMotionTemplate,
+  useMotionValue,
   useReducedMotion,
+  useScroll,
+  useTransform,
   type MotionProps,
+  type MotionValue,
 } from "motion/react";
 
 /* The flow explorer. The masthead narrows to one idea; this is where the idea
@@ -695,6 +700,50 @@ const RETURN_STROKE =
 // to visibly wait out of focus.
 const FOCAL_LINE = 0.38;
 
+// The depth of field. Full focus holds for DOF_PLATEAU px either side of the
+// plane (roughly half a tile, so a step doesn't shimmer while its center
+// rides near the line), then decays to fully receded across DOF_FALLOFF px
+// more. The curve is 1 - x², so focus lets go gently near the plane and
+// falls faster into the distance.
+const DOF_PLATEAU = 110;
+const DOF_FALLOFF = 380;
+// The receded end of each channel. Scale stays subtle on purpose: wires are
+// measured from unscaled boxes, so a scaled tile's edge drifts a few px off
+// its wire ends — but a receded tile's wires are also faded to near-nothing
+// (see WireSegment), which is what keeps the drift invisible.
+const DOF_SCALE_MIN = 0.945;
+const DOF_BLUR_MAX = 4.5;
+const DOF_OPACITY_MIN = 0.55;
+const DOF_WIRE_OPACITY_MIN = 0.25;
+
+// Geometry the depth transforms read on every scroll frame: the canvas's
+// page-space top plus each node's center relative to the canvas, refreshed by
+// measure(). geomTick bumps after each refresh so the focus transforms
+// re-evaluate even when the scroll position hasn't moved.
+type DepthField = {
+  active: boolean;
+  scrollY: MotionValue<number>;
+  geomTick: MotionValue<number>;
+  geom: { current: { canvasTop: number; centers: Map<string, number> } };
+};
+
+// How in-focus a node is at a given page scroll: 1 on the plane, 0 fully
+// receded. Unmeasured nodes read as sharp so nothing flashes blurry before
+// the first measure lands.
+function focusAt(
+  geom: { canvasTop: number; centers: Map<string, number> },
+  id: string,
+  pageY: number,
+): number {
+  if (typeof window === "undefined") return 1;
+  const cy = geom.centers.get(id);
+  if (cy == null) return 1;
+  const viewportY = geom.canvasTop + cy - pageY;
+  const dist = Math.abs(viewportY - window.innerHeight * FOCAL_LINE);
+  const x = Math.min(1, Math.max(0, (dist - DOF_PLATEAU) / DOF_FALLOFF));
+  return 1 - x * x;
+}
+
 const ROW_EPSILON = 18;
 const EDGE_INSET = 6;
 const ELBOW_R = 9;
@@ -717,6 +766,10 @@ type Segment = {
   tail: { x: number; y: number };
   // "return" is the loop's back edge; absent means a sequential wire.
   kind?: "return";
+  // The step ids the wire connects, so the depth layer can grade the wire by
+  // its endpoints' focus.
+  from: string;
+  to: string;
 };
 
 const useIsomorphicLayoutEffect =
@@ -743,7 +796,10 @@ function toAnchor(el: HTMLElement, origin: DOMRect): Anchor {
   };
 }
 
-function connectorSegment(a: Anchor, b: Anchor): Omit<Segment, "id"> {
+function connectorSegment(
+  a: Anchor,
+  b: Anchor,
+): Omit<Segment, "id" | "from" | "to"> {
   // Two steps share a row when their vertical CENTERS line up (the grid centers
   // same-row tiles), so a height difference between paired tiles never bends the
   // wire. Same-row wires run flat left to right; everything else flows downward.
@@ -800,7 +856,7 @@ function returnSegment(
   a: Anchor,
   b: Anchor,
   canvasW: number,
-): Omit<Segment, "id"> | null {
+): Omit<Segment, "id" | "from" | "to"> | null {
   const sameRow = Math.abs(a.cy - b.cy) < ROW_EPSILON && b.right < a.left;
   if (sameRow) {
     // Both ends sit off-center: the tail clear of the forward wire leaving
@@ -1168,24 +1224,21 @@ function layoutProps(disable: boolean, id: string): MotionProps {
 function PromptTile({
   step,
   motionProps,
-  gridStyle,
   registerNode,
   disableLayout = false,
 }: {
   step: StepSpec;
   motionProps: MotionProps;
-  gridStyle?: CSSProperties;
   registerNode: (id: string) => (el: HTMLElement | null) => void;
   disableLayout?: boolean;
 }) {
   const nodeRef = registerNode(step.id);
   return (
-    <m.li
+    <m.div
       ref={nodeRef}
       {...layoutProps(disableLayout, step.id)}
       {...motionProps}
-      className="flow-grid-item flow-prompt-node relative z-10 w-full list-none"
-      style={gridStyle}
+      className="flow-prompt-node relative"
     >
       <div className="flow-prompt-bar">
         <span className="flow-prompt-dots" aria-hidden="true">
@@ -1202,14 +1255,13 @@ function PromptTile({
         <span className="flow-prompt-text">{step.role}</span>
         <span className="flow-prompt-cursor" aria-hidden="true" />
       </div>
-    </m.li>
+    </m.div>
   );
 }
 
 function StepTile({
   step,
   motionProps,
-  gridStyle,
   registerNode,
   targeted,
   highlightElement,
@@ -1222,7 +1274,6 @@ function StepTile({
 }: {
   step: StepSpec;
   motionProps: MotionProps;
-  gridStyle?: CSSProperties;
   registerNode: (id: string) => (el: HTMLElement | null) => void;
   targeted?: boolean;
   highlightElement?: FeatureElement | null;
@@ -1257,12 +1308,12 @@ function StepTile({
         }
       : { backgroundColor: TILE_FILL };
   return (
-    <m.li
+    <m.div
       ref={composedRef}
       {...layoutProps(disableLayout, step.id)}
       {...motionProps}
-      className="flow-grid-item flow-step-tile relative z-10 flex w-full list-none flex-col p-4 text-left text-foreground"
-      style={{ ...gridStyle, ...tileStyle }}
+      className="flow-step-tile relative flex w-full flex-col p-4 text-left text-foreground"
+      style={tileStyle}
     >
       {onSelect ? (
         // A full-bleed hit target so the whole tile is clickable and keyboard
@@ -1353,7 +1404,7 @@ function StepTile({
       ) : null}
 
       <StepDetail step={step} highlightElement={highlightElement} />
-    </m.li>
+    </m.div>
   );
 }
 
@@ -1468,7 +1519,6 @@ function FanoutCluster({
   step,
   reduceMotion,
   motionProps,
-  gridStyle,
   registerNode,
   highlightElement,
   onSelect,
@@ -1480,7 +1530,6 @@ function FanoutCluster({
   step: StepSpec;
   reduceMotion: boolean;
   motionProps: MotionProps;
-  gridStyle?: CSSProperties;
   registerNode: (id: string) => (el: HTMLElement | null) => void;
   highlightElement?: FeatureElement | null;
   onSelect?: () => void;
@@ -1551,12 +1600,11 @@ function FanoutCluster({
   }, [measureFan]);
 
   return (
-    <m.li
+    <m.div
       ref={setOuterRef}
       {...layoutProps(disableLayout, step.id)}
       {...motionProps}
-      className="flow-grid-item relative z-10 flex w-full list-none justify-center"
-      style={gridStyle}
+      className="relative flex w-full justify-center"
     >
       <div
         ref={setCardRef}
@@ -1628,7 +1676,7 @@ function FanoutCluster({
           ))}
         </div>
       </div>
-    </m.li>
+    </m.div>
   );
 }
 
@@ -1699,6 +1747,155 @@ function placeRows(rows: StepRow[]): PlacedStep[] {
   });
 }
 
+// The depth-of-field wrapper: one per grid slot. The tile inside keeps its
+// mount/dim/layout animations — they own the tile element's animate channel —
+// while this wrapper carries the scroll-linked focus grade on its own
+// composited channels, so the two never fight. Scale, blur, and opacity all
+// leave the layout box untouched, which is what keeps the measured wire
+// geometry valid at any focus. The root stays a motion <li> so AnimatePresence
+// popLayout can still measure and pop it on exit. Hooks run unconditionally
+// (rules of hooks); inactive mode just doesn't attach their output.
+function DepthTile({
+  dof,
+  id,
+  gridStyle,
+  children,
+}: {
+  dof: DepthField;
+  id: string;
+  gridStyle?: CSSProperties;
+  children: ReactNode;
+}) {
+  const focus = useTransform(
+    [dof.scrollY, dof.geomTick],
+    ([y]: number[]) => focusAt(dof.geom.current, id, y),
+  );
+  const scale = useTransform(focus, [0, 1], [DOF_SCALE_MIN, 1]);
+  const blur = useTransform(focus, [0, 1], [DOF_BLUR_MAX, 0]);
+  const filter = useMotionTemplate`blur(${blur}px)`;
+  const opacity = useTransform(focus, [0, 1], [DOF_OPACITY_MIN, 1]);
+  return (
+    <m.li
+      className="flow-grid-item relative z-10 w-full list-none"
+      style={
+        dof.active
+          ? {
+              ...gridStyle,
+              scale,
+              filter,
+              opacity,
+              transformOrigin: "50% 50%",
+              // All three channels move on every scroll frame; pinning the
+              // layer up front beats re-promoting it mid-scroll.
+              willChange: "transform, filter, opacity",
+            }
+          : gridStyle
+      }
+    >
+      {children}
+    </m.li>
+  );
+}
+
+// One wire, graded by its endpoints: its opacity keys to the AVERAGE focus of
+// the two tiles it connects, so a wire into the receded distance dims with
+// them. The fade is also what hides the scale detachment — a receding tile
+// shrinks a few px off its measured wire ends, and by the time that gap could
+// read, the wire is too faint to betray it. Opacity only, no blur: a 1px
+// stroke reads as distant through opacity alone, and a per-wire filter would
+// cost real paint time. The grade lives on its own outer group because the
+// inner group's mount/exit variants already own that element's opacity and
+// filter.
+function WireSegment({
+  dof,
+  seg,
+  index,
+  reduceMotion,
+}: {
+  dof: DepthField;
+  seg: Segment;
+  index: number;
+  reduceMotion: boolean;
+}) {
+  const wireFocus = useTransform(
+    [dof.scrollY, dof.geomTick],
+    ([y]: number[]) => {
+      const g = dof.geom.current;
+      return (focusAt(g, seg.from, y) + focusAt(g, seg.to, y)) / 2;
+    },
+  );
+  const dofOpacity = useTransform(
+    wireFocus,
+    [0, 1],
+    [DOF_WIRE_OPACITY_MIN, 1],
+  );
+  const isReturn = seg.kind === "return";
+  const stroke = isReturn ? RETURN_STROKE : "currentColor";
+  const width = isReturn ? 1.1 : 1.25;
+  return (
+    <m.g style={dof.active ? { opacity: dofOpacity } : undefined}>
+      <m.g {...connectorGroupProps(reduceMotion, index * 0.05)}>
+        {/* The port: a small socket where the wire leaves its tile. */}
+        <m.circle
+          cx={seg.tail.x}
+          cy={seg.tail.y}
+          r={2.4}
+          fill="var(--background)"
+          stroke={stroke}
+          strokeWidth={1.25}
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={
+            reduceMotion
+              ? { duration: 0 }
+              : { delay: index * 0.05, duration: 0.2 }
+          }
+        />
+        {/* A return wire carries a static dash pattern, so it fades in whole:
+            Framer's pathLength trick drives stroke-dasharray itself and the
+            two would fight. */}
+        <m.path
+          d={seg.d}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={width}
+          strokeDasharray={isReturn ? "4 5" : undefined}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={
+            reduceMotion
+              ? false
+              : isReturn
+                ? { opacity: 0 }
+                : { pathLength: 0, opacity: 0 }
+          }
+          animate={isReturn ? { opacity: 1 } : { pathLength: 1, opacity: 1 }}
+          transition={
+            reduceMotion
+              ? { duration: 0 }
+              : { delay: index * 0.05, duration: 0.45, ease: "easeOut" }
+          }
+        />
+        <m.path
+          d={chevron(seg.head)}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={width}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={
+            reduceMotion
+              ? { duration: 0 }
+              : { delay: index * 0.05 + 0.32, duration: 0.2 }
+          }
+        />
+      </m.g>
+    </m.g>
+  );
+}
+
 function FlowDiagram({
   flow,
   reduceMotion,
@@ -1744,6 +1941,22 @@ function FlowDiagram({
   const nodeRefMap = nodeRefs.current;
   const refCallbackMap = refCallbacks.current;
 
+  // The scroll-linked depth of field. Page scroll and re-measures both feed
+  // the per-tile focus transforms; the geometry itself lives in a ref, so a
+  // re-measure never re-renders React — the MotionValues restyle the tiles on
+  // the animation thread.
+  const { scrollY } = useScroll();
+  const geomTick = useMotionValue(0);
+  const dofGeom = useRef<{ canvasTop: number; centers: Map<string, number> }>({
+    canvasTop: 0,
+    centers: new Map(),
+  });
+  const dofActive = depth && !reduceMotion;
+  const dof: DepthField = useMemo(
+    () => ({ active: dofActive, scrollY, geomTick, geom: dofGeom }),
+    [dofActive, scrollY, geomTick],
+  );
+
   const spring = reduceMotion
     ? { duration: 0 }
     : ({ type: "spring", stiffness: 420, damping: 36, mass: 0.9 } as const);
@@ -1780,7 +1993,12 @@ function FlowDiagram({
       const elB = nodeRefMap.get(seq[i + 1].id);
       if (!elA || !elB) continue;
       const seg = connectorSegment(toAnchor(elA, origin), toAnchor(elB, origin));
-      next.push({ id: `${flow.key}:${seq[i].id}->${seq[i + 1].id}`, ...seg });
+      next.push({
+        id: `${flow.key}:${seq[i].id}->${seq[i + 1].id}`,
+        from: seq[i].id,
+        to: seq[i + 1].id,
+        ...seg,
+      });
     }
     // The loop's back edge. Sequential wires say "then"; this one says
     // "again", so it reads from the same measured boxes but routes and
@@ -1796,9 +2014,27 @@ function FlowDiagram({
         origin.width,
       );
       if (seg) {
-        next.push({ id: `${flow.key}:${step.id}~>${step.loopTo}`, ...seg });
+        next.push({
+          id: `${flow.key}:${step.id}~>${step.loopTo}`,
+          from: step.id,
+          to: step.loopTo,
+          ...seg,
+        });
       }
     }
+    // Refresh the depth geometry BEFORE the signature early-return below: the
+    // wire shapes can be identical while the canvas's page position moved
+    // (fonts settling above push the whole section down), and the focus
+    // transforms must not keep grading against the stale position. The bump
+    // nudges the scroll-linked transforms to recompute without a scroll.
+    dofGeom.current.canvasTop = origin.top + window.scrollY;
+    const centers = dofGeom.current.centers;
+    centers.clear();
+    for (const step of seq) {
+      const el = nodeRefMap.get(step.id);
+      if (el) centers.set(step.id, toAnchor(el, origin).cy);
+    }
+    geomTick.set(geomTick.get() + 1);
     const sig = `${flow.key}|${origin.width}x${origin.height}|${next.map((s) => s.d).join("|")}`;
     if (sig === lastSig.current) return;
     lastSig.current = sig;
@@ -1808,7 +2044,7 @@ function FlowDiagram({
         ? prev
         : { w: origin.width, h: origin.height },
     );
-  }, [flow, nodeRefMap]);
+  }, [flow, nodeRefMap, geomTick]);
 
   useIsomorphicLayoutEffect(() => {
     measure();
@@ -1845,6 +2081,17 @@ function FlowDiagram({
       active = false;
     };
   }, [measure]);
+
+  // The focal line sits at a fraction of the viewport, so a window resize
+  // moves it even when the canvas keeps its own size (a pure height change
+  // never fires the canvas ResizeObserver). Re-measuring refreshes the depth
+  // geometry against the new viewport.
+  useEffect(() => {
+    if (!dofActive || typeof window === "undefined") return;
+    const onResize = () => measure();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [dofActive, measure]);
 
   // Selecting a feature brings its anchor tile's center to the page's focal
   // line — the same line the depth-of-field layer treats as sharp — so a
@@ -1887,75 +2134,15 @@ function FlowDiagram({
         style={{ color: CONNECTOR_STROKE }}
       >
         <AnimatePresence initial={false}>
-          {segments.map((seg, i) => {
-            const isReturn = seg.kind === "return";
-            const stroke = isReturn ? RETURN_STROKE : "currentColor";
-            const width = isReturn ? 1.1 : 1.25;
-            return (
-              <m.g key={seg.id} {...connectorGroupProps(reduceMotion, i * 0.05)}>
-                {/* The port: a small socket where the wire leaves its tile. */}
-                <m.circle
-                  cx={seg.tail.x}
-                  cy={seg.tail.y}
-                  r={2.4}
-                  fill="var(--background)"
-                  stroke={stroke}
-                  strokeWidth={1.25}
-                  initial={reduceMotion ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={
-                    reduceMotion
-                      ? { duration: 0 }
-                      : { delay: i * 0.05, duration: 0.2 }
-                  }
-                />
-                {/* A return wire carries a static dash pattern, so it fades
-                    in whole: Framer's pathLength trick drives
-                    stroke-dasharray itself and the two would fight. */}
-                <m.path
-                  d={seg.d}
-                  fill="none"
-                  stroke={stroke}
-                  strokeWidth={width}
-                  strokeDasharray={isReturn ? "4 5" : undefined}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  initial={
-                    reduceMotion
-                      ? false
-                      : isReturn
-                        ? { opacity: 0 }
-                        : { pathLength: 0, opacity: 0 }
-                  }
-                  animate={
-                    isReturn
-                      ? { opacity: 1 }
-                      : { pathLength: 1, opacity: 1 }
-                  }
-                  transition={
-                    reduceMotion
-                      ? { duration: 0 }
-                      : { delay: i * 0.05, duration: 0.45, ease: "easeOut" }
-                  }
-                />
-                <m.path
-                  d={chevron(seg.head)}
-                  fill="none"
-                  stroke={stroke}
-                  strokeWidth={width}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  initial={reduceMotion ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={
-                    reduceMotion
-                      ? { duration: 0 }
-                      : { delay: i * 0.05 + 0.32, duration: 0.2 }
-                  }
-                />
-              </m.g>
-            );
-          })}
+          {segments.map((seg, i) => (
+            <WireSegment
+              key={seg.id}
+              dof={dof}
+              seg={seg}
+              index={i}
+              reduceMotion={reduceMotion}
+            />
+          ))}
         </AnimatePresence>
       </svg>
 
@@ -1975,44 +2162,51 @@ function FlowDiagram({
               ? withDim(motionProps, variant, reduceMotion)
               : motionProps;
             const pulseTick = dialPulse.ids.has(step.id) ? dialPulse.tick : 0;
-            return step.shape === "prompt" ? (
-              <PromptTile
+            return (
+              <DepthTile
                 key={step.id}
-                step={step}
-                motionProps={tileMotion}
+                dof={dof}
+                id={step.id}
                 gridStyle={gridStyle}
-                registerNode={registerNode}
-                disableLayout={depth}
-              />
-            ) : step.shape === "fanout" ? (
-              <FanoutCluster
-                key={step.id}
-                step={step}
-                reduceMotion={reduceMotion}
-                motionProps={tileMotion}
-                gridStyle={gridStyle}
-                registerNode={registerNode}
-                highlightElement={element}
-                onSelect={() => onSelectElement(step.id, defaultElementFor(step))}
-                selected={pressed}
-                disableLayout={depth}
-                dialPulseTick={pulseTick}
-              />
-            ) : (
-              <StepTile
-                key={step.id}
-                step={step}
-                motionProps={tileMotion}
-                gridStyle={gridStyle}
-                registerNode={registerNode}
-                targeted={targeted}
-                highlightElement={element}
-                variant={variant}
-                onSelect={() => onSelectElement(step.id, defaultElementFor(step))}
-                selected={pressed}
-                disableLayout={depth}
-                dialPulseTick={pulseTick}
-              />
+              >
+                {step.shape === "prompt" ? (
+                  <PromptTile
+                    step={step}
+                    motionProps={tileMotion}
+                    registerNode={registerNode}
+                    disableLayout={depth}
+                  />
+                ) : step.shape === "fanout" ? (
+                  <FanoutCluster
+                    step={step}
+                    reduceMotion={reduceMotion}
+                    motionProps={tileMotion}
+                    registerNode={registerNode}
+                    highlightElement={element}
+                    onSelect={() =>
+                      onSelectElement(step.id, defaultElementFor(step))
+                    }
+                    selected={pressed}
+                    disableLayout={depth}
+                    dialPulseTick={pulseTick}
+                  />
+                ) : (
+                  <StepTile
+                    step={step}
+                    motionProps={tileMotion}
+                    registerNode={registerNode}
+                    targeted={targeted}
+                    highlightElement={element}
+                    variant={variant}
+                    onSelect={() =>
+                      onSelectElement(step.id, defaultElementFor(step))
+                    }
+                    selected={pressed}
+                    disableLayout={depth}
+                    dialPulseTick={pulseTick}
+                  />
+                )}
+              </DepthTile>
             );
           })}
         </AnimatePresence>

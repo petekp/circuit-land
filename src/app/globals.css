@@ -798,6 +798,9 @@
      chrome distinct from the colored step tiles. */
   width: 100%;
   max-width: 32rem;
+  /* The grid slot is a full-width depth wrapper now, so the terminal centers
+     itself rather than relying on the slot's justify-self. */
+  margin-inline: auto;
   overflow: hidden;
   border-radius: 14px;
   corner-shape: squircle;
