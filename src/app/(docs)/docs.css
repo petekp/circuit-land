@@ -41,3 +41,60 @@
   --color-fd-primary-foreground: hsl(220 4% 6.5%); /* --brand-panel-deep */
   --color-fd-ring: hsl(163 60% 42%); /* signal, dimmed for focus rings */
 }
+
+/* Sidebar density. Fumadocs ships a 268px rail with 36px rows at 14px; this
+   docs tree is shallow enough to read at a tighter scale, and the reclaimed
+   width goes to the content column. The width var is declared on the layout
+   root because Fumadocs sets it there via a utility class — an id selector
+   (unlayered) outranks it, and both the desktop rail and the mobile drawer
+   children read the same var. Row rules scope to the scroll viewport so the
+   header (logo, collapse, search) keeps its own rhythm. */
+#nd-docs-layout {
+  --fd-sidebar-width: 232px;
+}
+
+#nd-sidebar > div:first-child {
+  padding: 12px 12px 4px;
+  gap: 8px;
+}
+
+#nd-sidebar [data-search-full] {
+  font-size: 12.5px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+#nd-sidebar [data-search-full] kbd {
+  font-size: 10px;
+}
+
+#nd-sidebar [data-radix-scroll-area-viewport] {
+  font-size: 13px;
+}
+
+#nd-sidebar [data-radix-scroll-area-viewport] a,
+#nd-sidebar [data-radix-scroll-area-viewport] button {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+#nd-sidebar [data-radix-scroll-area-viewport] svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* The phone drawer is a separate element (#nd-sidebar-mobile) and overlays
+   the page instead of costing it width, so it tightens less: type down one
+   notch, rows kept near touch size. */
+#nd-sidebar-mobile {
+  font-size: 14px;
+}
+
+#nd-sidebar-mobile [data-radix-scroll-area-viewport] a,
+#nd-sidebar-mobile [data-radix-scroll-area-viewport] button {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 14px;
+}
