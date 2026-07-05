@@ -27,14 +27,8 @@ import {
   type MotionStyle,
   type MotionValue,
 } from "motion/react";
-import {
-  DOF_BLUR_MAX,
-  DOF_OPACITY_MIN,
-  DOF_SCALE_MIN,
-  DOF_WIRE_OPACITY_MIN,
-  FOCAL_LINE,
-  focusFromDist,
-} from "./glass/depth-field";
+import { focusFromDist } from "./glass/depth-field";
+import { glassParams, subscribeGlassField } from "./glass/glass-params";
 import { GlassLayer, probeWebGL } from "./glass/glass-scene";
 
 /* The flow explorer. The masthead narrows to one idea; this is where the idea
@@ -701,8 +695,9 @@ const RETURN_STROKE =
   "color-mix(in oklab, var(--flow-color) 42%, var(--border))";
 
 // The focal line, the plateau/falloff curve, and the per-channel recession
-// floors live in glass/depth-field.ts, imported above: the WebGL glass layer
-// grades its slabs with the same math, and the two renderers must agree.
+// floors live in glassParams.depth (glass/glass-params.ts), read live through
+// glass/depth-field.ts: the WebGL glass layer grades its slabs with the same
+// math, the two renderers must agree, and the tune panel moves both at once.
 
 // WebGL support never changes within a page's lifetime, so the "store" for
 // useSyncExternalStore has nothing to subscribe to; the server snapshot is
@@ -733,7 +728,9 @@ function focusAt(
   const cy = geom.centers.get(id);
   if (cy == null) return 1;
   const viewportY = geom.canvasTop + cy - pageY;
-  return focusFromDist(viewportY - window.innerHeight * FOCAL_LINE);
+  return focusFromDist(
+    viewportY - window.innerHeight * glassParams.depth.focalLine,
+  );
 }
 
 const ROW_EPSILON = 18;
@@ -1794,8 +1791,19 @@ function DepthTile({
     [dof.scrollY, dof.geomTick],
     ([y]: number[]) => focusAt(dof.geom.current, id, y),
   );
-  const scale = useTransform(focus, [0, 1], [DOF_SCALE_MIN, 1]);
-  const blur = useTransform(focus, [0, 1], [DOF_BLUR_MAX, 0]);
+  // Function form, not ranges: the floors read live off glassParams.depth at
+  // every evaluation, so the tune panel's sliders bite without baking numbers
+  // at mount. geomTick is an explicit input on each channel — MotionValues
+  // dedupe equal values, so a pure param drag (focus unchanged, no scroll)
+  // would never propagate through `focus`; the tick always changes.
+  const scale = useTransform([focus, dof.geomTick], ([f]: number[]) => {
+    const d = glassParams.depth;
+    return d.scaleMin + (1 - d.scaleMin) * f;
+  });
+  const blur = useTransform(
+    [focus, dof.geomTick],
+    ([f]: number[]) => glassParams.depth.blurMax * (1 - f),
+  );
   // At the plane the filter must be literally ABSENT, not blur(0px): any
   // filter value makes this wrapper a backdrop root, and the glass tile
   // inside would sample its (empty) subtree instead of the page behind
@@ -1803,7 +1811,10 @@ function DepthTile({
   const filter = useTransform(blur, (b) =>
     b < 0.05 ? "none" : `blur(${b}px)`,
   );
-  const opacity = useTransform(focus, [0, 1], [DOF_OPACITY_MIN, 1]);
+  const opacity = useTransform([focus, dof.geomTick], ([f]: number[]) => {
+    const d = glassParams.depth;
+    return d.opacityMin + (1 - d.opacityMin) * f;
+  });
   // The recession also feeds CSS as --illum: the tile's material reads it to
   // fall into shadow, and the neon bits read its inverse to bloom through
   // the blur like bokeh.
@@ -1861,10 +1872,14 @@ function WireSegment({
       return (focusAt(g, seg.from, y) + focusAt(g, seg.to, y)) / 2;
     },
   );
+  // geomTick rides along for the same reason as the tile channels: a floor
+  // drag must re-derive this even when the wire's focus lands unchanged.
   const dofOpacity = useTransform(
-    wireFocus,
-    [0, 1],
-    [DOF_WIRE_OPACITY_MIN, 1],
+    [wireFocus, dof.geomTick],
+    ([f]: number[]) => {
+      const d = glassParams.depth;
+      return d.wireOpacityMin + (1 - d.wireOpacityMin) * f;
+    },
   );
   const isReturn = seg.kind === "return";
   const stroke = isReturn ? RETURN_STROKE : "currentColor";
@@ -1951,9 +1966,9 @@ function FlowDiagram({
   focusTick: number;
   variant: TourVariant;
   // Depth mode (the focus variant): the diagram runs at full height in the
-  // page flow and reads through a scroll-linked depth of field — the plane at
-  // FOCAL_LINE is sharp, everything else recedes. Selection scrolls the PAGE
-  // to bring the anchor step to that plane.
+  // page flow and reads through a scroll-linked depth of field — the plane
+  // at the focal line is sharp, everything else recedes. Selection scrolls
+  // the PAGE to bring the anchor step to that plane.
   depth?: boolean;
   // The steps the last dial move re-tiered, and a tick that keys the
   // one-shot badge flash.
@@ -1993,6 +2008,14 @@ function FlowDiagram({
     () => ({ active: dofActive, scrollY, geomTick, geom: dofGeom }),
     [dofActive, scrollY, geomTick],
   );
+  // The tune panel mutates the depth params without any scroll happening.
+  // Nudging geomTick re-fires every focus transform (the same path a
+  // re-measure takes), so a slider drag restyles the tiles immediately —
+  // still no React render, the MotionValues do the work.
+  useEffect(
+    () => subscribeGlassField(() => geomTick.set(geomTick.get() + 1)),
+    [geomTick],
+  );
   // The key light: a soft glow that sits AT the focal plane in the viewport,
   // so the diagram scrolls through it and whatever crosses the plane is lit.
   // It renders inside the canvas (a fixed element would break under any
@@ -2000,7 +2023,11 @@ function FlowDiagram({
   // page-space plane minus canvas top.
   const lightY = useTransform([scrollY, geomTick], ([y]: number[]) => {
     if (typeof window === "undefined") return 0;
-    return y + window.innerHeight * FOCAL_LINE - dofGeom.current.canvasTop;
+    return (
+      y +
+      window.innerHeight * glassParams.depth.focalLine -
+      dofGeom.current.canvasTop
+    );
   });
 
   // The WebGL glass layer: a sticky viewport-filling canvas that mirrors
@@ -2186,7 +2213,7 @@ function FlowDiagram({
     const el = nodeRefMap.get(focusNow.anchorStepId);
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const focal = window.innerHeight * FOCAL_LINE;
+    const focal = window.innerHeight * glassParams.depth.focalLine;
     const delta = r.top + r.height / 2 - focal;
     // Already at the plane: don't jolt the page over a rounding error.
     if (Math.abs(delta) < 24) return;

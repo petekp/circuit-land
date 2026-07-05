@@ -69,6 +69,41 @@ export type GlassParams = {
     fillIntensity: number;
   };
   depth: {
+    // -- The focus field. Both renderers grade a tile through the same
+    // curve (focusFromDist in depth-field.ts), so these move the DOM
+    // treatment and the GL slabs together. --
+    // The page-space focal plane, as a fraction of the viewport height. A
+    // step centered on this line reads fully sharp; selecting a feature
+    // scrolls the page to bring the anchor step here.
+    focalLine: number;
+    // Full focus holds for this many px either side of the plane (roughly
+    // half a tile, so a step doesn't shimmer while riding the line)...
+    plateau: number;
+    // ...then focus decays to fully receded across this many px more.
+    falloff: number;
+    // The decay's shape: focus falls as 1 - x^curve across the falloff.
+    // 2 lets go gently near the plane and dives into the distance; 1 is
+    // linear; higher holds focus longer before letting go.
+    curve: number;
+    // -- The DOM recession grade: what the tile wrapper and wires do with
+    // their focus. The GL slabs express recession as depth instead (below),
+    // but they track the wrapper's live box, so scaleMin moves them too. --
+    // The receded end of the tile scale. Subtle by default: wires are
+    // measured from unscaled boxes, so a scaled tile's edge drifts a few px
+    // off its wire ends — invisible while receded wires also fade
+    // (wireOpacityMin), visible if scale gets dramatic while wires stay lit.
+    scaleMin: number;
+    // The receded end of the DOM blur, in px. Under GL this grades the text
+    // riding on the slabs (the slabs themselves blur through the bokeh
+    // pass); on the CSS fallback it is the whole recession blur.
+    blurMax: number;
+    // Wrapper opacity at full recession. The veil (riding --illum) owns the
+    // darkness of a receded tile; this floor only assists, so the neon
+    // elements that should survive recession do.
+    opacityMin: number;
+    // The wire stroke's opacity at full recession.
+    wireOpacityMin: number;
+    // -- The GL projection of the same field. --
     // How far a fully receded slab sinks behind the focal plane, in world px.
     // The scroll moves slabs through this range; depth of field reads it.
     zSpread: number;
@@ -77,6 +112,9 @@ export type GlassParams = {
     focusRange: number;
     // The bokeh kernel scale: how big the blur gets at full recession.
     bokehScale: number;
+    // The DoF pass's internal resolution, as a fraction of the canvas.
+    // Lower is softer (and cheaper) bokeh; 1 resolves the finest kernel.
+    bokehResolution: number;
   };
   wires: {
     // The conduit light: a hot core (HDR — above 1 it excites bloom) inside
@@ -148,9 +186,18 @@ export const GLASS_DEFAULTS: GlassParams = {
     fillIntensity: 0.45,
   },
   depth: {
+    focalLine: 0.38,
+    plateau: 110,
+    falloff: 380,
+    curve: 2,
+    scaleMin: 0.945,
+    blurMax: 4.5,
+    opacityMin: 0.72,
+    wireOpacityMin: 0.25,
     zSpread: 170,
     focusRange: 90,
     bokehScale: 2.4,
+    bokehResolution: 0.75,
   },
   wires: {
     coreGain: 1.6,
@@ -203,6 +250,25 @@ export function glassParamsVersion() {
   return version;
 }
 
+// The GL frame loop reads every param fresh each frame, but the DOM depth
+// grade can't: its motion transforms re-evaluate only when an input
+// MotionValue moves (a scroll, a re-measure). This second channel is how the
+// tune panel reaches them — it pokes after mutating a depth field, and the
+// diagram answers by nudging the tick its focus transforms already depend
+// on. No React render either way; visitors without the panel never pay it.
+const fieldListeners = new Set<() => void>();
+
+export function pokeGlassField() {
+  for (const listener of fieldListeners) listener();
+}
+
+export function subscribeGlassField(listener: () => void) {
+  fieldListeners.add(listener);
+  return () => {
+    fieldListeners.delete(listener);
+  };
+}
+
 export function resetGlassParams() {
   const fresh = structuredClone(GLASS_DEFAULTS);
   Object.assign(glassParams.glass, fresh.glass);
@@ -212,4 +278,5 @@ export function resetGlassParams() {
   Object.assign(glassParams.wires, fresh.wires);
   Object.assign(glassParams.post, fresh.post);
   bumpGlassParams();
+  pokeGlassField();
 }

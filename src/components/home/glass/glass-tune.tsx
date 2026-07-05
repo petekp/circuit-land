@@ -15,6 +15,7 @@ import { Pane } from "tweakpane";
 import {
   bumpGlassParams,
   glassParams,
+  pokeGlassField,
   resetGlassParams,
 } from "./glass-params";
 
@@ -68,9 +69,25 @@ export default function GlassTune() {
 
     const depth = pane.addFolder({ title: "depth", expanded: false });
     const d = glassParams.depth;
+    // The focus field and the DOM recession grade are read by motion
+    // transforms that only re-evaluate when an input moves, so each of these
+    // pokes the field channel; the GL-only knobs below skip it (the frame
+    // loop reads them live).
+    const poke = () => pokeGlassField();
+    depth.addBinding(d, "focalLine", rng(0.1, 0.9, 0.01)).on("change", poke);
+    depth.addBinding(d, "plateau", rng(0, 400, 5)).on("change", poke);
+    depth.addBinding(d, "falloff", rng(40, 1000, 10)).on("change", poke);
+    depth.addBinding(d, "curve", rng(0.5, 4, 0.05)).on("change", poke);
+    depth.addBinding(d, "scaleMin", rng(0.5, 1, 0.005)).on("change", poke);
+    depth.addBinding(d, "blurMax", rng(0, 20, 0.25)).on("change", poke);
+    depth.addBinding(d, "opacityMin", rng(0.2, 1, 0.01)).on("change", poke);
+    depth
+      .addBinding(d, "wireOpacityMin", rng(0, 1, 0.01))
+      .on("change", poke);
     depth.addBinding(d, "zSpread", rng(0, 400, 5));
     depth.addBinding(d, "focusRange", rng(20, 400, 5));
     depth.addBinding(d, "bokehScale", rng(0, 8, 0.1));
+    depth.addBinding(d, "bokehResolution", rng(0.25, 1, 0.05));
 
     const wires = pane.addFolder({ title: "wires", expanded: false });
     const w = glassParams.wires;

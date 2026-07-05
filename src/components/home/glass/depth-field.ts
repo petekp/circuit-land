@@ -3,42 +3,27 @@
    glass layer must grade a tile identically — same focal line, same curve —
    or the GL slab would disagree with the DOM treatment sitting on top of it.
    This module is pure math with no React and no three.js, so either side can
-   import it without dragging in the other's dependencies. */
+   import it without dragging in the other's dependencies.
 
-// The page-space focal plane, as a fraction of the viewport height. A step
-// whose center sits on this line reads fully sharp; the depth-of-field layer
-// grades everything else by its distance from it, and selecting a feature
-// scrolls the page to bring the anchor step here. Above center: the reader's
-// eye rests in the upper third, and it leaves room below for the next steps
-// to visibly wait out of focus.
-export const FOCAL_LINE = 0.38;
+   Every number in the grade lives in glassParams.depth (glass-params.ts) so
+   the tune panel can move it live; this module owns only the curve itself.
+   Consumers read the per-channel floors (scaleMin, blurMax, opacityMin,
+   wireOpacityMin) and the focal line straight off glassParams.depth. */
 
-// The depth of field. Full focus holds for DOF_PLATEAU px either side of the
-// plane (roughly half a tile, so a step doesn't shimmer while its center
-// rides near the line), then decays to fully receded across DOF_FALLOFF px
-// more. The curve is 1 - x², so focus lets go gently near the plane and
-// falls faster into the distance.
-export const DOF_PLATEAU = 110;
-export const DOF_FALLOFF = 380;
-
-// The receded end of each channel. Scale stays subtle on purpose: wires are
-// measured from unscaled boxes, so a scaled tile's edge drifts a few px off
-// its wire ends — but a receded tile's wires are also faded to near-nothing
-// (see WireSegment), which is what keeps the drift invisible.
-export const DOF_SCALE_MIN = 0.945;
-export const DOF_BLUR_MAX = 4.5;
-// The veil (flow-veil, riding --illum) owns the darkness of a receded tile
-// now, so wrapper opacity only assists; a 0.55 floor on top of the veil
-// crushed the neon elements that are supposed to survive recession.
-export const DOF_OPACITY_MIN = 0.72;
-export const DOF_WIRE_OPACITY_MIN = 0.25;
+import { glassParams } from "./glass-params";
 
 // How in-focus something is, given its signed viewport-space distance from
 // the focal line: 1 on the plane (and across the plateau), 0 fully receded.
+// Focus holds for `plateau` px either side of the plane (roughly half a
+// tile, so a step doesn't shimmer while its center rides near the line),
+// then decays across `falloff` px more as 1 - x^curve — at the default
+// curve of 2, focus lets go gently near the plane and falls faster into
+// the distance.
 export function focusFromDist(dist: number): number {
+  const d = glassParams.depth;
   const x = Math.min(
     1,
-    Math.max(0, (Math.abs(dist) - DOF_PLATEAU) / DOF_FALLOFF),
+    Math.max(0, (Math.abs(dist) - d.plateau) / Math.max(d.falloff, 1)),
   );
-  return 1 - x * x;
+  return 1 - x ** d.curve;
 }

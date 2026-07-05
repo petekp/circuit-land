@@ -66,7 +66,7 @@ import {
 } from "postprocessing";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { FOCAL_LINE, focusFromDist } from "./depth-field";
+import { focusFromDist } from "./depth-field";
 import type { GlassLayerProps } from "./glass-scene";
 import {
   glassParams,
@@ -469,7 +469,7 @@ function SlabField({ hostRef, nodes, flowColor, segments }: GlassLayerProps) {
       focusDistance: CAMERA_DIST,
       focusRange: glassParams.depth.focusRange,
       bokehScale: glassParams.depth.bokehScale,
-      resolutionScale: 0.75,
+      resolutionScale: glassParams.depth.bokehResolution,
     }),
     bloom: new BloomEffect({
       mipmapBlur: true,
@@ -568,7 +568,7 @@ function SlabField({ hostRef, nodes, flowColor, segments }: GlassLayerProps) {
     const canvasEl = (canvasElRef.current ??=
       hostEl.closest<HTMLElement>(".flow-diagram-canvas"));
     const canvasRect = canvasEl?.getBoundingClientRect() ?? hostRect;
-    const focalY = window.innerHeight * FOCAL_LINE;
+    const focalY = window.innerHeight * p.depth.focalLine;
 
     backdrop.position.set(0, 0, -720);
     backdrop.scale.set(size.width, size.height, 1);
@@ -844,6 +844,11 @@ function SlabField({ hostRef, nodes, flowColor, segments }: GlassLayerProps) {
     fx.dof.cocMaterial.focusDistance = CAMERA_DIST;
     fx.dof.cocMaterial.focusRange = p.depth.focusRange;
     fx.dof.bokehScale = p.depth.bokehScale;
+    // Guarded: the resolution setter rebuilds the pass's render targets on
+    // change, so it must not run as an every-frame write like the rest.
+    if (fx.dof.resolution.scale !== p.depth.bokehResolution) {
+      fx.dof.resolution.scale = p.depth.bokehResolution;
+    }
     fx.bloom.intensity = p.post.bloomIntensity;
     fx.bloom.luminanceMaterial.threshold = p.post.bloomThreshold;
     fx.bloom.luminanceMaterial.smoothing = p.post.bloomSmoothing;
