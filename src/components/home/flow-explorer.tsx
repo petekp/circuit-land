@@ -901,7 +901,12 @@ function DetailRow({
       <span className="w-11 shrink-0 pt-[2px] text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
         {label}
       </span>
-      <div className="flex flex-1 flex-wrap items-center gap-1">{children}</div>
+      {/* min-w-0: without it this wrapper's min-width:auto tracks the widest
+          chip, the row overflows the tile, and the chips' own max-w-full cap
+          (and truncation) never engages. Same gotcha .flow-grid-item pins. */}
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+        {children}
+      </div>
     </div>
   );
 }
@@ -1345,7 +1350,7 @@ function FanoutCluster({
           </span>
           <ModelBadge step={step} hot={highlightElement === "model"} />
         </div>
-        <p className="relative z-20 mt-1 max-w-[15rem] text-[11.5px] leading-snug text-muted-foreground">
+        <p className="relative z-20 mt-1 max-w-[15rem] text-[12px] leading-snug text-muted-foreground">
           {step.role}
         </p>
         <svg
@@ -1384,7 +1389,7 @@ function FanoutCluster({
               ref={(el) => {
                 branchRefs.current[i] = el;
               }}
-              className="flow-fanout-branch px-2.5 py-1.5 font-mono text-[10.5px] font-medium leading-tight text-foreground/80"
+              className="flow-fanout-branch px-2.5 py-1.5 font-mono text-[11px] font-medium leading-tight text-foreground/80"
             >
               {label}
             </div>
