@@ -63,6 +63,12 @@ type StepSpec = {
   name: string;
   role: string;
   shape?: Shape;
+  // Marks a plain step that departs from the default relay kind: the
+  // deterministic gate ("verification") and the written artifact ("compose")
+  // get a head glyph. Control shapes carry their own glyphs; plain relay
+  // steps stay unmarked, the way a default task does in most diagram
+  // languages.
+  kind?: "verification" | "compose";
   model?: string;
   tier?: Tier;
   effort?: Effort;
@@ -197,6 +203,7 @@ const FLOWS: ExampleFlow[] = [
           id: "verify",
           name: "Verify",
           role: "build, lint, and tests: the mechanical gate",
+          kind: "verification",
           model: "deterministic",
           tier: "none",
           note: "no model opinion",
@@ -230,7 +237,8 @@ const FLOWS: ExampleFlow[] = [
           id: "record",
           name: "Record",
           role: "the durable run folder it all leaves behind",
-          model: "—",
+          kind: "compose",
+          model: "deterministic",
           tier: "none",
           note: "trace · reports · evidence",
         },
@@ -298,6 +306,7 @@ const FLOWS: ExampleFlow[] = [
           id: "verify",
           name: "Verify",
           role: "reruns it 50 times: the mechanical gate",
+          kind: "verification",
           model: "deterministic",
           tier: "none",
           note: "no model opinion",
@@ -320,7 +329,8 @@ const FLOWS: ExampleFlow[] = [
           id: "record",
           name: "Record",
           role: "the durable run folder it all leaves behind",
-          model: "—",
+          kind: "compose",
+          model: "deterministic",
           tier: "none",
           note: "trace · reports · evidence",
         },
@@ -573,7 +583,7 @@ function stepBlurb(step: StepSpec, element: FeatureElement): string {
       if (step.skills && step.skills.length > 0) {
         scope.push(`pulls in ${step.skills.join(", ")}`);
       }
-      if (step.model && step.model !== "—" && step.tier !== "none") {
+      if (step.model && step.tier !== "none") {
         scope.push(`on ${step.model}`);
       }
       return scope.length > 0 ? `${lead} It ${scope.join(", ")}.` : lead;
@@ -802,7 +812,7 @@ function connectorGroupProps(reduceMotion: boolean, delay: number): MotionProps 
 // ---- Per-step detail chrome -------------------------------------------------
 
 // The model badge. Brightness carries the tier: strategic is the bright signal
-// fill, balanced a soft fill, execution a dim outline, none a plain label.
+// fill, balanced a soft fill, execution a dim outline, none a ghost outline.
 function tierStyle(tier: Tier): { className: string; style: CSSProperties } {
   switch (tier) {
     case "strategic":
@@ -827,7 +837,16 @@ function tierStyle(tier: Tier): { className: string; style: CSSProperties } {
         },
       };
     default:
-      return { className: "text-muted-foreground", style: {} };
+      // The ghost tier: no model spend at all. A hairline ring one step dimmer
+      // than execution's, so "deterministic" and "you decide" hold the same
+      // corner object as the model pills instead of floating as bare text.
+      return {
+        className: "text-muted-foreground",
+        style: {
+          boxShadow:
+            "inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)",
+        },
+      };
   }
 }
 
@@ -841,9 +860,7 @@ const EFFORT_PIPS: Record<Effort, number> = {
 };
 
 function ModelBadge({ step, hot }: { step: StepSpec; hot?: boolean }) {
-  // "—" is the data's spelling of "no model" (Record); either way, no badge
-  // rather than a dangling dash pill in the corner.
-  if (!step.model || step.model === "—") return null;
+  if (!step.model) return null;
   const tier = step.tier ?? "none";
   const { className, style } = tierStyle(tier);
   const pips = EFFORT_PIPS[step.effort ?? "none"];
@@ -911,6 +928,12 @@ function DetailRow({
   );
 }
 
+// A tile lists at most this many skill chips; the rest fold into a "+N"
+// counter (full names in its title). The long skill tokens each eat a full
+// chip line, so an uncapped stack is what made one tile twice its neighbors'
+// height.
+const MAX_SKILL_CHIPS = 2;
+
 // One quiet material for every scope chip: the row label already names the
 // kind, so per-kind tints read as noise at ten tiles, and the tier badge
 // stays the tile's one color moment. A long token truncates (full text in the
@@ -956,7 +979,7 @@ function StepDetail({
     !!step.note && step.shape !== "loop" && step.shape !== "subrun";
   if (!hasContext && !hasTools && !hasSkills && !showNote) return null;
   return (
-    <div className="mt-3 flex flex-col gap-1.5 border-t border-border/50 pt-3">
+    <div className="flow-scope-well mt-3 flex flex-col gap-1.5">
       {hasContext ? (
         <DetailRow label="ctx" state={rowState("ctx")}>
           {step.context!.map((c) => (
@@ -979,9 +1002,21 @@ function StepDetail({
       ) : null}
       {hasSkills ? (
         <DetailRow label="skills" state={rowState("skills")}>
-          {step.skills!.map((s) => (
+          {step.skills!.slice(0, MAX_SKILL_CHIPS).map((s) => (
             <Chip key={s}>{s}</Chip>
           ))}
+          {step.skills!.length > MAX_SKILL_CHIPS ? (
+            <span
+              title={step.skills!.slice(MAX_SKILL_CHIPS).join(", ")}
+              className="inline-flex items-center rounded-md px-1.5 py-[2px] font-mono text-[11px] leading-tight text-muted-foreground"
+              style={{
+                boxShadow:
+                  "inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)",
+              }}
+            >
+              +{step.skills!.length - MAX_SKILL_CHIPS}
+            </span>
+          ) : null}
         </DetailRow>
       ) : null}
       {showNote ? (
@@ -1148,6 +1183,9 @@ function StepTile({
         <span className="inline-flex items-center gap-1.5 text-[14px] font-medium leading-tight tracking-tight">
           {isCheckpoint ? <PauseIcon /> : null}
           {isLoop ? <LoopIcon /> : null}
+          {step.shape === "subrun" ? <SubrunIcon /> : null}
+          {step.kind === "verification" ? <GateIcon /> : null}
+          {step.kind === "compose" ? <ComposeIcon /> : null}
           {step.name}
         </span>
         <ModelBadge step={step} hot={highlightElement === "model"} />
@@ -1169,20 +1207,33 @@ function StepTile({
 
       {isCheckpoint && step.options ? (
         <div
-          className={`mt-3 flex flex-col gap-1.5 border-t border-border/50 pt-3 ${highlightElement === "options" ? "flow-options-hot" : ""}`}
+          className={`flow-scope-well mt-3 flex flex-col gap-1.5 ${highlightElement === "options" ? "flow-options-hot" : ""}`}
         >
-          {step.options.map((o) => (
-            <span
-              key={o}
-              className="rounded-md px-2 py-1 text-[11px] leading-tight text-foreground/90"
-              style={{
-                background:
-                  "color-mix(in oklab, var(--flow-color) 14%, transparent)",
-              }}
-            >
-              {o}
-            </span>
-          ))}
+          {step.options.map((o) => {
+            // Options are authored "A · label"; the leading letter renders as
+            // a keycap so the row reads as a decision waiting on one keypress.
+            const [cap, ...rest] = o.split(" · ");
+            const label = rest.join(" · ");
+            return (
+              <span
+                key={o}
+                className="flex items-center gap-2 rounded-md px-1.5 py-1 text-[11px] leading-tight text-foreground/90"
+                style={{
+                  background:
+                    "color-mix(in oklab, var(--flow-color) 14%, transparent)",
+                }}
+              >
+                {label ? (
+                  <>
+                    <kbd className="flow-option-key font-mono">{cap}</kbd>
+                    {label}
+                  </>
+                ) : (
+                  o
+                )}
+              </span>
+            );
+          })}
         </div>
       ) : null}
 
@@ -1234,6 +1285,72 @@ function LoopIcon() {
       <path d="M20 5v4h-4" />
       <path d="M20 15a8 8 0 0 1-14 3l-2-2" />
       <path d="M4 19v-4h4" />
+    </svg>
+  );
+}
+
+// The deterministic gate: a check between hard brackets. The brackets say the
+// pass bar is code, not opinion; the check says it has to clear.
+function GateIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ color: "var(--flow-color)" }}
+    >
+      <path d="M8 4.5H4.5v15H8" />
+      <path d="M16 4.5h3.5v15H16" />
+      <path d="M8.5 12.4l2.6 2.6 4.4-5.2" />
+    </svg>
+  );
+}
+
+// The written record: the report lines a run leaves behind.
+function ComposeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ color: "var(--flow-color)" }}
+    >
+      <path d="M5 6.5h14" />
+      <path d="M5 12h14" />
+      <path d="M5 17.5h8" />
+    </svg>
+  );
+}
+
+// A run nested inside a step: the child flow the step expands into.
+function SubrunIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ color: "var(--flow-color)" }}
+    >
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4.5" />
+      <rect x="10.5" y="10.5" width="7" height="7" rx="2" />
     </svg>
   );
 }
