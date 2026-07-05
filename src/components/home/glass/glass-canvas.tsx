@@ -26,12 +26,22 @@
    The transmission buffer still needs something for the glass to refract, so
    a flat plane holding the site background color (lifted a touch toward
    white, see baseLift) renders into the FBO pass ONLY and never to screen.
-   Per-tile focal glows are additive quads behind the slabs, so the glass
-   refracts its own halo. The wires keep their crisp SVG cores (information,
-   like the text) and the GL layer adds what a lit conduit casts: an additive
-   ribbon under each measured path and a hot spot at each port, graded by
-   endpoint focus. The DOM tiles drop their CSS material and focal glow under
-   [data-gl] (see globals.css) and keep text, veil, and neon.
+   The lights are a studio rig: a key aimed by angle/elevation params and a
+   cool counter-fill, so the slab bevels and clearcoat carry real speculars.
+   The wires keep their crisp SVG cores (information, like the text) and the
+   GL layer adds what a lit conduit casts: a hot HDR core in a soft halo,
+   with energy pulses gliding along the path, graded by endpoint focus. The
+   DOM tiles drop their CSS material and focal glow under [data-gl] (see
+   globals.css) and keep text, veil, and neon.
+
+   Depth model: recession is real geometry. A slab sinks behind the focal
+   plane by depth.zSpread × (1 − focus) — free under the orthographic camera
+   (no size or position change) — and a DepthOfFieldEffect reads the depth
+   buffer, so the WHOLE slab blurs when it recedes, edges included, not just
+   the content its glass transmits. The camera sits far away (CAMERA_DIST)
+   because the CoC pass measures radial distance from the camera: at close
+   range the focal surface is a visibly curved sphere, at 20k world units it
+   is flat to within a few px across the widest canvas.
 
    Every look-defining number lives in glassParams (glass-params.ts), read
    fresh each frame; the tweakpane panel (glass-tune.tsx, dev or ?tune)
@@ -48,7 +58,12 @@ import {
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MeshTransmissionMaterial, useFBO } from "@react-three/drei";
 import { EffectComposer } from "@react-three/postprocessing";
-import { BlendFunction, BloomEffect, NoiseEffect } from "postprocessing";
+import {
+  BlendFunction,
+  BloomEffect,
+  DepthOfFieldEffect,
+  NoiseEffect,
+} from "postprocessing";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { FOCAL_LINE, focusFromDist } from "./depth-field";
@@ -76,20 +91,26 @@ const SLAB_DEPTH = 26;
 
 // The wire light pools. The SVG keeps the crisp cores — they are
 // information, like the text — and the GL layer adds what a lit conduit
-// casts: a soft additive ribbon under each path and a hot spot at each port.
-// Gains, sizes, and timings live in glassParams.wires.
+// casts: a hot core in a soft halo along each path and a hot spot at each
+// port. Gains, sizes, and timings live in glassParams.wires.
 const WIRE_POOL = 20;
 const PORT_POOL = 40;
 
-// The warm pool at the focal line (glassParams.light.poolGain, default off),
-// in raw sRGB like every light-bed color.
-//
+// How far behind its focused endpoints a wire's light plane sits, so a
+// ribbon never wins the depth test against the slab it plugs into.
+const WIRE_Z_SET = 20;
+
+// The orthographic camera's distance from the z=0 focal plane. Ortho framing
+// is distance-independent; the number only matters to the depth-of-field
+// pass, whose CoC measures RADIAL distance from the camera — far away, the
+// focal sphere flattens to a plane (see the header note).
+const CAMERA_DIST = 20000;
+
 // Post-chain colorspace note: with the composer on, the scene renders into a
 // LINEAR buffer and the final pass gamma-encodes, so the raw-sRGB shaders
 // must ship linear on the direct view too (uLinearOut stays 1 in both
 // passes) or the frame double-encodes and washes pale. Bloom thresholds are
-// therefore LINEAR-space values. No bokeh pass: the camera is orthographic
-// and every slab sits at z 0, so depth of field has nothing to read.
+// therefore LINEAR-space values.
 
 type SlabDebug = {
   id: string;
@@ -189,18 +210,11 @@ function resolveCssColor(
   return color;
 }
 
-// Light colors stay in raw sRGB (see resolveCssColor): the additive shaders
-// ARE the final pixel math, no encode pass after them.
-const rawHsl = (h: number, s: number, l: number) =>
-  new THREE.Color().setHSL(
-    h / 360,
-    s / 100,
-    l / 100,
-    THREE.LinearSRGBColorSpace,
-  );
-
-// The focal pool's warmth, split from the old key-light pair it replaces.
-const POOL_WARM = rawHsl(40, 55, 84);
+// The studio rig's fixed colors (hand-tuned, from the Ever effect's palette):
+// a warm-white key, a cool blue fill. Angles and intensities live in
+// glassParams.light.
+const KEY_COLOR = new THREE.Color(1.0, 0.98, 0.92);
+const FILL_COLOR = new THREE.Color(0.66, 0.8, 1.0);
 
 const QUAD_VERT = /* glsl */ `
   varying vec2 vUv;
@@ -230,63 +244,92 @@ const BASE_FRAG = /* glsl */ `
   }
 `;
 
-// The focal glow: the wide anamorphic ellipse the DOM drew behind whichever
-// tile holds the plane (radial 50% × 42%, transparent at 72%), additive so
-// it adds over the aurora exactly like plus-lighter did. One quad per slab,
-// between the backdrop and the glass, so the slab refracts its own halo.
-// uRadii picks the ellipse: (0.5, 0.42) for the anamorphic focal glow,
-// (0.5, 0.5) for the round port sprites that share this shader.
-const GLOW_FRAG = /* glsl */ `
+// The port hot spot: the same profile family as the wire — a gaussian core
+// inside an exponential skirt, eased to zero before the quad's edge. Raw
+// sRGB on the direct view (see the colorspace note); the FBO pass flips
+// uLinearOut. Dim pixels discard so the depth write (which keeps the DoF
+// pass from far-blurring the light) never stamps invisible fragments.
+const PORT_FRAG = /* glsl */ `
   uniform vec3 uColor;
-  uniform float uAlpha;
-  uniform vec2 uRadii;
+  uniform float uGain;
+  uniform float uCore;
   uniform float uLinearOut;
   varying vec2 vUv;
 
   void main() {
-    float d = length((vUv - 0.5) / uRadii);
-    float a = uAlpha * clamp((0.72 - d) / 0.72, 0.0, 1.0);
-    // Raw sRGB on the direct view: additive over the backdrop's raw values,
-    // the same space CSS plus-lighter adds in. Encoding here would lift a
-    // 0.05 halo to 0.24 — the wash that motivated the raw scheme. The FBO
-    // pass flips uLinearOut like the backdrop does.
+    float d = length(vUv - 0.5) * 2.0;
+    float core = exp(-(d * d) / (2.0 * uCore * uCore));
+    float halo = exp(-d * 4.0) * 0.5;
+    float a = (core + halo) * uGain * (1.0 - smoothstep(0.8, 1.0, d));
+    if (a < 0.004) discard;
     vec3 col = uColor * a;
     if (uLinearOut > 0.5) col = pow(col, vec3(2.2));
     gl_FragColor = vec4(col, 1.0);
   }
 `;
 
-// The wire glow ribbon: a triangle strip along the sampled path, aT running
-// -1..1 across it and aL 0..1 along it. Quadratic falloff across, a short
-// fade at each end so the ports own the terminals.
+// The wire light ribbon: a triangle strip along the sampled path, aT running
+// -1..1 across it (edge = haloWidth px) and aL 0..1 along it. The vertex
+// stage rides the endpoints' DEPTH: z interpolates tail-to-head, so the
+// depth-of-field pass blurs a wire's receded end and leaves its focused end
+// crisp, exactly like the slabs it connects.
 const RIBBON_VERT = /* glsl */ `
   attribute float aT;
   attribute float aL;
+  uniform float uZFrom;
+  uniform float uZTo;
   varying float vT;
   varying float vL;
   void main() {
     vT = aT;
     vL = aL;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec3 p = position;
+    p.z = mix(uZFrom, uZTo, aL);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
   }
 `;
 
+// The conduit profile: a hot gaussian core (HDR — uCoreGain above 1 excites
+// bloom) inside an exponential halo skirt, plus a train of comet pulses
+// gliding tail-to-head: sharp nose, exponential wake, riding the core so
+// they read as current in the conduit. Dim pixels discard so the depth
+// write never stamps invisible fragments.
 const RIBBON_FRAG = /* glsl */ `
   uniform vec3 uColor;
-  uniform float uAlpha;
+  uniform float uEnergy;
   uniform float uReveal;
+  uniform float uCoreGain;
+  uniform float uCore;
+  uniform float uHaloGain;
+  uniform float uPulseGain;
+  uniform float uPulseSpeed;
+  uniform float uPulseSpacing;
+  uniform float uPulseLength;
+  uniform float uLen;
+  uniform float uTime;
   uniform float uLinearOut;
   varying float vT;
   varying float vL;
 
   void main() {
-    float across = 1.0 - abs(vT);
-    float ends = smoothstep(0.0, 0.08, vL) * (1.0 - smoothstep(0.92, 1.0, vL));
+    float d = abs(vT);
+    // Core sigma is coreWidth/haloWidth, so the core reads in px no matter
+    // how wide the ribbon geometry runs.
+    float sigma = max(uCore, 0.02);
+    float core = exp(-(d * d) / (2.0 * sigma * sigma));
+    float halo = exp(-d * 3.0) * (1.0 - d);
+    float ends = smoothstep(0.0, 0.06, vL) * (1.0 - smoothstep(0.94, 1.0, vL));
     // The light sweeps tail-to-head as uReveal runs 0..1, tracking the SVG
     // core's pathLength draw-in so the glow never precedes its conduit. The
     // 1.08 overshoot lets the soft edge clear the far end.
     float reveal = clamp((uReveal * 1.08 - vL) / 0.08, 0.0, 1.0);
-    vec3 col = uColor * (uAlpha * across * across * ends * reveal);
+    float s = vL * uLen;
+    float behind = mod(uTime * uPulseSpeed - s, max(uPulseSpacing, 1.0));
+    float comet = exp(-behind / max(uPulseLength, 1.0));
+    float glow = (core * uCoreGain + halo * uHaloGain
+      + core * comet * uPulseGain) * ends * reveal * uEnergy;
+    if (glow < 0.004) discard;
+    vec3 col = uColor * glow;
     if (uLinearOut > 0.5) col = pow(col, vec3(2.2));
     gl_FragColor = vec4(col, 1.0);
   }
@@ -382,6 +425,8 @@ function buildRibbon(
   geo.setAttribute("aT", new THREE.BufferAttribute(aT, 1));
   geo.setAttribute("aL", new THREE.BufferAttribute(aL, 1));
   geo.setIndex(idx);
+  // The pulse train needs real px along the path (aL is normalized).
+  geo.userData.length = length;
   return geo;
 }
 
@@ -398,16 +443,16 @@ type TransmissionMaterial = THREE.MeshPhysicalMaterial & {
   temporalDistortion: number;
 };
 
-function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
+function SlabField({ hostRef, nodes, flowColor, segments }: GlassLayerProps) {
   const meshRefs = useRef<(THREE.Mesh | null)[]>([]);
-  const glowRefs = useRef<(THREE.Mesh | null)[]>([]);
   const wireRefs = useRef<(THREE.Mesh | null)[]>([]);
   const portRefs = useRef<(THREE.Mesh | null)[]>([]);
   const wireGroupRef = useRef<THREE.Group | null>(null);
   const backdropRef = useRef<THREE.Mesh | null>(null);
-  const poolRef = useRef<THREE.Mesh | null>(null);
   const ambientRef = useRef<THREE.AmbientLight | null>(null);
   const keyLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const fillLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const camera = useThree((state) => state.camera);
   // The post effects, built as raw postprocessing instances instead of the
   // library's <Bloom>/<Noise> components. wrapEffect keys an internal
   // useMemo on JSON.stringify(props), and React 19 passes ref inside props:
@@ -418,6 +463,14 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
   // mid-edit); the frame loop writes through the ref mirror below, keeping
   // the state value out of render-time mutation.
   const [postFx] = useState(() => ({
+    // DoF first (defocus happens in the lens, before bloom), grain last so
+    // it stays crisp over the blur.
+    dof: new DepthOfFieldEffect(camera, {
+      focusDistance: CAMERA_DIST,
+      focusRange: glassParams.depth.focusRange,
+      bokehScale: glassParams.depth.bokehScale,
+      resolutionScale: 0.75,
+    }),
     bloom: new BloomEffect({
       mipmapBlur: true,
       intensity: glassParams.post.bloomIntensity,
@@ -453,7 +506,6 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
     checkpoint: new THREE.Color(1, 1, 1),
     loop: new THREE.Color(1, 1, 1),
     prompt: new THREE.Color(1, 1, 1),
-    glow: new THREE.Color(1, 1, 1),
     flow: new THREE.Color("#8b8b96"),
     wire: new THREE.Color("#8b8b96"),
   });
@@ -470,23 +522,24 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
   }, []);
 
   useFrame((state) => {
-    const hostEl = host.current;
+    const hostEl = hostRef.current;
     const nodeMap = nodes.current;
     const pool = meshRefs.current;
-    const glows = glowRefs.current;
     const backdrop = backdropRef.current;
     if (!hostEl || !nodeMap || !backdrop) return;
 
     const p = glassParams;
+    // A slab's recession in depth: 0 at the focal plane, zSpread px behind
+    // it when fully receded. Ortho keeps the screen position exact; only
+    // the depth-of-field pass sees the move.
+    const zFor = (f: number) => -p.depth.zSpread * (1 - f);
     if (tintKey.current !== flowColor) {
       tintKey.current = flowColor;
       const t = tints.current;
       t.flow.copy(resolveCssColor(hostEl, flowColor));
-      // The light colors live in raw sRGB (see resolveCssColor): the glow
-      // paint is pale and flow-leaning; the wire light is the flow color
-      // straight — the energy the tinted glass and glows are downstream of.
+      // The wire light lives in raw sRGB (see resolveCssColor): the flow
+      // color straight — the energy the tinted glass is downstream of.
       const rawFlow = resolveCssColor(hostEl, flowColor, true);
-      t.glow.copy(rawFlow).lerp(WHITE, 0.83);
       t.wire.copy(rawFlow);
       const backdropMat = backdrop.material as THREE.ShaderMaterial;
       (backdropMat.uniforms.uBase.value as THREE.Color).copy(
@@ -516,35 +569,33 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
       hostEl.closest<HTMLElement>(".flow-diagram-canvas"));
     const canvasRect = canvasEl?.getBoundingClientRect() ?? hostRect;
     const focalY = window.innerHeight * FOCAL_LINE;
-    const focalHostY = focalY - hostRect.top;
 
-    backdrop.position.set(0, 0, -120);
+    backdrop.position.set(0, 0, -720);
     backdrop.scale.set(size.width, size.height, 1);
     const backdropMat = backdrop.material as THREE.ShaderMaterial;
     backdropMat.uniforms.uLift.value = p.glass.baseLift;
 
-    // The warm pool at the focal line (off until dialed up): a wide additive
-    // ellipse of POOL_WARM riding the plane of focus.
-    const poolMesh = poolRef.current;
-    if (poolMesh) {
-      poolMesh.visible = p.light.poolGain > 0.0005;
-      poolMesh.position.set(0, size.height / 2 - focalHostY, -110);
-      poolMesh.scale.set(size.width * 1.5, p.light.poolHeight, 1);
-      const poolMat = poolMesh.material as THREE.ShaderMaterial;
-      (poolMat.uniforms.uColor.value as THREE.Color).copy(POOL_WARM);
-      poolMat.uniforms.uAlpha.value = p.light.poolGain;
-    }
-
-    // The lights read their knobs live; the key tracks the focal line, so
-    // the slab bevels catch their sheen at the plane of focus.
+    // The studio rig reads its knobs live: the key aimed by angle/elevation
+    // (directional — only the direction matters), the cool fill mirrored
+    // opposite it, slightly lower.
     if (ambientRef.current) ambientRef.current.intensity = p.light.ambient;
     const keyLight = keyLightRef.current;
-    if (keyLight) {
-      keyLight.intensity = p.light.key;
+    const fillLight = fillLightRef.current;
+    if (keyLight && fillLight) {
+      const a = (p.light.keyAngle * Math.PI) / 180;
+      const e = (p.light.keyElevation * Math.PI) / 180;
+      const r = Math.max(size.width, size.height);
+      keyLight.intensity = p.light.keyIntensity;
       keyLight.position.set(
-        -0.3 * size.width,
-        size.height / 2 - focalHostY,
-        520,
+        Math.cos(a) * Math.cos(e) * r,
+        Math.sin(a) * Math.cos(e) * r,
+        Math.sin(e) * r,
+      );
+      fillLight.intensity = p.light.fillIntensity;
+      fillLight.position.set(
+        -Math.cos(a) * Math.cos(e) * r,
+        -Math.sin(a) * Math.cos(e) * r,
+        Math.sin(e) * r * 0.8,
       );
     }
 
@@ -559,8 +610,7 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
       const r = el.getBoundingClientRect();
       if (r.width < 1 || r.height < 1) continue;
       const mesh = pool[slot];
-      const glow = glows[slot];
-      if (!mesh || !glow) break;
+      if (!mesh) break;
       slot += 1;
 
       // Host-relative CSS px → world units. The camera frustum spans the
@@ -571,7 +621,6 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
       const wx = cx - size.width / 2;
       const wy = size.height / 2 - cy;
       mesh.visible = true;
-      mesh.position.set(wx, wy, 0);
 
       // The slab is a real rounded volume sized to the tile, not a scaled
       // unit quad: non-uniform scale would distort the corner radius. Sizes
@@ -601,9 +650,12 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
       }
 
       // The same grade the DOM tiles run, computed from the live box rather
-      // than the measured-centers cache — fresher, and free.
+      // than the measured-centers cache — fresher, and free. The slab SINKS
+      // by it: recession is depth now, and the DoF pass turns that depth
+      // into whole-slab blur.
       const focus = focusFromDist(r.top + r.height / 2 - focalY);
       focusMap.set(id, focus);
+      mesh.position.set(wx, wy, zFor(focus));
       // The material scalars re-apply every frame straight off glassParams:
       // drei exposes each custom uniform as a live accessor on the instance,
       // so this is uniform writes, not shader rebuilds.
@@ -613,10 +665,16 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
       material.thickness = g.thickness;
       material.ior = g.ior;
       material.chromaticAberration = g.chromaticAberration;
-      material.anisotropicBlur = g.anisotropicBlur;
+      material.anisotropicBlur = g.frostBlur;
       material.distortion = g.distortion;
       material.distortionScale = g.distortionScale;
       material.temporalDistortion = g.temporalDistortion;
+      material.roughness = g.frost;
+      // The clamp keeps the compiled program's clearcoat branch alive: three
+      // keys the shader on clearcoat > 0, so a true 0 here would need a
+      // rebuild to ever come back.
+      material.clearcoat = Math.max(g.clearcoat, 0.001);
+      material.clearcoatRoughness = g.clearcoatRoughness;
       const shape = el.dataset.shape;
       const t = tints.current;
       material.color
@@ -630,19 +688,10 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
                 : t.step,
         )
         .multiplyScalar(g.dimReceded + (1 - g.dimReceded) * focus);
-      material.roughness =
-        g.roughnessFocused +
-        (1 - focus) * (g.roughnessReceded - g.roughnessFocused);
-
-      // The focal glow rides the slab: same DOM box the ::before had
-      // (min(120%, 64rem) × 130%, centered), gain quadratic in focus so it
-      // exists only AT the plane and never reads as a permanent halo.
-      glow.visible = true;
-      glow.position.set(wx, wy, -60);
-      glow.scale.set(Math.min(1.2 * r.width, 1024), 1.3 * r.height, 1);
-      const glowMat = glow.material as THREE.ShaderMaterial;
-      (glowMat.uniforms.uColor.value as THREE.Color).copy(t.glow);
-      glowMat.uniforms.uAlpha.value = focus * focus * p.light.glowGain;
+      // Self-glow tinted by the flow color, graded by focus: the step at
+      // the plane carries the light, and bloom picks it up.
+      material.emissive.copy(t.flow);
+      material.emissiveIntensity = g.emissive * (0.25 + 0.75 * focus);
 
       PROJECTED.set(
         mesh.position.x - r.width / 2,
@@ -663,8 +712,6 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
     for (let i = slot; i < POOL_SIZE; i += 1) {
       const mesh = pool[i];
       if (mesh) mesh.visible = false;
-      const glow = glows[i];
-      if (glow) glow.visible = false;
     }
 
     // The wire light rides the same measured segments the SVG draws, in the
@@ -679,7 +726,7 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
       wireGroup.position.set(
         canvasRect.left - hostRect.left - size.width / 2,
         size.height / 2 - (canvasRect.top - hostRect.top),
-        -40,
+        0,
       );
       const now = state.clock.elapsedTime;
       const tint = tints.current;
@@ -710,11 +757,11 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
           cache.id = seg.id;
           cache.swapT = now;
         }
-        if (cache.d !== seg.d || cache.hw !== w.halfWidth) {
+        if (cache.d !== seg.d || cache.hw !== w.haloWidth) {
           cache.d = seg.d;
-          cache.hw = w.halfWidth;
+          cache.hw = w.haloWidth;
           mesh.geometry.dispose();
-          mesh.geometry = buildRibbon(samplePath(seg.d), w.halfWidth);
+          mesh.geometry = buildRibbon(samplePath(seg.d), w.haloWidth);
         }
 
         mesh.visible = true;
@@ -724,28 +771,46 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
         );
         const fFrom = focusMap.get(seg.from) ?? 0.5;
         const fTo = focusMap.get(seg.to) ?? 0.5;
-        const focus = w.floor + (1 - w.floor) * ((fFrom + fTo) / 2);
+        const grade = w.floor + (1 - w.floor) * ((fFrom + fTo) / 2);
         const isReturn = seg.kind === "return";
-        const mat = mesh.material as THREE.ShaderMaterial;
-        (mat.uniforms.uColor.value as THREE.Color).copy(tint.wire);
+        const u = (mesh.material as THREE.ShaderMaterial).uniforms;
+        (u.uColor.value as THREE.Color).copy(tint.wire);
         // Sequential wires sweep in with the SVG core's draw; the return
-        // edge fades in whole, like its dashed stroke does.
-        mat.uniforms.uReveal.value = isReturn ? 1 : env;
-        mat.uniforms.uAlpha.value =
-          (isReturn ? w.returnGain : w.gain) * focus * (isReturn ? env : 1);
+        // edge fades in whole, like its dashed stroke does, and runs dim.
+        u.uReveal.value = isReturn ? 1 : env;
+        u.uEnergy.value = grade * (isReturn ? w.returnDim * env : 1);
+        u.uCoreGain.value = w.coreGain;
+        u.uCore.value = Math.min(w.coreWidth / Math.max(w.haloWidth, 0.5), 1);
+        u.uHaloGain.value = w.haloGain;
+        u.uPulseGain.value = w.pulseGain;
+        u.uPulseSpeed.value = w.pulseSpeed;
+        u.uPulseSpacing.value = w.pulseSpacing;
+        u.uPulseLength.value = w.pulseLength;
+        u.uLen.value =
+          (mesh.geometry.userData as { length?: number }).length ?? 1;
+        u.uTime.value = now;
+        // The ribbon rides its endpoints' depth (see RIBBON_VERT), set a
+        // step behind them so it never wins the depth test against the
+        // slabs it plugs into.
+        u.uZFrom.value = zFor(fFrom) - WIRE_Z_SET;
+        u.uZTo.value = zFor(fTo) - WIRE_Z_SET;
         wireDebug.push({
           id: seg.id,
-          alpha: mat.uniforms.uAlpha.value as number,
-          reveal: mat.uniforms.uReveal.value as number,
+          alpha: u.uEnergy.value as number,
+          reveal: u.uReveal.value as number,
         });
 
         if (tailPort) {
           tailPort.visible = true;
-          tailPort.position.set(seg.tail.x, -seg.tail.y, 0);
+          tailPort.position.set(
+            seg.tail.x,
+            -seg.tail.y,
+            zFor(fFrom) - WIRE_Z_SET,
+          );
           tailPort.scale.set(w.portSize, w.portSize, 1);
-          const pm = tailPort.material as THREE.ShaderMaterial;
-          (pm.uniforms.uColor.value as THREE.Color).copy(tint.wire);
-          pm.uniforms.uAlpha.value =
+          const pm = (tailPort.material as THREE.ShaderMaterial).uniforms;
+          (pm.uColor.value as THREE.Color).copy(tint.wire);
+          pm.uGain.value =
             w.portGain *
             (w.floor + (1 - w.floor) * fFrom) *
             Math.min(env * 3, 1) *
@@ -753,13 +818,17 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
         }
         if (headPort) {
           headPort.visible = true;
-          headPort.position.set(seg.head.x, -seg.head.y, 0);
+          headPort.position.set(
+            seg.head.x,
+            -seg.head.y,
+            zFor(fTo) - WIRE_Z_SET,
+          );
           headPort.scale.set(w.headSize, w.headSize, 1);
-          const pm = headPort.material as THREE.ShaderMaterial;
-          (pm.uniforms.uColor.value as THREE.Color).copy(tint.wire);
+          const pm = (headPort.material as THREE.ShaderMaterial).uniforms;
+          (pm.uColor.value as THREE.Color).copy(tint.wire);
           // The head lights when the sweep arrives, like the chevron's
           // delayed fade in the SVG.
-          pm.uniforms.uAlpha.value =
+          pm.uGain.value =
             w.headGain *
             (w.floor + (1 - w.floor) * fTo) *
             (isReturn ? env : Math.max((env - 0.7) / 0.3, 0)) *
@@ -772,24 +841,23 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
     // instances outlive the composer, so these writes stay valid (and
     // harmless) while post.enabled is off.
     const fx = postFxRef.current;
+    fx.dof.cocMaterial.focusDistance = CAMERA_DIST;
+    fx.dof.cocMaterial.focusRange = p.depth.focusRange;
+    fx.dof.bokehScale = p.depth.bokehScale;
     fx.bloom.intensity = p.post.bloomIntensity;
     fx.bloom.luminanceMaterial.threshold = p.post.bloomThreshold;
     fx.bloom.luminanceMaterial.smoothing = p.post.bloomSmoothing;
     fx.noise.blendMode.opacity.value = p.post.grainOpacity;
 
-    // The shared transmission pass: the base plane, glows, and wire light
-    // from the same camera, so the material's screen-space buffer sampling
-    // lines up. The base plane shows HERE ONLY — on screen the canvas stays
+    // The shared transmission pass: the base plane and wire light from the
+    // same camera, so the material's screen-space buffer sampling lines up.
+    // The base plane shows HERE ONLY — on screen the canvas stays
     // transparent and the real page plays the part the plane plays inside
     // the buffer. The light shaders switch to linear output for this pass
     // (see uLinearOut).
     const setLinearOut = (value: number) => {
       backdropMat.uniforms.uLinearOut.value = value;
-      if (poolMesh) {
-        (poolMesh.material as THREE.ShaderMaterial).uniforms.uLinearOut.value =
-          value;
-      }
-      for (const list of [glows, wires, ports]) {
+      for (const list of [wires, ports]) {
         for (const m of list) {
           if (m) {
             (m.material as THREE.ShaderMaterial).uniforms.uLinearOut.value =
@@ -825,14 +893,22 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
 
   return (
     <>
-      {/* Broad, diffuse light: a soft ambient bed plus one wide key whose
-          height tracks the focal line each frame, so the slab bevels carry
-          a sheen at the plane of focus and never a glint. */}
+      {/* The studio rig: a soft ambient bed, a warm key aimed by the
+          light.keyAngle/keyElevation params, and a cool counter-fill
+          mirrored opposite it — so the bevels and clearcoat carry real
+          speculars from a direction Pete points, not a hardcoded one. */}
       <ambientLight ref={ambientRef} intensity={0.55} />
       <directionalLight
         ref={keyLightRef}
-        position={[-0.3 * size.width, 0.4 * size.height, 520]}
-        intensity={1.1}
+        color={KEY_COLOR}
+        position={[-0.5 * size.width, 0.5 * size.height, 600]}
+        intensity={1.2}
+      />
+      <directionalLight
+        ref={fillLightRef}
+        color={FILL_COLOR}
+        position={[0.5 * size.width, -0.5 * size.height, 480]}
+        intensity={0.45}
       />
       {/* The transmission base: visible during the FBO pass only (the frame
           loop toggles it). The screen never shows this plane — there the
@@ -854,63 +930,14 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
           color factors add (ONE, ONE) while the alpha factors keep the
           destination's (ZERO, ONE). Stock AdditiveBlending also ADDS alpha,
           and a light quad that lands alpha 1 composites as an opaque black
-          box over the page below. */}
-      {/* The focal warm pool (glassParams.light.poolGain, default 0): the
-          one piece of scene atmosphere kept from the old light bed, off
-          until dialed up. */}
-      <mesh ref={poolRef} visible={false} renderOrder={-2}>
-        <planeGeometry args={[1, 1]} />
-        <shaderMaterial
-          vertexShader={QUAD_VERT}
-          fragmentShader={GLOW_FRAG}
-          uniforms={{
-            uColor: { value: POOL_WARM.clone() },
-            uAlpha: { value: 0 },
-            uRadii: { value: new THREE.Vector2(0.5, 0.5) },
-            uLinearOut: { value: 0 },
-          }}
-          transparent
-          depthWrite={false}
-          blending={THREE.CustomBlending}
-          blendSrc={THREE.OneFactor}
-          blendDst={THREE.OneFactor}
-          blendSrcAlpha={THREE.ZeroFactor}
-          blendDstAlpha={THREE.OneFactor}
-        />
-      </mesh>
-      {Array.from({ length: POOL_SIZE }, (_, i) => (
-        <mesh
-          key={`glow-${i}`}
-          ref={(mesh: THREE.Mesh | null) => {
-            glowRefs.current[i] = mesh;
-          }}
-          visible={false}
-          renderOrder={-1}
-        >
-          <planeGeometry args={[1, 1]} />
-          <shaderMaterial
-            vertexShader={QUAD_VERT}
-            fragmentShader={GLOW_FRAG}
-            uniforms={{
-              uColor: { value: new THREE.Color(1, 1, 1) },
-              uAlpha: { value: 0 },
-              uRadii: { value: new THREE.Vector2(0.5, 0.42) },
-              uLinearOut: { value: 0 },
-            }}
-            transparent
-            depthWrite={false}
-            blending={THREE.CustomBlending}
-            blendSrc={THREE.OneFactor}
-            blendDst={THREE.OneFactor}
-            blendSrcAlpha={THREE.ZeroFactor}
-            blendDstAlpha={THREE.OneFactor}
-          />
-        </mesh>
-      ))}
-      {/* The wire light: additive ribbons under the SVG cores plus a hot
+          box over the page below.
+
+          The wire light: additive ribbons under the SVG cores plus a hot
           spot at each port, grouped so one canvas-anchored transform moves
-          them all. Between the focal glows (-60) and the slabs (0), so the
-          glass refracts the conduit light like everything else in the bed. */}
+          them all. Unlike the old flat quads these WRITE DEPTH (with a
+          discard guard for dim pixels), riding their endpoints' recession
+          so the DoF pass grades them with the slabs instead of far-blurring
+          them into mush. */}
       <group ref={wireGroupRef}>
         {Array.from({ length: WIRE_POOL }, (_, i) => (
           <mesh
@@ -926,12 +953,22 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
               fragmentShader={RIBBON_FRAG}
               uniforms={{
                 uColor: { value: new THREE.Color(1, 1, 1) },
-                uAlpha: { value: 0 },
+                uEnergy: { value: 0 },
                 uReveal: { value: 0 },
+                uCoreGain: { value: 0 },
+                uCore: { value: 0.12 },
+                uHaloGain: { value: 0 },
+                uPulseGain: { value: 0 },
+                uPulseSpeed: { value: 0 },
+                uPulseSpacing: { value: 320 },
+                uPulseLength: { value: 90 },
+                uLen: { value: 1 },
+                uTime: { value: 0 },
+                uZFrom: { value: -WIRE_Z_SET },
+                uZTo: { value: -WIRE_Z_SET },
                 uLinearOut: { value: 0 },
               }}
               transparent
-              depthWrite={false}
               blending={THREE.CustomBlending}
               blendSrc={THREE.OneFactor}
               blendDst={THREE.OneFactor}
@@ -952,15 +989,14 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
             <planeGeometry args={[1, 1]} />
             <shaderMaterial
               vertexShader={QUAD_VERT}
-              fragmentShader={GLOW_FRAG}
+              fragmentShader={PORT_FRAG}
               uniforms={{
                 uColor: { value: new THREE.Color(1, 1, 1) },
-                uAlpha: { value: 0 },
-                uRadii: { value: new THREE.Vector2(0.5, 0.5) },
+                uGain: { value: 0 },
+                uCore: { value: 0.32 },
                 uLinearOut: { value: 0 },
               }}
               transparent
-              depthWrite={false}
               blending={THREE.CustomBlending}
               blendSrc={THREE.OneFactor}
               blendDst={THREE.OneFactor}
@@ -978,23 +1014,31 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
           }}
           visible={false}
         >
+          {/* clearcoat clamps to ≥0.001: three compiles the clearcoat
+              program branch only when the value is nonzero, so a true 0
+              here would dead-end the panel slider after first compile. */}
           <MeshTransmissionMaterial
             buffer={buffer.texture}
             transmission={glassParams.glass.transmission}
             thickness={glassParams.glass.thickness}
             ior={glassParams.glass.ior}
-            roughness={glassParams.glass.roughnessFocused}
+            roughness={glassParams.glass.frost}
             chromaticAberration={glassParams.glass.chromaticAberration}
-            anisotropicBlur={glassParams.glass.anisotropicBlur}
+            anisotropicBlur={glassParams.glass.frostBlur}
             distortion={glassParams.glass.distortion}
             distortionScale={glassParams.glass.distortionScale}
             temporalDistortion={glassParams.glass.temporalDistortion}
+            clearcoat={Math.max(glassParams.glass.clearcoat, 0.001)}
+            clearcoatRoughness={glassParams.glass.clearcoatRoughness}
             samples={4}
           />
         </mesh>
       ))}
       {glassParams.post.enabled && (
         <EffectComposer multisampling={4}>
+          {/* Defocus happens in the lens before light hits film: DoF first,
+              then bloom spreads what survives, grain last stays crisp. */}
+          <primitive object={postFx.dof} />
           <primitive object={postFx.bloom} />
           <primitive object={postFx.noise} />
         </EffectComposer>
@@ -1027,7 +1071,7 @@ export default function GlassCanvas(props: GlassLayerProps) {
   // frame is already current. (Hidden tabs need nothing: rAF stops there.)
   const [frameloop, setFrameloop] = useState<"always" | "never">("always");
   useEffect(() => {
-    const el = props.host.current;
+    const el = props.hostRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       ([entry]) => setFrameloop(entry.isIntersecting ? "always" : "never"),
@@ -1035,7 +1079,36 @@ export default function GlassCanvas(props: GlassLayerProps) {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [props.host]);
+  }, [props.hostRef]);
+
+  // Pin the full-bleed host to the viewport's left edge, exactly. The CSS
+  // calc on .flow-gl-host centers 100vw on the COLUMN, and the column sits
+  // a couple rem off viewport center (asymmetric rails), so measure where
+  // the host actually lands with no margin and pull it to zero. Slab
+  // registration doesn't care — the frame loop re-reads the canvas rect
+  // every frame — this only moves where the PAINT edge falls. Body resize
+  // catches breakpoint swaps and settling content, same as the depth
+  // engine's own observer.
+  useEffect(() => {
+    const hostRef = props.hostRef;
+    if (!hostRef.current) return;
+    const place = () => {
+      const el = hostRef.current;
+      if (!el) return;
+      el.style.marginLeft = "0px";
+      const { left } = el.getBoundingClientRect();
+      el.style.marginLeft = `${-left}px`;
+    };
+    place();
+    window.addEventListener("resize", place);
+    const bodyRo = new ResizeObserver(place);
+    bodyRo.observe(document.body);
+    return () => {
+      window.removeEventListener("resize", place);
+      bodyRo.disconnect();
+      if (hostRef.current) hostRef.current.style.marginLeft = "";
+    };
+  }, [props.hostRef]);
 
   // The tuning panel: every dev build, production behind ?tune. Lazy, so
   // tweakpane's chunk never loads for a visitor.
@@ -1047,9 +1120,18 @@ export default function GlassCanvas(props: GlassLayerProps) {
 
   return (
     <>
+      {/* The camera sits CAMERA_DIST away, not 600: ortho framing doesn't
+          care, but the DoF pass measures RADIAL distance to the lens, and
+          from far away the focal sphere is locally flat — a slab at the
+          screen edge reads the same focus as one dead center. */}
       <Canvas
         orthographic
-        camera={{ position: [0, 0, 600], near: 0.1, far: 2000, zoom: 1 }}
+        camera={{
+          position: [0, 0, CAMERA_DIST],
+          near: 100,
+          far: 40000,
+          zoom: 1,
+        }}
         dpr={[1, 2]}
         frameloop={frameloop}
         gl={{

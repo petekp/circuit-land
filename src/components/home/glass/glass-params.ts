@@ -6,6 +6,10 @@
    unmounts the EffectComposer — the panel bumps the version below and the
    scene re-renders through useSyncExternalStore.
 
+   The vocabulary follows the Ever AI background effect (arc-design-studio):
+   physical, named controls — light angle and elevation, polish, frost,
+   emissive — each with visible authority, instead of abstract gains.
+
    The defaults are the values the showpiece shipped with, so a reset always
    lands on a known-good look. When a dialed-in set should become the new
    baseline, update GLASS_DEFAULTS and the look is committed. */
@@ -17,14 +21,22 @@ export type GlassParams = {
     thickness: number;
     ior: number;
     chromaticAberration: number;
-    anisotropicBlur: number;
+    // Body roughness: how milky the transmitted page reads. One value for
+    // every slab — recession is depth of field's job now, not roughness's.
+    frost: number;
+    // Directional smearing of the transmission blur (anisotropicBlur).
+    frostBlur: number;
     distortion: number;
     distortionScale: number;
     temporalDistortion: number;
-    // Roughness rides focus between these two ends — the GL analog of the
-    // CSS blur() riding --illum.
-    roughnessFocused: number;
-    roughnessReceded: number;
+    // The polished top layer: a clearcoat catching the key light. Sheen
+    // breadth rides clearcoatRoughness — 0 is a pinpoint glint, 1 a broad
+    // soft sheen.
+    clearcoat: number;
+    clearcoatRoughness: number;
+    // Self-glow tinted by the flow color, graded by focus so the step at
+    // the plane carries the light. Feeds bloom.
+    emissive: number;
     // The in-material recession grade: the tint multiplies transmitted
     // light, so scaling it down moves a receded slab out of the light.
     dimReceded: number;
@@ -45,28 +57,53 @@ export type GlassParams = {
   };
   light: {
     ambient: number;
-    key: number;
-    // The focal glow behind whichever tile holds the plane.
-    glowGain: number;
-    // The warm pool at the focal line. Off by default: with the painted
-    // light bed gone, the page background owns the atmosphere and the pool
-    // is opt-in warmth.
-    poolGain: number;
-    poolHeight: number;
+    // The key light, aimed like a studio lamp: angle in degrees around the
+    // canvas (0 = from the right, 90 = from above), elevation in degrees off
+    // the glass plane (low = grazing side-light with dramatic bevels, 90 =
+    // flat overhead).
+    keyIntensity: number;
+    keyAngle: number;
+    keyElevation: number;
+    // The cool counter-light opposite the key (the classic two-light setup):
+    // keeps the shadow-side bevels from going dead.
+    fillIntensity: number;
+  };
+  depth: {
+    // How far a fully receded slab sinks behind the focal plane, in world px.
+    // The scroll moves slabs through this range; depth of field reads it.
+    zSpread: number;
+    // The sharp band around the focal plane, world px. Everything inside is
+    // crisp; blur ramps in past it.
+    focusRange: number;
+    // The bokeh kernel scale: how big the blur gets at full recession.
+    bokehScale: number;
   };
   wires: {
-    gain: number;
-    returnGain: number;
+    // The conduit light: a hot core (HDR — above 1 it excites bloom) inside
+    // a soft halo skirt. Widths in px.
+    coreGain: number;
+    coreWidth: number;
+    haloGain: number;
+    haloWidth: number;
+    // The energy pulses gliding tail-to-head: comet brightness, speed in
+    // px/s, spacing between comets in px, tail length in px.
+    pulseGain: number;
+    pulseSpeed: number;
+    pulseSpacing: number;
+    pulseLength: number;
     // The glow floor when a wire's endpoints recede.
     floor: number;
-    halfWidth: number;
-    portGain: number;
-    headGain: number;
-    portSize: number;
-    headSize: number;
-    // The SVG cores draw in staggered; the glow arrives on the same clock.
+    // The SVG cores draw in staggered; the light arrives on the same clock.
     stagger: number;
     fadeIn: number;
+    // Port hot spots at wire terminals; the head lights when the sweep
+    // arrives.
+    portGain: number;
+    portSize: number;
+    headGain: number;
+    headSize: number;
+    // The dashed return edge runs dimmer than the forward path.
+    returnDim: number;
   };
   post: {
     // Structural: mounts/unmounts the composer. Changing it must bump.
@@ -85,12 +122,14 @@ export const GLASS_DEFAULTS: GlassParams = {
     thickness: 22,
     ior: 1.22,
     chromaticAberration: 0.04,
-    anisotropicBlur: 0.32,
+    frost: 0.3,
+    frostBlur: 0.32,
     distortion: 0.14,
     distortionScale: 0.6,
     temporalDistortion: 0.02,
-    roughnessFocused: 0.3,
-    roughnessReceded: 0.62,
+    clearcoat: 0.55,
+    clearcoatRoughness: 0.22,
+    emissive: 0.05,
     dimReceded: 0.78,
     baseLift: 0.08,
   },
@@ -103,22 +142,33 @@ export const GLASS_DEFAULTS: GlassParams = {
   },
   light: {
     ambient: 0.55,
-    key: 1.1,
-    glowGain: 0.163,
-    poolGain: 0,
-    poolHeight: 520,
+    keyIntensity: 1.2,
+    keyAngle: 155,
+    keyElevation: 38,
+    fillIntensity: 0.45,
+  },
+  depth: {
+    zSpread: 170,
+    focusRange: 90,
+    bokehScale: 2.4,
   },
   wires: {
-    gain: 0.11,
-    returnGain: 0.055,
+    coreGain: 1.6,
+    coreWidth: 1.6,
+    haloGain: 0.16,
+    haloWidth: 14,
+    pulseGain: 1.2,
+    pulseSpeed: 120,
+    pulseSpacing: 320,
+    pulseLength: 90,
     floor: 0.15,
-    halfWidth: 5,
-    portGain: 0.35,
-    headGain: 0.25,
-    portSize: 20,
-    headSize: 14,
     stagger: 0.05,
     fadeIn: 0.45,
+    portGain: 0.9,
+    portSize: 26,
+    headGain: 0.8,
+    headSize: 20,
+    returnDim: 0.45,
   },
   post: {
     enabled: true,
@@ -158,6 +208,7 @@ export function resetGlassParams() {
   Object.assign(glassParams.glass, fresh.glass);
   Object.assign(glassParams.tints, fresh.tints);
   Object.assign(glassParams.light, fresh.light);
+  Object.assign(glassParams.depth, fresh.depth);
   Object.assign(glassParams.wires, fresh.wires);
   Object.assign(glassParams.post, fresh.post);
   bumpGlassParams();

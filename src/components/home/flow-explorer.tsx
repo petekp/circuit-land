@@ -2228,7 +2228,7 @@ function FlowDiagram({
       {glActive ? (
         <div ref={glassHostRef} aria-hidden="true" className="flow-gl-host">
           <GlassLayer
-            host={glassHostRef}
+            hostRef={glassHostRef}
             nodes={nodeRefs}
             flowColor={flow.color}
             segments={segments}

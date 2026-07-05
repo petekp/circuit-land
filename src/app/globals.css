@@ -790,6 +790,15 @@
   height: 100dvh;
   margin-bottom: -100dvh;
   pointer-events: none;
+  /* Full-bleed: bloom halos and bokeh die at the canvas paint edge, so the
+     canvas covers the whole viewport and the rails sit on top of it (they
+     carry z-index: 1). This calc centers on the COLUMN, which sits a couple
+     rem off viewport center (the rails are asymmetric) — GlassCanvas
+     measures the real offset on mount and pins margin-left exactly. The
+     html overflow-x: clip up top eats the classic-scrollbar sliver 100vw
+     drags in. */
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
 }
 
 /* When the WebGL glass is live (data-gl on the canvas), the DOM tiles hand
@@ -938,6 +947,16 @@
 
 .flow-focus-info {
   min-height: 5rem;
+}
+
+/* The GL canvas bleeds under the rails now (see .flow-gl-host); lift them
+   above it. The lg block below re-declares position: sticky — later rule,
+   same specificity — so relative only holds in the stacked layout, while
+   the z-index carries through both. */
+.flow-focus-nav,
+.flow-focus-info {
+  position: relative;
+  z-index: 1;
 }
 
 @media (min-width: 1024px) {

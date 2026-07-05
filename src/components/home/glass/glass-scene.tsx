@@ -25,8 +25,9 @@ export type GlassSegment = {
 export type GlassLayerProps = {
   // The sticky full-viewport element the canvas fills. Slab positions are
   // computed relative to its live box, so the world/CSS mapping holds while
-  // the host rides the viewport.
-  host: RefObject<HTMLDivElement | null>;
+  // the host rides the viewport. Named *Ref so the React Compiler knows
+  // writes through .current are ref mutations, not props mutations.
+  hostRef: RefObject<HTMLDivElement | null>;
   // The diagram's live node registry (step id → visual tile element). The GL
   // frame loop reads each element's box every frame; exiting tiles stay in
   // the map until unmount, so their slabs track the exit animation too.
