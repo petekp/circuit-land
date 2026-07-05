@@ -617,11 +617,13 @@ function resolveSelection(
 type TourVariant = "spotlight" | "glow" | "focus";
 
 // How far a non-target tile fades when a feature is active. Glow does not dim at
-// all (it adds emphasis to the target instead); focus also blurs the rest.
+// all (it adds emphasis to the target instead); focus adds a light blur on top.
+// Focus keeps the fade gentle: the rest of the diagram should read as quieted
+// but still legible, not fogged out.
 const DIM_OPACITY: Record<TourVariant, number> = {
   spotlight: 0.34,
   glow: 1,
-  focus: 0.5,
+  focus: 0.6,
 };
 
 // Fold the dim/blur into the tile's existing animate target so Framer transitions
@@ -635,7 +637,7 @@ function withDim(
   const opacity = DIM_OPACITY[variant];
   const animate = { ...(base.animate as Record<string, unknown>) };
   if (opacity < 1) animate.opacity = opacity;
-  if (variant === "focus" && !reduceMotion) animate.filter = "blur(2px)";
+  if (variant === "focus" && !reduceMotion) animate.filter = "blur(1.5px)";
   return { ...base, animate: animate as MotionProps["animate"] };
 }
 
@@ -839,7 +841,9 @@ const EFFORT_PIPS: Record<Effort, number> = {
 };
 
 function ModelBadge({ step, hot }: { step: StepSpec; hot?: boolean }) {
-  if (!step.model) return null;
+  // "—" is the data's spelling of "no model" (Record); either way, no badge
+  // rather than a dangling dash pill in the corner.
+  if (!step.model || step.model === "—") return null;
   const tier = step.tier ?? "none";
   const { className, style } = tierStyle(tier);
   const pips = EFFORT_PIPS[step.effort ?? "none"];
@@ -856,7 +860,7 @@ function ModelBadge({ step, hot }: { step: StepSpec; hot?: boolean }) {
     step.shape === "fanout" && branchCount ? `${branchCount} × ` : "";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[10.5px] ${className} ${hot ? "flow-badge-hot" : ""}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[11px] ${className} ${hot ? "flow-badge-hot" : ""}`}
       style={style}
     >
       {prefix}
@@ -894,7 +898,7 @@ function DetailRow({
     state === "hot" ? "flow-row-hot" : state === "cool" ? "flow-row-cool" : "";
   return (
     <div className={`flex items-start gap-2 ${cls}`}>
-      <span className="w-10 shrink-0 pt-[3px] text-[9px] font-medium uppercase tracking-[0.13em] text-muted-foreground/70">
+      <span className="w-11 shrink-0 pt-[2px] text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
         {label}
       </span>
       <div className="flex flex-1 flex-wrap items-center gap-1">{children}</div>
@@ -902,31 +906,20 @@ function DetailRow({
   );
 }
 
-function Chip({
-  children,
-  kind,
-}: {
-  children: ReactNode;
-  kind: "context" | "tool" | "skill";
-}) {
-  const style: CSSProperties =
-    kind === "tool"
-      ? { background: "color-mix(in oklab, var(--signal) 13%, transparent)" }
-      : kind === "skill"
-        ? { background: "color-mix(in oklab, var(--foreground) 8%, transparent)" }
-        : { background: "color-mix(in oklab, var(--muted) 70%, transparent)" };
-  const text =
-    kind === "tool"
-      ? "text-signal"
-      : kind === "skill"
-        ? "text-foreground/85"
-        : "text-muted-foreground";
+// One quiet material for every scope chip: the row label already names the
+// kind, so per-kind tints read as noise at ten tiles, and the tier badge
+// stays the tile's one color moment. A long token truncates (full text in the
+// title attribute) instead of wrapping mid-word into a ragged extra line.
+function Chip({ children }: { children: string }) {
   return (
     <span
-      className={`inline-flex min-w-0 max-w-full items-center rounded-md px-1.5 py-[2px] font-mono text-[10.5px] leading-tight [overflow-wrap:anywhere] ${text}`}
-      style={style}
+      title={children}
+      className="inline-flex min-w-0 max-w-full items-center rounded-md px-1.5 py-[2px] font-mono text-[11px] leading-tight text-foreground/80"
+      style={{
+        background: "color-mix(in oklab, var(--foreground) 7%, transparent)",
+      }}
     >
-      {children}
+      <span className="truncate">{children}</span>
     </span>
   );
 }
@@ -962,21 +955,17 @@ function StepDetail({
       {hasContext ? (
         <DetailRow label="ctx" state={rowState("ctx")}>
           {step.context!.map((c) => (
-            <Chip key={c} kind="context">
-              {c}
-            </Chip>
+            <Chip key={c}>{c}</Chip>
           ))}
         </DetailRow>
       ) : null}
       {hasTools ? (
         <DetailRow label="tools" state={rowState("tools")}>
           {step.tools!.allow.map((t) => (
-            <Chip key={t} kind="tool">
-              {t}
-            </Chip>
+            <Chip key={t}>{t}</Chip>
           ))}
           {step.tools!.blocked ? (
-            <span className="ml-0.5 inline-flex items-center gap-1 font-mono text-[10.5px] text-destructive/85">
+            <span className="ml-0.5 inline-flex items-center gap-1 font-mono text-[11px] text-destructive/85">
               <LockIcon />
               {step.tools!.blocked} blocked
             </span>
@@ -986,14 +975,12 @@ function StepDetail({
       {hasSkills ? (
         <DetailRow label="skills" state={rowState("skills")}>
           {step.skills!.map((s) => (
-            <Chip key={s} kind="skill">
-              {s}
-            </Chip>
+            <Chip key={s}>{s}</Chip>
           ))}
         </DetailRow>
       ) : null}
       {showNote ? (
-        <span className="font-mono text-[10.5px] text-muted-foreground">
+        <span className="font-mono text-[11px] text-muted-foreground">
           {step.note}
         </span>
       ) : null}
@@ -1160,13 +1147,13 @@ function StepTile({
         </span>
         <ModelBadge step={step} hot={highlightElement === "model"} />
       </div>
-      <p className="mt-1 text-[11.5px] leading-snug text-muted-foreground">
+      <p className="mt-1 text-[12px] leading-snug text-muted-foreground">
         {step.role}
       </p>
 
       {step.shape === "subrun" && step.note ? (
         <span
-          className={`mt-2 inline-flex w-fit items-center rounded-md px-1.5 py-[2px] font-mono text-[10.5px] text-signal ${highlightElement === "note" ? "flow-note-hot" : ""}`}
+          className={`mt-2 inline-flex w-fit items-center rounded-md px-1.5 py-[2px] font-mono text-[11px] text-signal ${highlightElement === "note" ? "flow-note-hot" : ""}`}
           style={{
             background: "color-mix(in oklab, var(--signal) 13%, transparent)",
           }}
@@ -1195,7 +1182,7 @@ function StepTile({
       ) : null}
 
       {isLoop && step.note ? (
-        <span className="mt-2 font-mono text-[10.5px] text-muted-foreground">
+        <span className="mt-2 font-mono text-[11px] text-muted-foreground">
           {step.note}
         </span>
       ) : null}
@@ -1705,13 +1692,31 @@ function FlowDiagram({
     const win = windowRef.current;
     const focusNow = focusRef.current;
     if (!win || !focusNow) return;
+    // When the frame has no scroll range (the stacked layout opens it to full
+    // height; a short diagram can also fit whole), the page is the scroll
+    // container instead. Bring the focal tile to the viewport there — but only
+    // when it actually sits outside it, so selecting a visible tile never
+    // jolts the page. Page scrolls don't fire the frame's scroll handler, so
+    // this path needs no programmatic-scroll latch.
+    if (win.scrollHeight - win.clientHeight <= 1) {
+      const el = nodeRefMap.get(focusNow.anchorStepId);
+      if (!el || typeof window === "undefined") return;
+      const r = el.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > window.innerHeight) {
+        el.scrollIntoView({
+          block: "center",
+          behavior: reduceMotion ? "auto" : "smooth",
+        });
+      }
+      return;
+    }
     const target = computeScrollTarget(focusNow.stepIds);
     if (target == null) return;
     lastTarget.current = target;
     programmaticUntil.current =
       performance.now() + (reduceMotion ? 60 : 700);
     win.scrollTo({ top: target, behavior: reduceMotion ? "auto" : "smooth" });
-  }, [computeScrollTarget, reduceMotion]);
+  }, [computeScrollTarget, nodeRefMap, reduceMotion]);
 
   // A new (or changed) selection scrolls it into the frame. Keyed on focusTick,
   // which bumps ONLY on a fresh selection, never on a reflow or resize, so the
@@ -1954,7 +1959,7 @@ function Legend() {
   ];
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-      <span className="text-[11px] text-muted-foreground/70">Model routing</span>
+      <span className="text-[11px] text-muted-foreground">Model routing</span>
       {items.map((it) => (
         <span
           key={it.label}
@@ -2291,12 +2296,11 @@ export function FlowExplorer({
     <FeatureInfo focus={focus} flow={flow} reduceMotion={reduceMotion} />
   );
 
+  // The command token lives on the diagram's terminal node, so the header
+  // doesn't repeat it; it carries just the caption and the dial.
   const header = (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <span className="font-mono text-[12px] font-semibold text-foreground">
-        /circuit:run
-      </span>
-      <span className="text-[12px] text-muted-foreground/70">
+      <span className="text-[12px] text-muted-foreground">
         an example flow · select a feature to highlight where it lives
       </span>
       <PowerDial dial={dial} onChange={setDial} />
@@ -2306,7 +2310,7 @@ export function FlowExplorer({
   const legend = (
     <div className="flex flex-col gap-2 border-t border-border/40 pt-4">
       <Legend />
-      <p className="text-[11px] leading-relaxed text-muted-foreground/70">
+      <p className="max-w-3xl text-[11px] leading-relaxed text-muted-foreground">
         An illustrative composition, drawn to show every control shape in one
         picture; the built-in flows each use a subset. Each step is a
         micro-harness with its own model, effort, tools, and skills. Power is
