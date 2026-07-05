@@ -142,15 +142,24 @@
   --flow-explore: hsl(188 100% 42%);
   --flow-explore-accent: hsl(72 100% 62%);
   --flow-build: hsl(21 100% 55%);
-  --flow-build-accent: hsl(254 100% 50%);
+  --flow-build-accent: hsl(167 80% 50%);
   --flow-fix: hsl(339 82% 52%);
   --flow-fix-accent: hsl(73 100% 50%);
   --flow-review: hsl(145 100% 39%);
   --flow-review-accent: hsl(338 100% 65%);
-  --flow-prototype: hsl(254 100% 65%);
+  --flow-prototype: hsl(167 80% 50%);
   --flow-prototype-accent: hsl(156 100% 62%);
   --flow-pursue: hsl(43 92% 55%);
   --flow-pursue-accent: hsl(54 96% 68%);
+  /* The interaction color. Distinct from every flow tint (teal/green) so a
+     selection or hover reads as "you're acting on this," not as more of the
+     flow's own wiring. A cool brand-blue: high contrast against the teal-tinted
+     cards, and it never clashes with the warm provider badges. */
+  --flow-highlight: hsl(210 95% 66%);
+  /* Provider identity for the model badges. Anthropic's own clay (their brand
+     token --swatch--clay); OpenAI reads monochrome, so a light cool neutral. */
+  --prov-anthropic: #d97757;
+  --prov-openai: hsl(216 12% 84%);
 }
 
 @layer base {
@@ -531,13 +540,10 @@
 }
 
 /* ---- The block material ---------------------------------------------------
-   Frosted glass. A step tile is a semi-transparent plastic slab with the hazy
-   tinge of its flow's color: the tint names the flow it belongs to, and the
-   frosting (backdrop blur + saturate) diffuses whatever the aurora bed and the
-   key light put behind it. Everything physical rides --illum, the per-tile
-   illumination the depth engine writes on the wrapper: frosting strength and
-   surface grain follow the light, so a tile "wakes up" as it crosses the
-   focal plane and costs almost nothing while it waits in the dark. */
+   A step tile is a dark card with the faint tinge of its flow's color, which
+   names the flow it belongs to. Surface grain rides --illum, the per-tile
+   illumination the depth engine writes on the wrapper, so a tile's texture
+   settles as it recedes from the focal plane. */
 .flow-step-tile,
 .flow-fanout-cluster {
   background: linear-gradient(
@@ -546,11 +552,6 @@
     color-mix(in oklab, var(--flow-color) 6%, transparent) 46%,
     hsl(222 6% 7% / 0.35) 100%
   );
-  /* Unprefixed only: Lightning CSS generates the -webkit- twin for Safari.
-     Authoring both by hand makes it drop the pair entirely (prefix dedupe
-     chokes on var() values), which reads as "no glass" in every browser. */
-  backdrop-filter: blur(calc(var(--illum, 1) * 20px))
-    saturate(calc(1 + var(--illum, 1) * 0.55));
   /* Top catch-light, glass edge, and the lift off the page: the specular is
      DIFFUSE on purpose — a broad soft sheen, never a hard glint. */
   box-shadow:
@@ -625,58 +626,17 @@
   opacity: calc((1 - var(--illum, 1)) * 0.78);
 }
 
-/* Neon: reserved for the live signals — the model routing, the engine's
-   check line, the prompt caret. Sits above the veil and BRIGHTENS as the
-   tile recedes, so the glow survives the shadow and blooms under the blur.
-   currentColor keys the glow to each signal's own ink, so the tier hierarchy
-   (signal / white / muted) carries into the light it throws. */
+/* The live signals: model routing, the engine's check line, the prompt caret.
+   Kept above the recession veil so they stay legible as a tile recedes; the
+   ink itself (signal / white / muted) carries the hierarchy, with no glow. */
 .flow-neon {
   position: relative;
   z-index: 12;
-  text-shadow:
-    0 0 7px color-mix(in oklab, currentColor 55%, transparent),
-    0 0 20px color-mix(in oklab, currentColor 24%, transparent);
-  filter: brightness(calc(1 + (1 - var(--illum, 1)) * 0.5));
 }
 
-/* The kind caption: names the shape glyph in words (gate, loop, pause,
-   sub-run), so nothing on the block asks to be decoded. */
-.flow-kind-caption {
-  font-size: 9px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: color-mix(in oklab, var(--flow-color) 72%, var(--foreground));
-  opacity: 0.85;
-}
-
-/* The step's name: crystal white with the faintest colored under-glow — the
-   tactile "printed on the glass" read, not a neon sign. */
+/* The step's name: crystal white, printed flat on the tile. */
 .flow-step-name {
   color: hsl(0 0% 100%);
-  text-shadow: 0 1px 10px color-mix(in oklab, var(--flow-color) 28%, transparent);
-}
-
-/* The focal glow: a wide anamorphic ellipse behind whichever tile holds the
-   plane, added over the aurora with plus-lighter. Quadratic in --illum so it
-   exists only AT the plane and never reads as a permanent halo. */
-.flow-grid[data-depth] > li::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: -1;
-  width: min(120%, 64rem);
-  height: 130%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  mix-blend-mode: plus-lighter;
-  background: radial-gradient(
-    50% 42% at 50% 50%,
-    color-mix(in oklab, var(--flow-color) 17%, hsl(0 0% 100% / 0.04)),
-    transparent 72%
-  );
-  opacity: calc(var(--illum, 1) * var(--illum, 1) * 0.8);
 }
 
 /* The tile's lower zone: everything the step's micro-harness is scoped on
@@ -691,6 +651,49 @@
   background: color-mix(in oklab, var(--background) 42%, transparent);
   box-shadow: inset 0 0 0 1px
     color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+/* The step's spec sheet: what the micro-harness is scoped on (context, tools,
+   skills, the note). Printed straight on the glass under a hairline — no
+   sunken well — so the tile reads as one continuous card, head then spec,
+   instead of a box nested in a box. The checkpoint's decision panel keeps the
+   well above; a spec sheet reads, a decision waits. */
+.flow-spec {
+  border-top: 1px solid
+    color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+/* Scope tokens, one ladder read by weight, not hue (the model badge carries the
+   tile's color). Three grants, three weights: a tool is a power the step was
+   GRANTED, so it reads solid and present; a skill is knowledge it REFERENCES, a
+   quiet outline; context is what it was GIVEN, the lightest — a faint filled
+   token so the inputs read as tokens like the rest, not loose middot text. */
+.flow-chip--tool {
+  color: color-mix(in oklab, var(--foreground) 92%, transparent);
+  background: color-mix(in oklab, var(--foreground) 11%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+.flow-chip--skill {
+  color: color-mix(in oklab, var(--foreground) 60%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--foreground) 15%, transparent);
+}
+
+.flow-chip--context {
+  color: color-mix(in oklab, var(--foreground) 56%, transparent);
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+/* The wall: how many tools the step is denied. A boundary it runs inside, not
+   an error — a faint outline in the denied tint, the one non-flow color the
+   tile spends, so the governance reads at a glance without shouting. */
+.flow-walled {
+  color: color-mix(in oklab, var(--destructive) 80%, var(--foreground));
+  background: color-mix(in oklab, var(--destructive) 9%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--destructive) 22%, transparent);
 }
 
 /* The checkpoint options' leading letter, drawn as a keycap: the decision is
@@ -755,100 +758,8 @@
   margin-inline: auto;
 }
 
-/* ---- The light bed --------------------------------------------------------
-   Frosted glass is invisible over a void: the material only reads once there
-   is colored light behind it to diffuse. Two aurora layers drift slowly in
-   counter-phase, carrying the active flow's hue plus two fixed brand
-   complements, and the whole bed fades out toward the canvas edges so it
-   reads as atmosphere, not a poster. The tiles' backdrop-filter does the
-   frosting; these layers are what it frosts. */
-.flow-aurora {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  mask-image: radial-gradient(120% 90% at 50% 50%, black 55%, transparent 98%);
-}
-
-.flow-aurora-layer {
-  position: absolute;
-  inset: -18%;
-}
-
-.flow-aurora-a {
-  background:
-    radial-gradient(
-      42% 26% at 24% 12%,
-      color-mix(in oklab, var(--flow-color) 30%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      38% 22% at 78% 42%,
-      color-mix(in oklab, hsl(254 90% 60%) 22%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      44% 24% at 30% 76%,
-      color-mix(in oklab, var(--signal) 18%, transparent),
-      transparent 72%
-    );
-  animation: flow-aurora-drift 90s ease-in-out infinite alternate;
-}
-
-.flow-aurora-b {
-  background:
-    radial-gradient(
-      36% 22% at 70% 16%,
-      color-mix(in oklab, hsl(198 90% 55%) 16%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      46% 26% at 26% 48%,
-      color-mix(in oklab, var(--flow-color) 24%, transparent),
-      transparent 72%
-    ),
-    radial-gradient(
-      40% 24% at 72% 84%,
-      color-mix(in oklab, hsl(322 85% 58%) 14%, transparent),
-      transparent 70%
-    );
-  animation: flow-aurora-drift 120s ease-in-out infinite alternate-reverse;
-}
-
-@keyframes flow-aurora-drift {
-  from {
-    transform: translate3d(-2.5%, -1.5%, 0) scale(1);
-  }
-  to {
-    transform: translate3d(2.5%, 2%, 0) scale(1.08);
-  }
-}
-
-/* The key light: a wide soft ellipse pinned to the focal plane in the
-   viewport (its y is driven from scroll by the depth engine), so blocks
-   scroll INTO the light rather than carrying lights of their own. plus-lighter
-   adds it over the aurora; everything crossing the plane brightens. */
-.flow-keylight {
-  position: absolute;
-  top: -260px;
-  left: -20%;
-  width: 140%;
-  height: 520px;
-  pointer-events: none;
-  mix-blend-mode: plus-lighter;
-  background: radial-gradient(
-    50% 50% at 50% 50%,
-    hsl(40 60% 88% / 0.13),
-    hsl(40 50% 80% / 0.05) 45%,
-    transparent 72%
-  );
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .flow-aurora-layer {
-    animation: none;
-  }
-}
+/* The light bed (aurora + key light) was removed. The diagram reads as flat
+   dark tiles: no colored atmosphere, no glow. */
 
 @container (min-width: 32rem) {
   .flow-grid {
@@ -1053,8 +964,8 @@
   overflow: hidden;
   border-radius: 14px;
   corner-shape: squircle;
-  /* The same glass family as the step tiles, but neutral: terminal chrome,
-     not a colored step. Translucent so the aurora reads through the frost. */
+  /* Terminal chrome, not a colored step: a neutral translucent frost over the
+     page background. Keeps its backdrop blur (the step tiles went flat). */
   background: color-mix(in oklab, var(--foreground) 8%, hsl(222 5% 8% / 0.6));
   backdrop-filter: blur(calc(var(--illum, 1) * 18px));
   box-shadow:
@@ -1141,27 +1052,39 @@
   }
 }
 
-/* Full-bleed click/keyboard target overlaying a tile. position:absolute so it
-   never enters the measured connector box; z-index above the content and the
-   highlight ring (z-20). Transparent, so the ring and content read through it;
-   border-radius:inherit so its focus outline follows the tile's rounding. */
-.flow-tile-hit {
-  position: absolute;
-  inset: 0;
-  z-index: 30;
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: inherit;
+/* Per-element hit target. Each configuration atom on a tile — the name, the
+   model badge, a spec row, the checkpoint options, the fan-out branches — is its
+   own button, so a click surfaces that element's own blurb instead of one whole-
+   tile story. This class only adds the interaction skin (cursor, a hover halo,
+   the focus ring); every button sets its own box (padding, radius, fill) with
+   utilities, so nothing here fights Tailwind. The halo is an OUTSET shadow, so it
+   hugs the element without a reflow — the measured connectors never move — and it
+   reads in the interaction color, previewing the selection it would make. The
+   buttons sit in normal flow (no raised z), so the recession veil still dims a
+   receded tile's controls; the veil is pointer-events:none, so clicks pass
+   straight through to the button underneath. */
+.flow-elhit {
   cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
+  transition: box-shadow 160ms ease;
 }
 
-.flow-tile-hit:focus-visible {
-  outline: 2px solid var(--flow-color);
-  outline-offset: 3px;
+@media (hover: hover) {
+  .flow-elhit:hover {
+    box-shadow:
+      0 0 0 4px color-mix(in oklab, var(--flow-highlight) 10%, transparent),
+      0 0 0 5px color-mix(in oklab, var(--flow-highlight) 34%, transparent);
+  }
+}
+
+.flow-elhit:focus-visible {
+  outline: 2px solid var(--flow-highlight);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-elhit {
+    transition: none;
+  }
 }
 
 /* Pointer affordance for the clickable tiles. The hit button overlays each
@@ -1179,7 +1102,7 @@
   pointer-events: none;
   opacity: 0;
   box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 42%, transparent),
+    inset 0 0 0 1px color-mix(in oklab, var(--flow-highlight) 42%, transparent),
     inset 0 1px 0 hsl(0 0% 100% / 0.08);
   transition: opacity 160ms ease;
 }
@@ -1205,19 +1128,13 @@
    so the badge never changes size mid-flash. */
 @keyframes flow-badge-pulse {
   0% {
-    box-shadow:
-      0 0 0 1.5px transparent,
-      0 0 14px -3px transparent;
+    box-shadow: 0 0 0 1.5px transparent;
   }
   30% {
-    box-shadow:
-      0 0 0 1.5px var(--signal),
-      0 0 14px -3px var(--signal);
+    box-shadow: 0 0 0 1.5px var(--signal);
   }
   100% {
-    box-shadow:
-      0 0 0 1.5px transparent,
-      0 0 14px -3px transparent;
+    box-shadow: 0 0 0 1.5px transparent;
   }
 }
 
@@ -1245,39 +1162,36 @@
 }
 
 .flow-tile-ring--spotlight {
-  box-shadow:
-    inset 0 0 0 1.5px var(--flow-color),
-    0 0 22px -6px var(--flow-color);
+  box-shadow: inset 0 0 0 2px var(--flow-highlight);
 }
 
 .flow-tile-ring--glow {
-  box-shadow:
-    inset 0 0 0 1.5px color-mix(in oklab, var(--flow-color) 80%, transparent),
-    0 0 34px -4px var(--flow-color);
+  box-shadow: inset 0 0 0 2px
+    color-mix(in oklab, var(--flow-highlight) 80%, transparent);
 }
 
 .flow-tile-ring--focus {
-  box-shadow: inset 0 0 0 1.5px var(--flow-color);
+  box-shadow: inset 0 0 0 2px var(--flow-highlight);
 }
 
-/* A detail row the active feature points at, and the siblings it quiets. */
+/* A detail row the selection points at, and the siblings it quiets. The halo is
+   the interaction color, not the flow tint, so it reads clearly against the
+   teal-tinted card instead of dissolving into it. */
 .flow-row-hot {
   border-radius: 8px;
   box-shadow:
-    0 0 0 5px color-mix(in oklab, var(--flow-color) 12%, transparent),
-    0 0 0 6px color-mix(in oklab, var(--flow-color) 50%, transparent);
+    0 0 0 5px color-mix(in oklab, var(--flow-highlight) 14%, transparent),
+    0 0 0 6px color-mix(in oklab, var(--flow-highlight) 60%, transparent);
 }
 
 .flow-row-cool {
   opacity: 0.4;
 }
 
-/* Inner blocks the active feature points at: the model badge, the subrun pill,
+/* Inner blocks the selection points at: the model badge, the subrun pill,
    the checkpoint options, the fan-out branches. Outset halo, no reflow. */
 .flow-badge-hot {
-  box-shadow:
-    0 0 0 1.5px var(--flow-color),
-    0 0 14px -4px var(--flow-color);
+  box-shadow: 0 0 0 2px var(--flow-highlight);
 }
 
 .flow-note-hot,
@@ -1285,8 +1199,8 @@
 .flow-options-hot {
   border-radius: 10px;
   box-shadow:
-    0 0 0 4px color-mix(in oklab, var(--flow-color) 12%, transparent),
-    0 0 0 5px color-mix(in oklab, var(--flow-color) 48%, transparent);
+    0 0 0 4px color-mix(in oklab, var(--flow-highlight) 14%, transparent),
+    0 0 0 5px color-mix(in oklab, var(--flow-highlight) 58%, transparent);
 }
 
 .flow-feature-tab,

@@ -231,7 +231,10 @@ const FLOWS: ExampleFlow[] = [
           id: "review",
           name: "Review",
           role: "reads the prototype against the original intent",
-          model: "opus",
+          // A different provider than the build, on purpose: an independent
+          // model reviewing the work catches what the builder's own model talks
+          // itself past. This is the flow's proof that models mix per step.
+          model: "gpt-5",
           tier: "strategic",
           effort: "high",
           context: ["diff", "intent"],
@@ -487,7 +490,7 @@ const FEATURES: Feature[] = [
     key: "model-routing",
     label: "Model routing",
     blurb:
-      "The model and effort are set per step. The few steps that decide direction run on the top model at high effort; the bulk work runs on a cheaper, faster model.",
+      "The model, effort, and even the provider are set per step. The few steps that decide direction run on a top model at high effort; the bulk work runs cheaper and faster; and review here runs on a different provider than the build, so a second model checks the work.",
     stepIds: [
       "frame",
       "research",
@@ -559,22 +562,6 @@ function findStep(flow: ExampleFlow, id: string): StepSpec | undefined {
     for (const step of row) if (step.id === id) return step;
   }
   return undefined;
-}
-
-// Clicking a tile selects the sub-block that carries that step's story: a fan-out
-// is about its branches, a checkpoint about its options, a sub-run about its note;
-// everything else rings whole and leads with its role.
-function defaultElementFor(step: StepSpec): FeatureElement {
-  switch (step.shape) {
-    case "fanout":
-      return "branches";
-    case "checkpoint":
-      return "options";
-    case "subrun":
-      return "note";
-    default:
-      return "whole";
-  }
 }
 
 // Turn a role fragment ("writes the prototype") into a sentence.
@@ -706,11 +693,15 @@ const FOCAL_LINE = 0.38;
 // falls faster into the distance.
 const DOF_PLATEAU = 110;
 const DOF_FALLOFF = 380;
-// The receded end of each channel. Scale stays subtle on purpose: wires are
-// measured from unscaled boxes, so a scaled tile's edge drifts a few px off
-// its wire ends — but a receded tile's wires are also faded to near-nothing
-// (see WireSegment), which is what keeps the drift invisible.
-const DOF_SCALE_MIN = 0.945;
+// The two ends of the scale channel. Wires are measured from resting boxes, so
+// a scaled tile's edge drifts off its wire ends; a receded tile hides that in
+// its wire fade (see WireSegment), the focal tile can't. But the connectors
+// already inset EDGE_INSET px from the tile edge, so a focal grow stays within
+// that slack up to ~1.06 — past that the wire ports visibly detach and the fix
+// is to re-measure on scroll, not to scale harder. The focal pop is this grow
+// AND the rest receding further (lower min).
+const DOF_SCALE_MIN = 0.9;
+const DOF_SCALE_MAX = 1.06;
 const DOF_BLUR_MAX = 4.5;
 // The veil (flow-veil, riding --illum) owns the darkness of a receded tile
 // now, so wrapper opacity only assists; a 0.55 floor on top of the veil
@@ -961,43 +952,46 @@ function connectorGroupProps(reduceMotion: boolean, delay: number): MotionProps 
 
 // ---- Per-step detail chrome -------------------------------------------------
 
-// The model badge. Brightness carries the tier: strategic is the bright signal
-// fill, balanced a soft fill, execution a dim outline, none a ghost outline.
-function tierStyle(tier: Tier): { className: string; style: CSSProperties } {
-  switch (tier) {
-    case "strategic":
-      return {
-        className: "text-signal",
-        style: {
-          background: "color-mix(in oklab, var(--signal) 16%, transparent)",
-        },
-      };
-    case "balanced":
-      return {
-        className: "text-foreground",
-        style: {
-          background: "color-mix(in oklab, var(--brand-second) 20%, transparent)",
-        },
-      };
-    case "execution":
-      return {
-        className: "text-muted-foreground",
-        style: {
-          boxShadow: "inset 0 0 0 1px color-mix(in oklab, var(--foreground) 16%, transparent)",
-        },
-      };
-    default:
-      // The ghost tier: no model spend at all. A hairline ring one step dimmer
-      // than execution's, so "deterministic" and "you decide" hold the same
-      // corner object as the model pills instead of floating as bare text.
-      return {
-        className: "text-muted-foreground",
-        style: {
-          boxShadow:
-            "inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)",
-        },
-      };
-  }
+// Which vendor runs a model, inferred from its name. Drives the badge's logo
+// and color, so a mixed-provider flow shows at a glance whose model each step
+// runs on. Markers that aren't a real model ("deterministic", "you decide")
+// have no provider and stay neutral.
+function providerFor(model: string): "anthropic" | "openai" | null {
+  const m = model.toLowerCase();
+  if (/opus|sonnet|haiku|claude/.test(m)) return "anthropic";
+  if (/^gpt|openai|^o\d/.test(m)) return "openai";
+  return null;
+}
+
+// Provider logomarks, drawn from each vendor's own single-path mark at badge
+// scale. They ink in currentColor, so the badge sets the provider tint on the
+// wrapping span and the glyph inherits it.
+function AnthropicMark({ size = 12 }: { size?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z" />
+    </svg>
+  );
+}
+
+function OpenAIMark({ size = 12 }: { size?: number }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M22.282 9.821a6 6 0 0 0-.516-4.91a6.05 6.05 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a6 6 0 0 0-3.998 2.9a6.05 6.05 0 0 0 .743 7.097a5.98 5.98 0 0 0 .51 4.911a6.05 6.05 0 0 0 6.515 2.9A6 6 0 0 0 13.26 24a6.06 6.06 0 0 0 5.772-4.206a6 6 0 0 0 3.997-2.9a6.06 6.06 0 0 0-.747-7.073M13.26 22.43a4.48 4.48 0 0 1-2.876-1.04l.141-.081l4.779-2.758a.8.8 0 0 0 .392-.681v-6.737l2.02 1.168a.07.07 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494M3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085l4.783 2.759a.77.77 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646M2.34 7.896a4.5 4.5 0 0 1 2.366-1.973V11.6a.77.77 0 0 0 .388.677l5.815 3.354l-2.02 1.168a.08.08 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.08.08 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667m2.01-3.023l-.141-.085l-4.774-2.782a.78.78 0 0 0-.785 0L9.409 9.23V6.897a.07.07 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.8.8 0 0 0-.393.681zm1.097-2.365l2.602-1.5l2.607 1.5v2.999l-2.597 1.5l-2.607-1.5Z" />
+    </svg>
+  );
 }
 
 const EFFORT_PIPS: Record<Effort, number> = {
@@ -1013,34 +1007,70 @@ function ModelBadge({
   step,
   hot,
   pulse = 0,
+  onSelect,
+  selected = false,
 }: {
   step: StepSpec;
   hot?: boolean;
   // Bumped when the power dial re-tiers this step. Keys the badge so the
   // one-shot flash replays on every move that touches it.
   pulse?: number;
+  // When present, the badge is its own hit target: clicking it surfaces the
+  // model's blurb. Absent for markers that aren't a real model.
+  onSelect?: () => void;
+  selected?: boolean;
 }) {
   if (!step.model) return null;
   const tier = step.tier ?? "none";
-  const { className, style } = tierStyle(tier);
+  const provider = providerFor(step.model);
   const pips = EFFORT_PIPS[step.effort ?? "none"];
-  const pipColor =
-    tier === "strategic"
-      ? "var(--signal)"
-      : tier === "balanced"
-        ? "var(--brand-second)"
-        : "var(--muted-foreground)";
   // The fan-out badge counts the real branches, so it stays truthful for any
   // flow added later, not just the one that happens to have five scouts.
   const branchCount = step.branches?.length ?? 0;
   const prefix =
     step.shape === "fanout" && branchCount ? `${branchCount} × ` : "";
-  return (
-    <span
-      key={pulse}
-      className={`flow-neon inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[11px] ${className} ${hot ? "flow-badge-hot" : ""} ${pulse > 0 ? "flow-badge-pulse" : ""}`}
-      style={style}
-    >
+
+  // A real model wears its provider's color; brightness still ladders by tier
+  // (strategic brightest, execution faintest) so model routing stays readable
+  // at a glance. A non-model marker keeps the neutral ghost hairline.
+  const provColor =
+    provider === "anthropic"
+      ? "var(--prov-anthropic)"
+      : provider === "openai"
+        ? "var(--prov-openai)"
+        : null;
+  let style: CSSProperties;
+  let pipColor: string;
+  if (provColor) {
+    const fillPct = tier === "strategic" ? 22 : tier === "balanced" ? 15 : 9;
+    const textPct = tier === "strategic" ? 100 : tier === "balanced" ? 88 : 68;
+    style = {
+      background: `color-mix(in oklab, ${provColor} ${fillPct}%, transparent)`,
+      color: `color-mix(in oklab, var(--foreground) ${textPct}%, transparent)`,
+    };
+    pipColor = provColor;
+  } else {
+    style = {
+      color: "var(--muted-foreground)",
+      boxShadow:
+        "inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)",
+    };
+    pipColor = "var(--muted-foreground)";
+  }
+
+  const cls = `flow-neon inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[11px] ${hot ? "flow-badge-hot" : ""} ${pulse > 0 ? "flow-badge-pulse" : ""}`;
+
+  const body = (
+    <>
+      {provColor ? (
+        <span
+          aria-hidden="true"
+          className="inline-flex shrink-0"
+          style={{ color: provColor }}
+        >
+          {provider === "anthropic" ? <AnthropicMark /> : <OpenAIMark />}
+        </span>
+      ) : null}
       {prefix}
       {step.model}
       {pips > 0 ? (
@@ -1059,6 +1089,28 @@ function ModelBadge({
           ))}
         </span>
       ) : null}
+    </>
+  );
+
+  if (onSelect) {
+    return (
+      <button
+        key={pulse}
+        type="button"
+        aria-pressed={selected}
+        aria-label={`model: ${step.model}`}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={onSelect}
+        className={`flow-elhit ${cls}`}
+        style={style}
+      >
+        {body}
+      </button>
+    );
+  }
+  return (
+    <span key={pulse} className={cls} style={style}>
+      {body}
     </span>
   );
 }
@@ -1067,26 +1119,46 @@ function DetailRow({
   label,
   children,
   state,
+  onSelect,
+  selected = false,
 }: {
   label: string;
   children: ReactNode;
   state?: "hot" | "cool" | null;
+  // When present the whole row is a hit target: clicking it surfaces that
+  // scope's blurb and quiets the sibling rows.
+  onSelect?: () => void;
+  selected?: boolean;
 }) {
   const cls =
     state === "hot" ? "flow-row-hot" : state === "cool" ? "flow-row-cool" : "";
-  return (
-    <div className={`flex items-start gap-2 ${cls}`}>
+  const inner = (
+    <>
       <span className="w-14 shrink-0 pt-[2px] text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
         {label}
       </span>
       {/* min-w-0: without it this wrapper's min-width:auto tracks the widest
           chip, the row overflows the tile, and the chips' own max-w-full cap
           (and truncation) never engages. Same gotcha .flow-grid-item pins. */}
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
         {children}
       </div>
-    </div>
+    </>
   );
+  if (onSelect) {
+    return (
+      <button
+        type="button"
+        aria-pressed={selected}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={onSelect}
+        className={`flow-elhit flex w-full appearance-none items-start gap-2.5 border-0 bg-transparent text-left ${cls}`}
+      >
+        {inner}
+      </button>
+    );
+  }
+  return <div className={`flex items-start gap-2.5 ${cls}`}>{inner}</div>;
 }
 
 // A tile lists at most this many skill chips; the rest fold into a "+N"
@@ -1095,18 +1167,23 @@ function DetailRow({
 // height.
 const MAX_SKILL_CHIPS = 2;
 
-// One quiet material for every scope chip: the row label already names the
-// kind, so per-kind tints read as noise at ten tiles, and the tier badge
-// stays the tile's one color moment. A long token truncates (full text in the
-// title attribute) instead of wrapping mid-word into a ragged extra line.
-function Chip({ children }: { children: string }) {
+// A scope token, weighted by what kind of grant it names. A "tool" is a power
+// the step was GRANTED, so it reads solid; a "skill" is knowledge it
+// REFERENCES, so it reads as a quiet outline; a "context" input is what it was
+// GIVEN, the lightest — a faint token. The model badge stays the tile's one
+// color moment, so the weights differ in presence, not hue. A long token
+// truncates (full text in the title) instead of wrapping into a ragged line.
+function Chip({
+  children,
+  variant,
+}: {
+  children: string;
+  variant: "tool" | "skill" | "context";
+}) {
   return (
     <span
       title={children}
-      className="inline-flex min-w-0 max-w-full items-center rounded-md px-1.5 py-[2px] font-mono text-[11px] leading-tight text-foreground/80"
-      style={{
-        background: "color-mix(in oklab, var(--foreground) 7%, transparent)",
-      }}
+      className={`flow-chip flow-chip--${variant} inline-flex min-w-0 max-w-full items-center rounded-md px-1.5 py-[2px] font-mono text-[11px] leading-tight`}
     >
       <span className="truncate">{children}</span>
     </span>
@@ -1116,15 +1193,22 @@ function Chip({ children }: { children: string }) {
 function StepDetail({
   step,
   highlightElement,
+  selectEl,
+  selectedElement = null,
 }: {
   step: StepSpec;
   highlightElement?: FeatureElement | null;
+  // Clicking a spec row selects that element; null when the tile isn't
+  // interactive (static previews).
+  selectEl?: (element: FeatureElement) => void;
+  selectedElement?: FeatureElement | null;
 }) {
   const hasContext = step.context && step.context.length > 0;
   const hasTools = step.tools && step.tools.allow.length > 0;
   const hasSkills = step.skills && step.skills.length > 0;
-  // When a context/tools/skills feature is active, ring the matching row and
-  // quiet the siblings. The other elements light up elsewhere in the tile.
+  // When a context/tools/skills element is active (from a tab or a direct
+  // click), ring the matching row and quiet the siblings. The other elements
+  // light up elsewhere in the tile.
   const rowFeature =
     highlightElement === "ctx" ||
     highlightElement === "tools" ||
@@ -1140,21 +1224,40 @@ function StepDetail({
     !!step.note && step.shape !== "loop" && step.shape !== "subrun";
   if (!hasContext && !hasTools && !hasSkills && !showNote) return null;
   return (
-    <div className="flow-scope-well mt-3 flex flex-col gap-1.5">
+    <div className="flow-spec mt-4 flex flex-col gap-2.5 pt-4">
       {hasContext ? (
-        <DetailRow label="context" state={rowState("ctx")}>
+        <DetailRow
+          label="context"
+          state={rowState("ctx")}
+          onSelect={selectEl ? () => selectEl("ctx") : undefined}
+          selected={selectedElement === "ctx"}
+        >
+          {/* Inputs the step is handed — the lightest grant, so they read as
+              faint tokens, quieter than the tools and skills below. */}
           {step.context!.map((c) => (
-            <Chip key={c}>{c}</Chip>
+            <Chip key={c} variant="context">
+              {c}
+            </Chip>
           ))}
         </DetailRow>
       ) : null}
       {hasTools ? (
-        <DetailRow label="tools" state={rowState("tools")}>
+        <DetailRow
+          label="tools"
+          state={rowState("tools")}
+          onSelect={selectEl ? () => selectEl("tools") : undefined}
+          selected={selectedElement === "tools"}
+        >
           {step.tools!.allow.map((t) => (
-            <Chip key={t}>{t}</Chip>
+            <Chip key={t} variant="tool">
+              {t}
+            </Chip>
           ))}
           {step.tools!.blocked ? (
-            <span className="ml-0.5 inline-flex items-center gap-1 font-mono text-[11px] text-destructive/85">
+            // Not an error — a boundary the step runs inside. The lock and the
+            // count read as a deliberate wall, the one place a second meaning
+            // (denied) earns its own tint.
+            <span className="flow-walled inline-flex items-center gap-1 rounded-md px-1.5 py-[2px] font-mono text-[11px] leading-tight">
               <LockIcon />
               {step.tools!.blocked} blocked
             </span>
@@ -1162,18 +1265,21 @@ function StepDetail({
         </DetailRow>
       ) : null}
       {hasSkills ? (
-        <DetailRow label="skills" state={rowState("skills")}>
+        <DetailRow
+          label="skills"
+          state={rowState("skills")}
+          onSelect={selectEl ? () => selectEl("skills") : undefined}
+          selected={selectedElement === "skills"}
+        >
           {step.skills!.slice(0, MAX_SKILL_CHIPS).map((s) => (
-            <Chip key={s}>{s}</Chip>
+            <Chip key={s} variant="skill">
+              {s}
+            </Chip>
           ))}
           {step.skills!.length > MAX_SKILL_CHIPS ? (
             <span
               title={step.skills!.slice(MAX_SKILL_CHIPS).join(", ")}
-              className="inline-flex items-center rounded-md px-1.5 py-[2px] font-mono text-[11px] leading-tight text-muted-foreground"
-              style={{
-                boxShadow:
-                  "inset 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)",
-              }}
+              className="flow-chip flow-chip--skill inline-flex items-center rounded-md px-1.5 py-[2px] font-mono text-[11px] leading-tight"
             >
               +{step.skills!.length - MAX_SKILL_CHIPS}
             </span>
@@ -1181,21 +1287,23 @@ function StepDetail({
         </DetailRow>
       ) : null}
       {showNote ? (
-        step.kind === "verification" ? (
-          // The engine's line, not the model's: a gate step's check runs
-          // deterministically, so it reads in the run-output register with
-          // the signal caret.
-          <span className="font-mono text-[11px] leading-snug text-foreground/85">
+        <button
+          type="button"
+          aria-pressed={selectedElement === "note"}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={selectEl ? () => selectEl("note") : undefined}
+          className={`flow-elhit inline-flex w-fit appearance-none items-center border-0 bg-transparent text-left font-mono text-[11px] leading-snug ${highlightElement === "note" ? "flow-note-hot" : ""} ${step.kind === "verification" ? "text-foreground/85" : "text-muted-foreground"}`}
+        >
+          {step.kind === "verification" ? (
+            // The engine's line, not the model's: a gate step's check runs
+            // deterministically, so it reads in the run-output register with
+            // the signal caret.
             <span aria-hidden="true" className="flow-neon mr-1.5 text-signal">
               ›
             </span>
-            {step.note}
-          </span>
-        ) : (
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {step.note}
-          </span>
-        )
+          ) : null}
+          {step.note}
+        </button>
       ) : null}
     </div>
   );
@@ -1281,8 +1389,8 @@ function StepTile({
   targeted,
   highlightElement,
   variant,
-  onSelect,
-  selected = false,
+  selectEl,
+  selectedElement = null,
   disableLayout = false,
   dialPulseTick = 0,
   ref,
@@ -1293,8 +1401,12 @@ function StepTile({
   targeted?: boolean;
   highlightElement?: FeatureElement | null;
   variant: TourVariant;
-  onSelect?: () => void;
-  selected?: boolean;
+  // Each element on the tile is its own hit target; this selects one. Absent on
+  // static (non-interactive) renders.
+  selectEl?: (element: FeatureElement) => void;
+  // The element currently selected on THIS tile (for aria-pressed), null when
+  // the selection is a feature tab or points at another tile.
+  selectedElement?: FeatureElement | null;
   disableLayout?: boolean;
   dialPulseTick?: number;
   ref?: Ref<HTMLElement>;
@@ -1309,50 +1421,35 @@ function StepTile({
   );
   const isCheckpoint = step.shape === "checkpoint";
   const isLoop = step.shape === "loop";
-  // Every mark on the block answers to a Circuit concept; the caption names
-  // the shape in words so the glyph never has to be decoded.
-  const kindCaption = isCheckpoint
-    ? "pause"
-    : isLoop
-      ? "loop"
-      : step.shape === "subrun"
-        ? "sub-run"
-        : step.kind === "verification"
-          ? "gate"
-          : step.kind === "compose"
-            ? "compose"
-            : null;
+  // Clicking an element must not let the browser also scroll the freshly-focused
+  // button into view — that instant jump is what fought the smooth focus pan.
+  // Preventing the mousedown default suppresses the focus (and its scroll) for
+  // pointer users; keyboard focus is untouched.
+  const holdScroll = (e: { preventDefault: () => void }) => e.preventDefault();
   return (
     <m.div
       ref={composedRef}
       {...layoutProps(disableLayout, step.id)}
       {...motionProps}
       data-shape={step.shape ?? "step"}
-      className="flow-step-tile relative flex w-full flex-col p-4 text-left text-foreground"
+      className="flow-step-tile relative flex w-full flex-col p-5 text-left text-foreground"
     >
-      {onSelect ? (
-        // A full-bleed hit target so the whole tile is clickable and keyboard
-        // operable. It sits above the content and the highlight ring (the ring is
-        // pointer-events:none and shows through this transparent button). It is
-        // position:absolute, so it never enters the measured box the connectors
-        // route from.
-        <button
-          type="button"
-          aria-pressed={selected}
-          aria-label={`${step.name}: ${step.role}`}
-          onClick={onSelect}
-          className="flow-tile-hit"
-        />
-      ) : null}
       {targeted && highlightElement === "whole" ? (
         <span
           aria-hidden="true"
           className={`flow-tile-ring flow-tile-ring--${variant}`}
         />
       ) : null}
-      <div className="flex items-start justify-between gap-2">
-        <span className="flow-step-name inline-flex items-baseline gap-1.5 text-[14px] font-medium leading-tight tracking-tight">
-          <span className="inline-flex items-center gap-1.5 self-center">
+      <div className="flex items-start justify-between gap-2.5">
+        <button
+          type="button"
+          aria-pressed={selectedElement === "whole"}
+          aria-label={`${step.name}: ${step.role}`}
+          onMouseDown={holdScroll}
+          onClick={() => selectEl?.("whole")}
+          className="flow-elhit flow-step-name inline-flex w-fit appearance-none items-center gap-1.5 border-0 bg-transparent text-[16px] font-semibold leading-[1.15] tracking-[-0.015em]"
+        >
+          <span className="inline-flex items-center gap-1.5">
             {isCheckpoint ? <PauseIcon /> : null}
             {isLoop ? <LoopIcon /> : null}
             {step.shape === "subrun" ? <SubrunIcon /> : null}
@@ -1360,34 +1457,38 @@ function StepTile({
             {step.kind === "compose" ? <ComposeIcon /> : null}
           </span>
           {step.name}
-          {kindCaption ? (
-            <span className="flow-kind-caption font-mono">{kindCaption}</span>
-          ) : null}
-        </span>
+        </button>
         <ModelBadge
           step={step}
           hot={highlightElement === "model"}
           pulse={dialPulseTick}
+          onSelect={selectEl ? () => selectEl("model") : undefined}
+          selected={selectedElement === "model"}
         />
       </div>
-      <p className="mt-1 text-[12px] leading-snug text-muted-foreground">
-        {step.role}
-      </p>
 
       {step.shape === "subrun" && step.note ? (
-        <span
-          className={`mt-2 inline-flex w-fit items-center rounded-md px-1.5 py-[2px] font-mono text-[11px] text-signal ${highlightElement === "note" ? "flow-note-hot" : ""}`}
+        <button
+          type="button"
+          aria-pressed={selectedElement === "note"}
+          onMouseDown={holdScroll}
+          onClick={() => selectEl?.("note")}
+          className={`flow-elhit mt-3 inline-flex w-fit appearance-none items-center rounded-md border-0 px-1.5 py-[2px] font-mono text-[11px] text-signal ${highlightElement === "note" ? "flow-note-hot" : ""}`}
           style={{
             background: "color-mix(in oklab, var(--signal) 13%, transparent)",
           }}
         >
           {step.note}
-        </span>
+        </button>
       ) : null}
 
       {isCheckpoint && step.options ? (
-        <div
-          className={`flow-scope-well mt-3 flex flex-col gap-1.5 ${highlightElement === "options" ? "flow-options-hot" : ""}`}
+        <button
+          type="button"
+          aria-pressed={selectedElement === "options"}
+          onMouseDown={holdScroll}
+          onClick={() => selectEl?.("options")}
+          className={`flow-elhit flow-scope-well mt-4 flex w-full appearance-none flex-col gap-2 border-0 text-left ${highlightElement === "options" ? "flow-options-hot" : ""}`}
         >
           {step.options.map((o) => {
             // Options are authored "A · label"; the leading letter renders as
@@ -1414,16 +1515,27 @@ function StepTile({
               </span>
             );
           })}
-        </div>
+        </button>
       ) : null}
 
       {isLoop && step.note ? (
-        <span className="mt-2 font-mono text-[11px] text-muted-foreground">
+        <button
+          type="button"
+          aria-pressed={selectedElement === "note"}
+          onMouseDown={holdScroll}
+          onClick={() => selectEl?.("note")}
+          className={`flow-elhit mt-3 inline-flex w-fit appearance-none border-0 bg-transparent font-mono text-[11px] text-muted-foreground ${highlightElement === "note" ? "flow-note-hot" : ""}`}
+        >
           {step.note}
-        </span>
+        </button>
       ) : null}
 
-      <StepDetail step={step} highlightElement={highlightElement} />
+      <StepDetail
+        step={step}
+        highlightElement={highlightElement}
+        selectEl={selectEl}
+        selectedElement={selectedElement}
+      />
       {/* The recession scrim. Last child so it overlays the body; the neon
           signals ride above it on their own z. */}
       <span aria-hidden="true" className="flow-veil" />
@@ -1544,8 +1656,8 @@ function FanoutCluster({
   motionProps,
   registerNode,
   highlightElement,
-  onSelect,
-  selected = false,
+  selectEl,
+  selectedElement = null,
   disableLayout = false,
   dialPulseTick = 0,
   ref,
@@ -1555,12 +1667,13 @@ function FanoutCluster({
   motionProps: MotionProps;
   registerNode: (id: string) => (el: HTMLElement | null) => void;
   highlightElement?: FeatureElement | null;
-  onSelect?: () => void;
-  selected?: boolean;
+  selectEl?: (element: FeatureElement) => void;
+  selectedElement?: FeatureElement | null;
   disableLayout?: boolean;
   dialPulseTick?: number;
   ref?: Ref<HTMLElement>;
 }) {
+  const holdScroll = (e: { preventDefault: () => void }) => e.preventDefault();
   const clusterRef = useRef<HTMLElement | null>(null);
   const branchRefs = useRef<(HTMLElement | null)[]>([]);
   const [fanSegs, setFanSegs] = useState<{ id: string; d: string }[]>([]);
@@ -1631,31 +1744,28 @@ function FanoutCluster({
     >
       <div
         ref={setCardRef}
-        className="flow-fanout-cluster relative w-fit max-w-[34rem] px-4 pb-4 pt-3.5 text-foreground"
+        className="flow-fanout-cluster relative w-fit max-w-[34rem] px-5 pb-5 pt-4 text-foreground"
       >
-        {onSelect ? (
+        <div className="relative z-20 flex items-center justify-between gap-3">
           <button
             type="button"
-            aria-pressed={selected}
-            aria-label={`${step.name}: ${step.role}`}
-            onClick={onSelect}
-            className="flow-tile-hit"
-          />
-        ) : null}
-        <div className="relative z-20 flex items-center justify-between gap-3">
-          <span className="inline-flex items-center gap-1.5 text-[14px] font-medium leading-tight tracking-tight">
+            aria-pressed={selectedElement === "whole"}
+            aria-label={step.name}
+            onMouseDown={holdScroll}
+            onClick={() => selectEl?.("whole")}
+            className="flow-elhit flow-step-name inline-flex w-fit appearance-none items-center gap-1.5 border-0 bg-transparent text-[16px] font-semibold leading-[1.15] tracking-[-0.015em]"
+          >
             <BranchIcon />
             {step.name}
-          </span>
+          </button>
           <ModelBadge
             step={step}
             hot={highlightElement === "model"}
             pulse={dialPulseTick}
+            onSelect={selectEl ? () => selectEl("model") : undefined}
+            selected={selectedElement === "model"}
           />
         </div>
-        <p className="relative z-20 mt-1 max-w-[15rem] text-[12px] leading-snug text-muted-foreground">
-          {step.role}
-        </p>
         <svg
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 z-0 w-full overflow-visible"
@@ -1683,21 +1793,26 @@ function FanoutCluster({
             />
           ))}
         </svg>
-        <div
-          className={`relative z-10 mt-3 flex flex-wrap justify-center gap-1.5 ${highlightElement === "branches" ? "flow-branches-hot" : ""}`}
+        <button
+          type="button"
+          aria-pressed={selectedElement === "branches"}
+          aria-label={`${branches.length} parallel branches`}
+          onMouseDown={holdScroll}
+          onClick={() => selectEl?.("branches")}
+          className={`flow-elhit relative z-10 mt-4 flex w-full flex-wrap justify-center gap-2 appearance-none border-0 bg-transparent ${highlightElement === "branches" ? "flow-branches-hot" : ""}`}
         >
           {branches.map((label, i) => (
-            <div
+            <span
               key={label}
               ref={(el) => {
                 branchRefs.current[i] = el;
               }}
-              className="flow-fanout-branch px-2.5 py-1.5 font-mono text-[11px] font-medium leading-tight text-foreground/80"
+              className="flow-fanout-branch px-3 py-1.5 font-mono text-[11px] font-medium leading-tight text-foreground/80"
             >
               {label}
-            </div>
+            </span>
           ))}
-        </div>
+        </button>
         <span aria-hidden="true" className="flow-veil" />
       </div>
     </m.div>
@@ -1804,19 +1919,18 @@ function DepthTile({
     [dof.scrollY, dof.geomTick],
     ([y]: number[]) => focusAt(dof.geom.current, id, y),
   );
-  const scale = useTransform(focus, [0, 1], [DOF_SCALE_MIN, 1]);
+  const scale = useTransform(focus, [0, 1], [DOF_SCALE_MIN, DOF_SCALE_MAX]);
   const blur = useTransform(focus, [0, 1], [DOF_BLUR_MAX, 0]);
   // At the plane the filter must be literally ABSENT, not blur(0px): any
-  // filter value makes this wrapper a backdrop root, and the glass tile
-  // inside would sample its (empty) subtree instead of the aurora bed behind
-  // the diagram. Same reason willChange pins only transform.
+  // filter value makes this wrapper a backdrop root, so the terminal tile's
+  // backdrop blur would sample this (empty) subtree instead of the page
+  // behind the diagram. Same reason willChange pins only transform.
   const filter = useTransform(blur, (b) =>
     b < 0.05 ? "none" : `blur(${b}px)`,
   );
   const opacity = useTransform(focus, [0, 1], [DOF_OPACITY_MIN, 1]);
   // The recession also feeds CSS as --illum: the tile's material reads it to
-  // fall into shadow, and the neon bits read its inverse to bloom through
-  // the blur like bokeh.
+  // fall into shadow as it leaves the focal plane.
   const illum = useTransform(focus, (f) => Math.round(f * 1000) / 1000);
   return (
     <m.li
@@ -1999,16 +2113,6 @@ function FlowDiagram({
     () => ({ active: dofActive, scrollY, geomTick, geom: dofGeom }),
     [dofActive, scrollY, geomTick],
   );
-  // The key light: a soft glow that sits AT the focal plane in the viewport,
-  // so the diagram scrolls through it and whatever crosses the plane is lit.
-  // It renders inside the canvas (a fixed element would break under any
-  // transformed ancestor), so its canvas-space y re-derives from scroll:
-  // page-space plane minus canvas top.
-  const lightY = useTransform([scrollY, geomTick], ([y]: number[]) => {
-    if (typeof window === "undefined") return 0;
-    return y + window.innerHeight * FOCAL_LINE - dofGeom.current.canvasTop;
-  });
-
   const spring = reduceMotion
     ? { duration: 0 }
     : ({ type: "spring", stiffness: 420, damping: 36, mass: 0.9 } as const);
@@ -2189,23 +2293,6 @@ function FlowDiagram({
 
   const canvas = (
     <div ref={containerRef} className="flow-diagram-canvas relative">
-      {/* The light bed the frosted glass diffuses. Two counter-drifting
-          aurora layers carry the flow's hue plus fixed brand complements;
-          the key light rides the focal plane. Both are invisible to the
-          layout and the reader's pointer — pure atmosphere. */}
-      {depth ? (
-        <div aria-hidden="true" className="flow-aurora">
-          <div className="flow-aurora-layer flow-aurora-a" />
-          <div className="flow-aurora-layer flow-aurora-b" />
-        </div>
-      ) : null}
-      {dofActive ? (
-        <m.div
-          aria-hidden="true"
-          className="flow-keylight"
-          style={{ y: lightY }}
-        />
-      ) : null}
       <svg
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible"
@@ -2268,10 +2355,8 @@ function FlowDiagram({
                     motionProps={tileMotion}
                     registerNode={registerNode}
                     highlightElement={element}
-                    onSelect={() =>
-                      onSelectElement(step.id, defaultElementFor(step))
-                    }
-                    selected={pressed}
+                    selectEl={(el) => onSelectElement(step.id, el)}
+                    selectedElement={pressed ? (focus?.element ?? null) : null}
                     disableLayout={depth}
                     dialPulseTick={pulseTick}
                   />
@@ -2283,10 +2368,8 @@ function FlowDiagram({
                     targeted={targeted}
                     highlightElement={element}
                     variant={variant}
-                    onSelect={() =>
-                      onSelectElement(step.id, defaultElementFor(step))
-                    }
-                    selected={pressed}
+                    selectEl={(el) => onSelectElement(step.id, el)}
+                    selectedElement={pressed ? (focus?.element ?? null) : null}
                     disableLayout={depth}
                     dialPulseTick={pulseTick}
                   />
@@ -2597,7 +2680,10 @@ export function FlowExplorer({
   const selectElement = useCallback(
     (stepId: string, element: FeatureElement) => {
       const prev = selectionRef.current;
-      const same = prev?.kind === "element" && prev.stepId === stepId;
+      const same =
+        prev?.kind === "element" &&
+        prev.stepId === stepId &&
+        prev.element === element;
       applySelection(same ? null : { kind: "element", stepId, element });
     },
     [applySelection],
