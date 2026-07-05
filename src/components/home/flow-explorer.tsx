@@ -920,7 +920,17 @@ const EFFORT_PIPS: Record<Effort, number> = {
   max: 3,
 };
 
-function ModelBadge({ step, hot }: { step: StepSpec; hot?: boolean }) {
+function ModelBadge({
+  step,
+  hot,
+  pulse = 0,
+}: {
+  step: StepSpec;
+  hot?: boolean;
+  // Bumped when the power dial re-tiers this step. Keys the badge so the
+  // one-shot flash replays on every move that touches it.
+  pulse?: number;
+}) {
   if (!step.model) return null;
   const tier = step.tier ?? "none";
   const { className, style } = tierStyle(tier);
@@ -938,7 +948,8 @@ function ModelBadge({ step, hot }: { step: StepSpec; hot?: boolean }) {
     step.shape === "fanout" && branchCount ? `${branchCount} × ` : "";
   return (
     <span
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[11px] ${className} ${hot ? "flow-badge-hot" : ""}`}
+      key={pulse}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[11px] ${className} ${hot ? "flow-badge-hot" : ""} ${pulse > 0 ? "flow-badge-pulse" : ""}`}
       style={style}
     >
       {prefix}
@@ -1175,6 +1186,7 @@ function StepTile({
   onSelect,
   selected = false,
   disableLayout = false,
+  dialPulseTick = 0,
   ref,
 }: {
   step: StepSpec;
@@ -1187,6 +1199,7 @@ function StepTile({
   onSelect?: () => void;
   selected?: boolean;
   disableLayout?: boolean;
+  dialPulseTick?: number;
   ref?: Ref<HTMLElement>;
 }) {
   const nodeRef = registerNode(step.id);
@@ -1249,7 +1262,11 @@ function StepTile({
           {step.kind === "compose" ? <ComposeIcon /> : null}
           {step.name}
         </span>
-        <ModelBadge step={step} hot={highlightElement === "model"} />
+        <ModelBadge
+          step={step}
+          hot={highlightElement === "model"}
+          pulse={dialPulseTick}
+        />
       </div>
       <p className="mt-1 text-[12px] leading-snug text-muted-foreground">
         {step.role}
@@ -1426,6 +1443,7 @@ function FanoutCluster({
   onSelect,
   selected = false,
   disableLayout = false,
+  dialPulseTick = 0,
   ref,
 }: {
   step: StepSpec;
@@ -1437,6 +1455,7 @@ function FanoutCluster({
   onSelect?: () => void;
   selected?: boolean;
   disableLayout?: boolean;
+  dialPulseTick?: number;
   ref?: Ref<HTMLElement>;
 }) {
   const clusterRef = useRef<HTMLElement | null>(null);
@@ -1526,7 +1545,11 @@ function FanoutCluster({
             <BranchIcon />
             {step.name}
           </span>
-          <ModelBadge step={step} hot={highlightElement === "model"} />
+          <ModelBadge
+            step={step}
+            hot={highlightElement === "model"}
+            pulse={dialPulseTick}
+          />
         </div>
         <p className="relative z-20 mt-1 max-w-[15rem] text-[12px] leading-snug text-muted-foreground">
           {step.role}
@@ -1653,6 +1676,7 @@ function FlowDiagram({
   focusTick,
   variant,
   windowed = false,
+  dialPulse,
   onSelectElement,
   onClear,
   onFocalAlign,
@@ -1664,6 +1688,9 @@ function FlowDiagram({
   focusTick: number;
   variant: TourVariant;
   windowed?: boolean;
+  // The steps the last dial move re-tiered, and a tick that keys the
+  // one-shot badge flash.
+  dialPulse: { ids: Set<string>; tick: number };
   onSelectElement: (stepId: string, element: FeatureElement) => void;
   onClear: () => void;
   onFocalAlign: (
@@ -2089,6 +2116,7 @@ function FlowDiagram({
             const tileMotion = dimmed
               ? withDim(motionProps, variant, reduceMotion)
               : motionProps;
+            const pulseTick = dialPulse.ids.has(step.id) ? dialPulse.tick : 0;
             return step.shape === "prompt" ? (
               <PromptTile
                 key={step.id}
@@ -2110,6 +2138,7 @@ function FlowDiagram({
                 onSelect={() => onSelectElement(step.id, defaultElementFor(step))}
                 selected={pressed}
                 disableLayout={showWindow}
+                dialPulseTick={pulseTick}
               />
             ) : (
               <StepTile
@@ -2124,6 +2153,7 @@ function FlowDiagram({
                 onSelect={() => onSelectElement(step.id, defaultElementFor(step))}
                 selected={pressed}
                 disableLayout={showWindow}
+                dialPulseTick={pulseTick}
               />
             );
           })}
@@ -2412,6 +2442,56 @@ export function FlowExplorer({
   // diagram only re-measures when the dial actually moves.
   const [dial, setDial] = useState<Dial>("medium");
   const dialedFlow = useMemo(() => flowAtDial(flow, dial), [flow, dial]);
+  // The dial's receipt and flash. The pulse diffs the CURRENT dialed flow
+  // against the NEXT one — not against the authored baseline — so turning
+  // back to medium flashes the steps that just changed, same as leaving it.
+  const [dialPulse, setDialPulse] = useState<{
+    ids: Set<string>;
+    tick: number;
+  }>(() => ({ ids: new Set<string>(), tick: 0 }));
+  const handleDial = useCallback(
+    (next: Dial) => {
+      if (next === dial) return;
+      const before = dialedFlow.rows.flat();
+      const after = flowAtDial(flow, next).rows.flat();
+      const ids = new Set<string>();
+      after.forEach((step, i) => {
+        const prev = before[i];
+        if (prev && (prev.model !== step.model || prev.effort !== step.effort)) {
+          ids.add(step.id);
+        }
+      });
+      setDialPulse((p) => ({ ids, tick: p.tick + 1 }));
+      setDial(next);
+    },
+    [dial, dialedFlow, flow],
+  );
+  // One mono line under the dial saying what the setting did. Verbs stay
+  // honest: at low a step may drop effort without changing model (research
+  // stays haiku), so it "goes cheaper" rather than "drops a tier".
+  const dialReceipt = useMemo(() => {
+    if (dial === "medium") return "medium · every step runs as authored";
+    const authored = flow.rows.flat();
+    const dialed = dialedFlow.rows.flat();
+    const moved: string[] = [];
+    const held = new Set<string>();
+    dialed.forEach((step, i) => {
+      const base = authored[i];
+      if (!base || (base.tier ?? "none") === "none") return;
+      if (base.model !== step.model || base.effort !== step.effort) {
+        moved.push(step.name.toLowerCase());
+      } else if (base.tier === "strategic" && base.model) {
+        held.add(base.model);
+      }
+    });
+    const movedPart = moved.length
+      ? `${moved.join(", ")} ${dial === "low" ? "go cheaper" : "step up"}`
+      : "nothing moves";
+    const heldPart = held.size
+      ? ` · judgment holds ${[...held].join("/")}`
+      : "";
+    return `${dial} · ${movedPart}${heldPart}`;
+  }, [dial, flow, dialedFlow]);
   // Feature focus and blurbs stay keyed off the authored flow — the dial changes
   // each step's model/effort, never its id — so highlighting still lines up.
   const focus = resolveSelection(selection, flow);
@@ -2512,6 +2592,7 @@ export function FlowExplorer({
         focusTick={focusTick}
         variant={variant}
         windowed={variant === "focus"}
+        dialPulse={dialPulse}
         onSelectElement={selectElement}
         onClear={clearSelection}
         onFocalAlign={handleFocalAlign}
@@ -2532,13 +2613,26 @@ export function FlowExplorer({
   );
 
   // The command token lives on the diagram's terminal node, so the header
-  // doesn't repeat it; it carries just the caption and the dial.
+  // doesn't repeat it; it carries the caption, the dial, and the dial's
+  // receipt line. min-h on the receipt reserves its row so switching settings
+  // never shifts the diagram below.
   const header = (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <span className="text-[12px] text-muted-foreground">
-        an example flow · select a feature to highlight where it lives
-      </span>
-      <PowerDial dial={dial} onChange={setDial} />
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="text-[12px] text-muted-foreground">
+          an example flow · select a feature to highlight where it lives
+        </span>
+        <PowerDial dial={dial} onChange={handleDial} />
+      </div>
+      <p
+        aria-live="polite"
+        className="flex min-h-[17px] items-center gap-2 font-mono text-[11px] leading-none text-muted-foreground"
+      >
+        <span aria-hidden="true" className="text-signal">
+          ›
+        </span>
+        {dialReceipt}
+      </p>
     </div>
   );
 

@@ -998,6 +998,39 @@
   }
 }
 
+/* The dial flash: a one-shot ring on each model badge the dial just re-tiered.
+   Replayed by remounting the badge (key={tick}), so the animation needs no
+   toggling class. Signal ink, not the flow color — the flash answers the dial,
+   which is signal-inked chrome, not the diagram's own wiring. Box-shadow only,
+   so the badge never changes size mid-flash. */
+@keyframes flow-badge-pulse {
+  0% {
+    box-shadow:
+      0 0 0 1.5px transparent,
+      0 0 14px -3px transparent;
+  }
+  30% {
+    box-shadow:
+      0 0 0 1.5px var(--signal),
+      0 0 14px -3px var(--signal);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1.5px transparent,
+      0 0 14px -3px transparent;
+  }
+}
+
+.flow-badge-pulse {
+  animation: flow-badge-pulse 700ms ease-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-badge-pulse {
+    animation: none;
+  }
+}
+
 /* Highlight chrome. Every rule below is composited-only (box-shadow, opacity,
    filter) so a highlight never changes a tile's box and the measured connectors
    never re-route. The whole-tile ring is an absolutely-positioned overlay; the
