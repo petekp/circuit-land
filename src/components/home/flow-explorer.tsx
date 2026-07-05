@@ -27,6 +27,15 @@ import {
   type MotionStyle,
   type MotionValue,
 } from "motion/react";
+import {
+  DOF_BLUR_MAX,
+  DOF_OPACITY_MIN,
+  DOF_SCALE_MIN,
+  DOF_WIRE_OPACITY_MIN,
+  FOCAL_LINE,
+  focusFromDist,
+} from "./glass/depth-field";
+import { GlassLayer, probeWebGL } from "./glass/glass-scene";
 
 /* The flow explorer. The masthead narrows to one idea; this is where the idea
    gets shown. It reuses the diagram engine from the old composer — measured SVG
@@ -691,32 +700,15 @@ const CONNECTOR_STROKE =
 const RETURN_STROKE =
   "color-mix(in oklab, var(--flow-color) 42%, var(--border))";
 
-// The page-space focal plane, as a fraction of the viewport height. A step
-// whose center sits on this line reads fully sharp; the depth-of-field layer
-// grades everything else by its distance from it, and selecting a feature
-// scrolls the page to bring the anchor step here. Above center: the reader's
-// eye rests in the upper third, and it leaves room below for the next steps
-// to visibly wait out of focus.
-const FOCAL_LINE = 0.38;
+// The focal line, the plateau/falloff curve, and the per-channel recession
+// floors live in glass/depth-field.ts, imported above: the WebGL glass layer
+// grades its slabs with the same math, and the two renderers must agree.
 
-// The depth of field. Full focus holds for DOF_PLATEAU px either side of the
-// plane (roughly half a tile, so a step doesn't shimmer while its center
-// rides near the line), then decays to fully receded across DOF_FALLOFF px
-// more. The curve is 1 - x², so focus lets go gently near the plane and
-// falls faster into the distance.
-const DOF_PLATEAU = 110;
-const DOF_FALLOFF = 380;
-// The receded end of each channel. Scale stays subtle on purpose: wires are
-// measured from unscaled boxes, so a scaled tile's edge drifts a few px off
-// its wire ends — but a receded tile's wires are also faded to near-nothing
-// (see WireSegment), which is what keeps the drift invisible.
-const DOF_SCALE_MIN = 0.945;
-const DOF_BLUR_MAX = 4.5;
-// The veil (flow-veil, riding --illum) owns the darkness of a receded tile
-// now, so wrapper opacity only assists; a 0.55 floor on top of the veil
-// crushed the neon elements that are supposed to survive recession.
-const DOF_OPACITY_MIN = 0.72;
-const DOF_WIRE_OPACITY_MIN = 0.25;
+// WebGL support never changes within a page's lifetime, so the "store" for
+// useSyncExternalStore has nothing to subscribe to; the server snapshot is
+// always false and the client snapshot is the cached probe.
+const subscribeNever = () => () => {};
+const webglServerSnapshot = () => false;
 
 // Geometry the depth transforms read on every scroll frame: the canvas's
 // page-space top plus each node's center relative to the canvas, refreshed by
@@ -741,9 +733,7 @@ function focusAt(
   const cy = geom.centers.get(id);
   if (cy == null) return 1;
   const viewportY = geom.canvasTop + cy - pageY;
-  const dist = Math.abs(viewportY - window.innerHeight * FOCAL_LINE);
-  const x = Math.min(1, Math.max(0, (dist - DOF_PLATEAU) / DOF_FALLOFF));
-  return 1 - x * x;
+  return focusFromDist(viewportY - window.innerHeight * FOCAL_LINE);
 }
 
 const ROW_EPSILON = 18;
@@ -2009,6 +1999,22 @@ function FlowDiagram({
     return y + window.innerHeight * FOCAL_LINE - dofGeom.current.canvasTop;
   });
 
+  // The WebGL glass layer: a sticky viewport-filling canvas that mirrors
+  // every tile's live box each frame and draws the material behind the DOM
+  // text (see glass/glass-canvas.tsx). Gated on the depth treatment being
+  // active AND a real WebGL context; anything short of that keeps the CSS
+  // glass, which also serves as the loading state while the lazy GL chunk
+  // arrives. The capability read goes through useSyncExternalStore so the
+  // server render and the hydration pass agree on "no GL", then React
+  // reconciles to the probed value after mount.
+  const glassHostRef = useRef<HTMLDivElement | null>(null);
+  const glSupported = useSyncExternalStore(
+    subscribeNever,
+    probeWebGL,
+    webglServerSnapshot,
+  );
+  const glActive = dofActive && glSupported;
+
   const spring = reduceMotion
     ? { duration: 0 }
     : ({ type: "spring", stiffness: 420, damping: 36, mass: 0.9 } as const);
@@ -2188,7 +2194,11 @@ function FlowDiagram({
   const ariaLabel = `${flow.name} flow. It starts from the prompt: "${flow.prompt}". Then it runs in order: ${orderedLabels}. Each step shows the scope it runs with.`;
 
   const canvas = (
-    <div ref={containerRef} className="flow-diagram-canvas relative">
+    <div
+      ref={containerRef}
+      className="flow-diagram-canvas relative"
+      data-gl={glActive || undefined}
+    >
       {/* The light bed the frosted glass diffuses. Two counter-drifting
           aurora layers carry the flow's hue plus fixed brand complements;
           the key light rides the focal plane. Both are invisible to the
@@ -2205,6 +2215,21 @@ function FlowDiagram({
           className="flow-keylight"
           style={{ y: lightY }}
         />
+      ) : null}
+      {/* The GL glass rides a sticky viewport-sized host: sticky (not fixed)
+          because the canvas div's container-type gives it layout containment,
+          which captures fixed descendants. The negative margin hands the
+          height back so the grid below still starts at the canvas top. Wedged
+          between the atmosphere and the wires: slabs above the aurora, text
+          and wires above the slabs. */}
+      {glActive ? (
+        <div ref={glassHostRef} aria-hidden="true" className="flow-gl-host">
+          <GlassLayer
+            host={glassHostRef}
+            nodes={nodeRefs}
+            flowColor={flow.color}
+          />
+        </div>
       ) : null}
       <svg
         aria-hidden="true"

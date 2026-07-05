@@ -844,6 +844,22 @@
   );
 }
 
+/* The WebGL glass layer's host: one viewport tall, stuck to the viewport
+   while the diagram scrolls past, so the canvas never moves — the scene
+   re-reads tile positions each frame instead. Sticky (not fixed) because
+   .flow-diagram-canvas has container-type, whose layout containment would
+   capture a fixed descendant. The negative margin returns the reserved
+   height to the flow, so the wires and grid after it still start at the
+   canvas top. Sits above the aurora and key light (later in the DOM, same
+   stacking level) and below the wires (z-0) and tile text (z-10). */
+.flow-gl-host {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  margin-bottom: -100dvh;
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flow-aurora-layer {
     animation: none;
