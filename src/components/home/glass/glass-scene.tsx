@@ -9,6 +9,19 @@
 import dynamic from "next/dynamic";
 import type { RefObject } from "react";
 
+// The wire data the GL layer mirrors: the same measured segments the SVG
+// draws, in diagram-canvas coordinates. The GL side adds the LIGHT (an
+// additive under-glow and glowing ports); the SVG keeps the crisp core.
+export type GlassSegment = {
+  id: string;
+  d: string;
+  head: { x: number; y: number };
+  tail: { x: number; y: number };
+  kind?: "return";
+  from: string;
+  to: string;
+};
+
 export type GlassLayerProps = {
   // The sticky full-viewport element the canvas fills. Slab positions are
   // computed relative to its live box, so the world/CSS mapping holds while
@@ -20,6 +33,9 @@ export type GlassLayerProps = {
   nodes: RefObject<Map<string, HTMLElement> | null>;
   // The active flow's brand color as a CSS hsl() literal.
   flowColor: string;
+  // The measured wire segments (canvas space), refreshed by the same pass
+  // that feeds the SVG.
+  segments: GlassSegment[];
 };
 
 const GlassCanvas = dynamic(() => import("./glass-canvas"), { ssr: false });

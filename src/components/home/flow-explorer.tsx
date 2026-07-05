@@ -1810,6 +1810,10 @@ function DepthTile({
   const illum = useTransform(focus, (f) => Math.round(f * 1000) / 1000);
   return (
     <m.li
+      // A real DOM id per step (prefixed clear of the page's section ids), so
+      // steps are deep-linkable: /#step-checkpoint scrolls the diagram to the
+      // checkpoint tile on load.
+      id={`step-${id}`}
       className="flow-grid-item relative z-10 w-full list-none"
       style={
         dof.active
@@ -2228,6 +2232,7 @@ function FlowDiagram({
             host={glassHostRef}
             nodes={nodeRefs}
             flowColor={flow.color}
+            segments={segments}
           />
         </div>
       ) : null}

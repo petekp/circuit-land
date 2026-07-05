@@ -23,6 +23,9 @@
    (the field scrolls past with the content), the edge mask, and the warm key
    light pinned to the focal line. Per-tile focal glows are additive quads
    between the backdrop and the slabs, so the glass refracts its own halo.
+   The wires keep their crisp SVG cores (information, like the text) and the
+   GL layer adds what a lit conduit casts: an additive ribbon under each
+   measured path and a hot spot at each port, graded by endpoint focus.
    The DOM tiles drop their CSS material, aurora, key light, and focal glow
    under [data-gl] (see globals.css) and keep text, veil, and neon. */
 
@@ -69,6 +72,28 @@ const DIM_RECEDED = 0.78;
 // opacity illum² × 0.8, composited plus-lighter. 0.2032 × 0.8 ≈ 0.163.
 const GLOW_GAIN = 0.163;
 
+// The wire light. The SVG keeps the crisp cores — they are information, like
+// the text — and the GL layer adds what a lit conduit casts: a soft additive
+// ribbon under each path and a hot spot at each port. Gains are the additive
+// alpha at full focus; the return edge stays dimmer than the sequential
+// wires, same hierarchy the strokes carry ("again" never outshouts "then").
+const WIRE_POOL = 20;
+const PORT_POOL = 40;
+const WIRE_HALF_WIDTH = 5;
+const WIRE_GLOW_GAIN = 0.11;
+const RETURN_GLOW_GAIN = 0.055;
+// The glow floor when a wire's endpoints recede: nearly out, while the SVG
+// core keeps its own higher floor so the diagram stays readable.
+const WIRE_GLOW_MIN = 0.15;
+const PORT_SIZE = 20;
+const HEAD_SIZE = 14;
+const PORT_GAIN = 0.35;
+const HEAD_GAIN = 0.25;
+// The SVG wires draw in with a 0.05s-per-wire stagger over ~0.45s; the glow
+// arrives on the same schedule so the light never precedes its conduit.
+const WIRE_STAGGER = 0.05;
+const WIRE_FADE_IN = 0.45;
+
 type SlabDebug = {
   id: string;
   x: number;
@@ -87,10 +112,17 @@ type SlabDebug = {
 const PROJECTED = new THREE.Vector3();
 const WHITE = new THREE.Color(1, 1, 1);
 
+type WireDebug = {
+  id: string;
+  alpha: number;
+  reveal: number;
+};
+
 declare global {
   interface Window {
-    // Live slab rects (host-relative CSS px) for registration probes.
-    __glassDebug?: { frame: number; rects: SlabDebug[] };
+    // Live slab rects (host-relative CSS px) and wire glow state for
+    // registration probes.
+    __glassDebug?: { frame: number; rects: SlabDebug[]; wires: WireDebug[] };
   }
 }
 
@@ -269,14 +301,17 @@ const AURORA_FRAG = /* glsl */ `
 // tile holds the plane (radial 50% × 42%, transparent at 72%), additive so
 // it adds over the aurora exactly like plus-lighter did. One quad per slab,
 // between the backdrop and the glass, so the slab refracts its own halo.
+// uRadii picks the ellipse: (0.5, 0.42) for the anamorphic focal glow,
+// (0.5, 0.5) for the round port sprites that share this shader.
 const GLOW_FRAG = /* glsl */ `
   uniform vec3 uColor;
   uniform float uAlpha;
+  uniform vec2 uRadii;
   uniform float uLinearOut;
   varying vec2 vUv;
 
   void main() {
-    float d = length((vUv - 0.5) / vec2(0.5, 0.42));
+    float d = length((vUv - 0.5) / uRadii);
     float a = uAlpha * clamp((0.72 - d) / 0.72, 0.0, 1.0);
     // Raw sRGB on the direct view: additive over the backdrop's raw values,
     // the same space CSS plus-lighter adds in. Encoding here would lift a
@@ -288,12 +323,144 @@ const GLOW_FRAG = /* glsl */ `
   }
 `;
 
-function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
+// The wire glow ribbon: a triangle strip along the sampled path, aT running
+// -1..1 across it and aL 0..1 along it. Quadratic falloff across, a short
+// fade at each end so the ports own the terminals.
+const RIBBON_VERT = /* glsl */ `
+  attribute float aT;
+  attribute float aL;
+  varying float vT;
+  varying float vL;
+  void main() {
+    vT = aT;
+    vL = aL;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const RIBBON_FRAG = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uAlpha;
+  uniform float uReveal;
+  uniform float uLinearOut;
+  varying float vT;
+  varying float vL;
+
+  void main() {
+    float across = 1.0 - abs(vT);
+    float ends = smoothstep(0.0, 0.08, vL) * (1.0 - smoothstep(0.92, 1.0, vL));
+    // The light sweeps tail-to-head as uReveal runs 0..1, tracking the SVG
+    // core's pathLength draw-in so the glow never precedes its conduit. The
+    // 1.08 overshoot lets the soft edge clear the far end.
+    float reveal = clamp((uReveal * 1.08 - vL) / 0.08, 0.0, 1.0);
+    vec3 col = uColor * (uAlpha * across * across * ends * reveal);
+    if (uLinearOut > 0.5) col = pow(col, vec3(2.2));
+    gl_FragColor = vec4(col, 1.0);
+  }
+`;
+
+// Sample an absolute-command SVG path (the connector engine only emits
+// M/L/C/Q) into a polyline in canvas coordinates.
+function samplePath(d: string): Array<{ x: number; y: number }> {
+  const pts: Array<{ x: number; y: number }> = [];
+  const tokens = d.match(/[MLCQ]|-?[\d.]+/g);
+  if (!tokens) return pts;
+  let i = 0;
+  let cx = 0;
+  let cy = 0;
+  const num = () => Number(tokens[i++]);
+  while (i < tokens.length) {
+    const cmd = tokens[i++];
+    if (cmd === "M" || cmd === "L") {
+      cx = num();
+      cy = num();
+      pts.push({ x: cx, y: cy });
+    } else if (cmd === "C") {
+      const x1 = num(), y1 = num(), x2 = num(), y2 = num(), x = num(), y = num();
+      for (let s = 1; s <= 16; s += 1) {
+        const t = s / 16;
+        const u = 1 - t;
+        pts.push({
+          x: u * u * u * cx + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x,
+          y: u * u * u * cy + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y,
+        });
+      }
+      cx = x;
+      cy = y;
+    } else if (cmd === "Q") {
+      const x1 = num(), y1 = num(), x = num(), y = num();
+      for (let s = 1; s <= 10; s += 1) {
+        const t = s / 10;
+        const u = 1 - t;
+        pts.push({
+          x: u * u * cx + 2 * u * t * x1 + t * t * x,
+          y: u * u * cy + 2 * u * t * y1 + t * t * y,
+        });
+      }
+      cx = x;
+      cy = y;
+    }
+  }
+  return pts;
+}
+
+// Build the ribbon strip for a polyline: each point becomes two vertices
+// offset along the averaged perpendicular, y negated (canvas y-down →
+// world y-up; the ribbon lives in a group anchored at the canvas origin).
+function buildRibbon(pts: Array<{ x: number; y: number }>): THREE.BufferGeometry {
+  const n = pts.length;
+  const geo = new THREE.BufferGeometry();
+  if (n < 2) return geo;
+  const pos = new Float32Array(n * 2 * 3);
+  const aT = new Float32Array(n * 2);
+  const aL = new Float32Array(n * 2);
+  const idx: number[] = [];
+  let length = 0;
+  const lens = new Float32Array(n);
+  for (let k = 1; k < n; k += 1) {
+    length += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y);
+    lens[k] = length;
+  }
+  for (let k = 0; k < n; k += 1) {
+    const prev = pts[Math.max(0, k - 1)];
+    const next = pts[Math.min(n - 1, k + 1)];
+    const tx = next.x - prev.x;
+    const ty = next.y - prev.y;
+    const tl = Math.hypot(tx, ty) || 1;
+    const nx = (-ty / tl) * WIRE_HALF_WIDTH;
+    const ny = (tx / tl) * WIRE_HALF_WIDTH;
+    const l = length > 0 ? lens[k] / length : 0;
+    const p = pts[k];
+    pos.set([p.x + nx, -(p.y + ny), 0], k * 6);
+    pos.set([p.x - nx, -(p.y - ny), 0], k * 6 + 3);
+    aT[k * 2] = 1;
+    aT[k * 2 + 1] = -1;
+    aL[k * 2] = l;
+    aL[k * 2 + 1] = l;
+    if (k > 0) {
+      const a = (k - 1) * 2;
+      idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    }
+  }
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("aT", new THREE.BufferAttribute(aT, 1));
+  geo.setAttribute("aL", new THREE.BufferAttribute(aL, 1));
+  geo.setIndex(idx);
+  return geo;
+}
+
+function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
   const meshRefs = useRef<(THREE.Mesh | null)[]>([]);
   const glowRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const wireRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const portRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const wireGroupRef = useRef<THREE.Group | null>(null);
   const backdropRef = useRef<THREE.Mesh | null>(null);
   const keyLightRef = useRef<THREE.DirectionalLight | null>(null);
   const canvasElRef = useRef<HTMLElement | null>(null);
+  // Focus per node id, refilled by the slab loop each frame; the wire pass
+  // grades each glow by its endpoints' focus, same rule the SVG opacity runs.
+  const focusById = useRef(new Map<string, number>());
   const size = useThree((state) => state.size);
   // One transmission source for every slab: the backdrop and glows rendered
   // without the slabs themselves. Slabs don't refract each other, which is
@@ -310,14 +477,17 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
     prompt: new THREE.Color(1, 1, 1),
     glow: new THREE.Color(1, 1, 1),
     flow: new THREE.Color("#8b8b96"),
+    wire: new THREE.Color("#8b8b96"),
   });
 
-  // Pool geometries are rebuilt imperatively as tiles resize; drop them all
-  // when the scene unmounts.
+  // Pool geometries are rebuilt imperatively as tiles resize and wires
+  // re-route; drop them all when the scene unmounts.
   useEffect(() => {
     const pool = meshRefs.current;
+    const wires = wireRefs.current;
     return () => {
       for (const mesh of pool) mesh?.geometry?.dispose();
+      for (const mesh of wires) mesh?.geometry?.dispose();
     };
   }, []);
 
@@ -344,6 +514,9 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
       // glow paint is color-mix(flow 17%, white), pale and flow-leaning.
       const rawFlow = resolveCssColor(hostEl, flowColor, true);
       t.glow.copy(rawFlow).lerp(WHITE, 0.83);
+      // The wire light is the flow color straight: it reads as the energy
+      // the tinted glass and pale glows are downstream of.
+      t.wire.copy(rawFlow);
       const backdropMat = backdrop.material as THREE.ShaderMaterial;
       (backdropMat.uniforms.uFlow.value as THREE.Color).copy(rawFlow);
       (backdropMat.uniforms.uBase.value as THREE.Color).copy(
@@ -390,6 +563,8 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
     );
 
     const rects: SlabDebug[] = [];
+    const focusMap = focusById.current;
+    focusMap.clear();
 
     let slot = 0;
     for (const [id, el] of nodeMap) {
@@ -442,6 +617,7 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
       // The same grade the DOM tiles run, computed from the live box rather
       // than the measured-centers cache — fresher, and free.
       const focus = focusFromDist(r.top + r.height / 2 - focalY);
+      focusMap.set(id, focus);
       const material = mesh.material as THREE.MeshPhysicalMaterial;
       const shape = el.dataset.shape;
       const t = tints.current;
@@ -492,29 +668,135 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
       if (glow) glow.visible = false;
     }
 
+    // The wire light rides the same measured segments the SVG draws, in the
+    // same canvas-relative coordinates: the group re-anchors to the canvas's
+    // top-left every frame and the ribbon geometry stays canvas-local, so
+    // the glow tracks the scroll for free, exactly like the slabs do.
+    const wires = wireRefs.current;
+    const ports = portRefs.current;
+    const wireGroup = wireGroupRef.current;
+    const wireDebug: WireDebug[] = [];
+    if (wireGroup) {
+      wireGroup.position.set(
+        canvasRect.left - hostRect.left - size.width / 2,
+        size.height / 2 - (canvasRect.top - hostRect.top),
+        -40,
+      );
+      const now = state.clock.elapsedTime;
+      const tint = tints.current;
+      for (let i = 0; i < WIRE_POOL; i += 1) {
+        const mesh = wires[i];
+        if (!mesh) continue;
+        const seg = segments[i];
+        const tailPort = ports[i * 2];
+        const headPort = ports[i * 2 + 1];
+        if (!seg) {
+          mesh.visible = false;
+          if (tailPort) tailPort.visible = false;
+          if (headPort) headPort.visible = false;
+          continue;
+        }
+
+        // Segment ids embed the flow key, so a flow swap restarts every
+        // envelope (the SVG redraws too) while a resize only changes `d`
+        // and rebuilds geometry without re-fading the light.
+        const cache = mesh.userData as {
+          id?: string;
+          d?: string;
+          swapT?: number;
+        };
+        if (cache.id !== seg.id) {
+          cache.id = seg.id;
+          cache.swapT = now;
+        }
+        if (cache.d !== seg.d) {
+          cache.d = seg.d;
+          mesh.geometry.dispose();
+          mesh.geometry = buildRibbon(samplePath(seg.d));
+        }
+
+        mesh.visible = true;
+        const env = Math.min(
+          Math.max(
+            (now - (cache.swapT ?? 0) - i * WIRE_STAGGER) / WIRE_FADE_IN,
+            0,
+          ),
+          1,
+        );
+        const fFrom = focusMap.get(seg.from) ?? 0.5;
+        const fTo = focusMap.get(seg.to) ?? 0.5;
+        const focus =
+          WIRE_GLOW_MIN + (1 - WIRE_GLOW_MIN) * ((fFrom + fTo) / 2);
+        const isReturn = seg.kind === "return";
+        const mat = mesh.material as THREE.ShaderMaterial;
+        (mat.uniforms.uColor.value as THREE.Color).copy(tint.wire);
+        // Sequential wires sweep in with the SVG core's draw; the return
+        // edge fades in whole, like its dashed stroke does.
+        mat.uniforms.uReveal.value = isReturn ? 1 : env;
+        mat.uniforms.uAlpha.value =
+          (isReturn ? RETURN_GLOW_GAIN : WIRE_GLOW_GAIN) *
+          focus *
+          (isReturn ? env : 1);
+        wireDebug.push({
+          id: seg.id,
+          alpha: mat.uniforms.uAlpha.value as number,
+          reveal: mat.uniforms.uReveal.value as number,
+        });
+
+        if (tailPort) {
+          tailPort.visible = true;
+          tailPort.position.set(seg.tail.x, -seg.tail.y, 0);
+          tailPort.scale.set(PORT_SIZE, PORT_SIZE, 1);
+          const pm = tailPort.material as THREE.ShaderMaterial;
+          (pm.uniforms.uColor.value as THREE.Color).copy(tint.wire);
+          pm.uniforms.uAlpha.value =
+            PORT_GAIN *
+            (WIRE_GLOW_MIN + (1 - WIRE_GLOW_MIN) * fFrom) *
+            Math.min(env * 3, 1) *
+            (isReturn ? 0.5 : 1);
+        }
+        if (headPort) {
+          headPort.visible = true;
+          headPort.position.set(seg.head.x, -seg.head.y, 0);
+          headPort.scale.set(HEAD_SIZE, HEAD_SIZE, 1);
+          const pm = headPort.material as THREE.ShaderMaterial;
+          (pm.uniforms.uColor.value as THREE.Color).copy(tint.wire);
+          // The head lights when the sweep arrives, like the chevron's
+          // delayed fade in the SVG.
+          pm.uniforms.uAlpha.value =
+            HEAD_GAIN *
+            (WIRE_GLOW_MIN + (1 - WIRE_GLOW_MIN) * fTo) *
+            (isReturn ? env : Math.max((env - 0.7) / 0.3, 0)) *
+            (isReturn ? 0.5 : 1);
+        }
+      }
+    }
+
     // The shared transmission pass: everything except the slabs, from the
     // same camera, so the material's screen-space buffer sampling lines up.
-    // The glows stay in — the glass refracts its own halo. The light-bed
-    // shaders switch to linear output for this pass only (see uLinearOut).
+    // The glows and wire light stay in — the glass refracts its own halo
+    // and the conduit light passing beneath it. The light-bed shaders
+    // switch to linear output for this pass only (see uLinearOut).
+    const setLinearOut = (value: number) => {
+      backdropMat.uniforms.uLinearOut.value = value;
+      for (const list of [glows, wires, ports]) {
+        for (const m of list) {
+          if (m) {
+            (m.material as THREE.ShaderMaterial).uniforms.uLinearOut.value =
+              value;
+          }
+        }
+      }
+    };
     for (let i = 0; i < slot; i += 1) {
       const mesh = pool[i];
       if (mesh) mesh.visible = false;
     }
-    backdropMat.uniforms.uLinearOut.value = 1;
-    for (const glow of glows) {
-      if (glow) {
-        (glow.material as THREE.ShaderMaterial).uniforms.uLinearOut.value = 1;
-      }
-    }
+    setLinearOut(1);
     state.gl.setRenderTarget(buffer);
     state.gl.render(state.scene, state.camera);
     state.gl.setRenderTarget(null);
-    backdropMat.uniforms.uLinearOut.value = 0;
-    for (const glow of glows) {
-      if (glow) {
-        (glow.material as THREE.ShaderMaterial).uniforms.uLinearOut.value = 0;
-      }
-    }
+    setLinearOut(0);
     for (let i = 0; i < slot; i += 1) {
       const mesh = pool[i];
       if (mesh) mesh.visible = true;
@@ -523,6 +805,7 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
     window.__glassDebug = {
       frame: (window.__glassDebug?.frame ?? 0) + 1,
       rects,
+      wires: wireDebug,
     };
   });
 
@@ -570,6 +853,7 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
             uniforms={{
               uColor: { value: new THREE.Color(1, 1, 1) },
               uAlpha: { value: 0 },
+              uRadii: { value: new THREE.Vector2(0.5, 0.42) },
               uLinearOut: { value: 0 },
             }}
             transparent
@@ -578,6 +862,61 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
           />
         </mesh>
       ))}
+      {/* The wire light: additive ribbons under the SVG cores plus a hot
+          spot at each port, grouped so one canvas-anchored transform moves
+          them all. Between the focal glows (-60) and the slabs (0), so the
+          glass refracts the conduit light like everything else in the bed. */}
+      <group ref={wireGroupRef}>
+        {Array.from({ length: WIRE_POOL }, (_, i) => (
+          <mesh
+            key={`wire-${i}`}
+            ref={(mesh: THREE.Mesh | null) => {
+              wireRefs.current[i] = mesh;
+            }}
+            visible={false}
+            renderOrder={-1}
+          >
+            <shaderMaterial
+              vertexShader={RIBBON_VERT}
+              fragmentShader={RIBBON_FRAG}
+              uniforms={{
+                uColor: { value: new THREE.Color(1, 1, 1) },
+                uAlpha: { value: 0 },
+                uReveal: { value: 0 },
+                uLinearOut: { value: 0 },
+              }}
+              transparent
+              depthWrite={false}
+              blending={THREE.AdditiveBlending}
+            />
+          </mesh>
+        ))}
+        {Array.from({ length: PORT_POOL }, (_, i) => (
+          <mesh
+            key={`port-${i}`}
+            ref={(mesh: THREE.Mesh | null) => {
+              portRefs.current[i] = mesh;
+            }}
+            visible={false}
+            renderOrder={-1}
+          >
+            <planeGeometry args={[1, 1]} />
+            <shaderMaterial
+              vertexShader={AURORA_VERT}
+              fragmentShader={GLOW_FRAG}
+              uniforms={{
+                uColor: { value: new THREE.Color(1, 1, 1) },
+                uAlpha: { value: 0 },
+                uRadii: { value: new THREE.Vector2(0.5, 0.5) },
+                uLinearOut: { value: 0 },
+              }}
+              transparent
+              depthWrite={false}
+              blending={THREE.AdditiveBlending}
+            />
+          </mesh>
+        ))}
+      </group>
       {Array.from({ length: POOL_SIZE }, (_, i) => (
         <mesh
           key={i}
