@@ -887,6 +887,13 @@
   display: none;
 }
 
+/* The focal glow moves in-scene too: an additive quad behind each slab that
+   the glass refracts (see glass-canvas.tsx), where the DOM version could
+   only sit flatly behind the tile. */
+.flow-diagram-canvas[data-gl] .flow-grid[data-depth] > li::before {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flow-aurora-layer {
     animation: none;

@@ -13,12 +13,18 @@
 
    Material model: each slab is a rounded glass volume running drei's
    MeshTransmissionMaterial. Transmission refracts the GL scene, not the DOM,
-   so an opaque backdrop plane (the aurora bed) sits behind the slabs; one
-   shared FBO renders that backdrop once per frame and feeds every slab's
+   so an opaque backdrop plane sits behind the slabs; one shared FBO renders
+   the backdrop (and the focal glows) once per frame and feeds every slab's
    material — passing an external buffer makes drei skip its per-material
-   scene render, so 11 slabs cost one extra plane draw, not 11 scene passes.
-   The DOM tiles drop their CSS material under [data-gl] (see globals.css)
-   and keep text, veil, and neon. */
+   scene render, so 11 slabs cost one extra scene draw, not 11.
+
+   Light model: the backdrop plane carries the whole CSS light bed, ported
+   stop for stop — the two counter-drifting aurora layers in DIAGRAM space
+   (the field scrolls past with the content), the edge mask, and the warm key
+   light pinned to the focal line. Per-tile focal glows are additive quads
+   between the backdrop and the slabs, so the glass refracts its own halo.
+   The DOM tiles drop their CSS material, aurora, key light, and focal glow
+   under [data-gl] (see globals.css) and keep text, veil, and neon. */
 
 import { useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -53,6 +59,16 @@ const TINT_PROMPT = 0.06;
 const ROUGHNESS_FOCUSED = 0.3;
 const ROUGHNESS_RECEDED = 0.62;
 
+// The in-material recession grade: the tint multiplies transmitted light, so
+// scaling it down moves a receded slab out of the key light's illumination
+// instead of just blurring it. Focused slabs transmit at full strength.
+const DIM_RECEDED = 0.78;
+
+// The focal glow's strength, folded from the CSS it replaces: the painted
+// color is color-mix(flow 17%, white/0.04) — mixed alpha 0.2032 — under
+// opacity illum² × 0.8, composited plus-lighter. 0.2032 × 0.8 ≈ 0.163.
+const GLOW_GAIN = 0.163;
+
 type SlabDebug = {
   id: string;
   x: number;
@@ -78,38 +94,82 @@ declare global {
   }
 }
 
-// The flow's color arrives as a var(--flow-*) reference; the literal lives in
-// the stylesheet. Custom properties inherit and keep their authored text, so
-// resolving the reference against the host element hands back the modern
-// space-separated hsl() literal — which THREE.Color.set() cannot parse (it
-// only understands the legacy comma form). Parse the components ourselves and
-// hand them to setHSL as sRGB so the GL tint matches the CSS one.
-function resolveCssColor(el: HTMLElement, css: string): THREE.Color {
+// The flow's color arrives as a var(--flow-*) reference; the literal lives
+// in the stylesheet. Computed custom-property values substitute nested
+// var()s but their serialization is the engine's choice — Chrome hands back
+// hex, others may keep rgb() or the authored space-separated hsl(), and
+// THREE.Color.set() only understands hex and the legacy comma forms. Accept
+// all three shapes so the GL tint can never silently fall back to grey (it
+// did: the hex form slipped past an hsl-only parse here and washed the
+// whole light bed).
+//
+// Color space matters as much as the parse. The slab tints feed a physical
+// material, so they convert sRGB → the linear working space like any texture
+// would. The LIGHT BED does not: CSS composites its gradients in gamma-space
+// sRGB, so the backdrop shader mixes raw sRGB components and writes them out
+// unencoded — running that math in linear and gamma-encoding the result
+// reads 2–5× brighter than the CSS it's porting (worst at the additive low
+// end, where linear 0.05 encodes to 0.24). `raw` picks the storage.
+function resolveCssColor(
+  el: HTMLElement,
+  css: string,
+  raw = false,
+): THREE.Color {
+  const space = raw ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
   const varMatch = css.match(/var\((--[\w-]+)/);
   const literal = varMatch
     ? getComputedStyle(el).getPropertyValue(varMatch[1]).trim()
     : css;
   const color = new THREE.Color();
-  const m = literal.match(/hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)/);
-  if (m) {
-    color.setHSL(
-      Number(m[1]) / 360,
-      Number(m[2]) / 100,
-      Number(m[3]) / 100,
-      THREE.SRGBColorSpace,
+  const hexM = literal.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+  if (hexM) {
+    const hex =
+      hexM[1].length === 3
+        ? [...hexM[1]].map((c) => c + c).join("")
+        : hexM[1];
+    const n = parseInt(hex, 16);
+    color.setRGB(
+      ((n >> 16) & 255) / 255,
+      ((n >> 8) & 255) / 255,
+      (n & 255) / 255,
+      space,
     );
-  } else {
-    color.set("#8b8b96");
+    return color;
   }
+  const hslM = literal.match(/hsla?\(\s*([\d.]+)[\s,]+([\d.]+)%[\s,]+([\d.]+)%/);
+  if (hslM) {
+    color.setHSL(
+      Number(hslM[1]) / 360,
+      Number(hslM[2]) / 100,
+      Number(hslM[3]) / 100,
+      space,
+    );
+    return color;
+  }
+  const rgbM = literal.match(/rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/);
+  if (rgbM) {
+    color.setRGB(
+      Number(rgbM[1]) / 255,
+      Number(rgbM[2]) / 255,
+      Number(rgbM[3]) / 255,
+      space,
+    );
+    return color;
+  }
+  color.set("#8b8b96");
   return color;
 }
 
-// The aurora bed the glass refracts: the page's near-black base with three
-// slow-drifting hue blobs — the flow's color plus the two fixed brand
-// complements the CSS aurora used. Opaque on purpose: the transmission
-// buffer needs defined light everywhere, and matching the page background
-// keeps the canvas edge invisible. Phase 3 replaces this stub with the
-// faithful aurora port and the focal key light.
+// Backdrop constants stay in raw sRGB (see resolveCssColor): the light bed's
+// shader IS the final pixel math, no encode pass after it.
+const rawHsl = (h: number, s: number, l: number) =>
+  new THREE.Color().setHSL(
+    h / 360,
+    s / 100,
+    l / 100,
+    THREE.LinearSRGBColorSpace,
+  );
+
 const AURORA_VERT = /* glsl */ `
   varying vec2 vUv;
   void main() {
@@ -118,42 +178,126 @@ const AURORA_VERT = /* glsl */ `
   }
 `;
 
+// The light bed, ported stop for stop from the CSS it replaces (see "The
+// light bed" in globals.css): six elliptical gradient blobs across two
+// layers that drift in counter-phase (90s / 120s, ease-in-out alternate —
+// cosine stands in, indistinguishable at these speeds), the whole bed
+// masked toward the canvas edges, plus the warm key light pinned to the
+// focal line. The aurora lives in DIAGRAM space — the CSS layers were
+// inset to the canvas element — so the field scrolls past with the
+// content while the key light holds still in the viewport.
 const AURORA_FRAG = /* glsl */ `
   uniform vec3 uBase;
   uniform vec3 uFlow;
   uniform vec3 uViolet;
-  uniform vec3 uTeal;
+  uniform vec3 uSignal;
+  uniform vec3 uCyan;
+  uniform vec3 uMagenta;
+  uniform vec3 uKeyA;
+  uniform vec3 uKeyB;
   uniform float uTime;
-  uniform float uAspect;
+  uniform vec2 uHostSize;
+  uniform vec4 uCanvas;
+  uniform float uFocalY;
+  uniform float uLinearOut;
   varying vec2 vUv;
 
-  float blob(vec2 uv, vec2 center, float r) {
-    vec2 d = uv - center;
-    return exp(-dot(d, d) / (r * r));
+  // One CSS radial-gradient(color, transparent STOP): a linear alpha ramp
+  // from the center to the stop, in the ellipse's normalized distance.
+  float blobRamp(vec2 uv, vec2 center, vec2 radii, float stop) {
+    float d = length((uv - center) / radii);
+    return clamp((stop - d) / stop, 0.0, 1.0);
   }
 
   void main() {
-    vec2 uv = vec2(vUv.x * uAspect, vUv.y);
+    // Fragment position in host CSS px, y down like the DOM. The host is
+    // viewport-sized and viewport-pinned once its sticky range engages.
+    vec2 vp = vec2(vUv.x, 1.0 - vUv.y) * uHostSize;
+
+    // Diagram-space uv: uCanvas is the diagram canvas rect, host-relative.
+    vec2 dUv = (vp - uCanvas.xy) / max(uCanvas.zw, vec2(1.0));
+
+    // Each aurora layer is the canvas inset -18%, transformed by the drift
+    // keyframes: translate(-2.5%, -1.5%) scale(1) -> translate(2.5%, 2%)
+    // scale(1.08). Sampling inverts the transform.
+    float sA = 0.5 - 0.5 * cos(6.2831853 * uTime / 180.0);
+    float sB = 0.5 + 0.5 * cos(6.2831853 * uTime / 240.0);
+    vec2 layer = (dUv + 0.18) / 1.36;
+    vec2 tA = mix(vec2(-0.025, -0.015), vec2(0.025, 0.02), sA);
+    vec2 tB = mix(vec2(-0.025, -0.015), vec2(0.025, 0.02), sB);
+    vec2 a = (layer - 0.5 - tA) / mix(1.0, 1.08, sA) + 0.5;
+    vec2 b = (layer - 0.5 - tB) / mix(1.0, 1.08, sB) + 0.5;
+
+    // The six blobs, alpha-over in CSS paint order: within a background
+    // list the first gradient paints on top, and layer B sits over layer A.
     vec3 col = uBase;
-    float t = uTime * 0.04;
-    col += uFlow * 0.14 *
-      blob(uv, vec2((0.3 + 0.05 * sin(t)) * uAspect, 0.68 + 0.04 * cos(t * 0.7)), 0.5);
-    col += uViolet * 0.1 *
-      blob(uv, vec2((0.74 + 0.04 * cos(t * 0.9)) * uAspect, 0.34 + 0.05 * sin(t * 0.6)), 0.55);
-    col += uTeal * 0.07 *
-      blob(uv, vec2((0.18 + 0.03 * sin(t * 1.1)) * uAspect, 0.16 + 0.03 * cos(t)), 0.4);
+    col = mix(col, uSignal,  0.18 * blobRamp(a, vec2(0.30, 0.76), vec2(0.44, 0.24), 0.72));
+    col = mix(col, uViolet,  0.22 * blobRamp(a, vec2(0.78, 0.42), vec2(0.38, 0.22), 0.70));
+    col = mix(col, uFlow,    0.30 * blobRamp(a, vec2(0.24, 0.12), vec2(0.42, 0.26), 0.70));
+    col = mix(col, uMagenta, 0.14 * blobRamp(b, vec2(0.72, 0.84), vec2(0.40, 0.24), 0.70));
+    col = mix(col, uFlow,    0.24 * blobRamp(b, vec2(0.26, 0.48), vec2(0.46, 0.26), 0.72));
+    col = mix(col, uCyan,    0.16 * blobRamp(b, vec2(0.70, 0.16), vec2(0.36, 0.22), 0.70));
+
+    // The bed fades toward the canvas edges (the CSS mask-image: black to
+    // 55%, gone by 98%), so it reads as atmosphere, not a poster.
+    float m = length((dUv - 0.5) / vec2(1.2, 0.9));
+    col = mix(uBase, col, clamp((0.98 - m) / 0.43, 0.0, 1.0));
+
+    // The key light: a wide warm ellipse at the focal line. plus-lighter in
+    // CSS, straight addition here — the framebuffer is sRGB after the
+    // colorspace include, same space CSS blends in.
+    vec2 kd2 = (vp - vec2(0.5 * uHostSize.x, uFocalY)) /
+      vec2(0.7 * uHostSize.x, 260.0);
+    float kd = length(kd2);
+    float ka = kd < 0.45
+      ? mix(0.13, 0.05, kd / 0.45)
+      : mix(0.05, 0.0, clamp((kd - 0.45) / 0.27, 0.0, 1.0));
+    col += mix(uKeyA, uKeyB, clamp(kd / 0.45, 0.0, 1.0)) * ka;
+
+    // The uniforms are raw sRGB and the mixing above IS the CSS compositing
+    // math, so on the direct view the value ships unencoded. The
+    // transmission buffer is the one consumer that wants linear (the glass
+    // material shades in linear and encodes on output — feeding it sRGB
+    // would double-encode and wash the slabs), so the FBO pass flips
+    // uLinearOut and decodes.
+    if (uLinearOut > 0.5) col = pow(col, vec3(2.2));
     gl_FragColor = vec4(col, 1.0);
-    #include <colorspace_fragment>
+  }
+`;
+
+// The focal glow: the wide anamorphic ellipse the DOM drew behind whichever
+// tile holds the plane (radial 50% × 42%, transparent at 72%), additive so
+// it adds over the aurora exactly like plus-lighter did. One quad per slab,
+// between the backdrop and the glass, so the slab refracts its own halo.
+const GLOW_FRAG = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uAlpha;
+  uniform float uLinearOut;
+  varying vec2 vUv;
+
+  void main() {
+    float d = length((vUv - 0.5) / vec2(0.5, 0.42));
+    float a = uAlpha * clamp((0.72 - d) / 0.72, 0.0, 1.0);
+    // Raw sRGB on the direct view: additive over the backdrop's raw values,
+    // the same space CSS plus-lighter adds in. Encoding here would lift a
+    // 0.05 halo to 0.24 — the wash that motivated the raw scheme. The FBO
+    // pass flips uLinearOut like the backdrop does.
+    vec3 col = uColor * a;
+    if (uLinearOut > 0.5) col = pow(col, vec3(2.2));
+    gl_FragColor = vec4(col, 1.0);
   }
 `;
 
 function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
   const meshRefs = useRef<(THREE.Mesh | null)[]>([]);
+  const glowRefs = useRef<(THREE.Mesh | null)[]>([]);
   const backdropRef = useRef<THREE.Mesh | null>(null);
+  const keyLightRef = useRef<THREE.DirectionalLight | null>(null);
+  const canvasElRef = useRef<HTMLElement | null>(null);
   const size = useThree((state) => state.size);
-  // One transmission source for every slab: the backdrop rendered without
-  // the slabs themselves. Slabs don't refract each other, which is fine —
-  // they never overlap on screen.
+  // One transmission source for every slab: the backdrop and glows rendered
+  // without the slabs themselves. Slabs don't refract each other, which is
+  // fine — they never overlap on screen.
   const buffer = useFBO(1024, 1024);
 
   // Tint resolution happens in the frame loop (the host element is reliably
@@ -164,6 +308,7 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
     checkpoint: new THREE.Color(1, 1, 1),
     loop: new THREE.Color(1, 1, 1),
     prompt: new THREE.Color(1, 1, 1),
+    glow: new THREE.Color(1, 1, 1),
     flow: new THREE.Color("#8b8b96"),
   });
 
@@ -180,6 +325,7 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
     const hostEl = host.current;
     const nodeMap = nodes.current;
     const pool = meshRefs.current;
+    const glows = glowRefs.current;
     const backdrop = backdropRef.current;
     if (!hostEl || !nodeMap || !backdrop) return;
 
@@ -194,20 +340,55 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
       // The prompt is a terminal: its glass stays dark. The material color
       // multiplies the transmitted light, so scaling it down dims the slab.
       t.prompt.copy(WHITE).lerp(flow, TINT_PROMPT).multiplyScalar(0.55);
+      // The light bed's colors live in raw sRGB (see resolveCssColor): the
+      // glow paint is color-mix(flow 17%, white), pale and flow-leaning.
+      const rawFlow = resolveCssColor(hostEl, flowColor, true);
+      t.glow.copy(rawFlow).lerp(WHITE, 0.83);
+      const backdropMat = backdrop.material as THREE.ShaderMaterial;
+      (backdropMat.uniforms.uFlow.value as THREE.Color).copy(rawFlow);
+      (backdropMat.uniforms.uBase.value as THREE.Color).copy(
+        resolveCssColor(hostEl, "var(--background)", true),
+      );
+      (backdropMat.uniforms.uSignal.value as THREE.Color).copy(
+        resolveCssColor(hostEl, "var(--signal)", true),
+      );
     }
 
-    // The backdrop plane tracks the frustum and its shader clock.
+    // One host read per frame; every slab derives from it, so subpixel error
+    // between slabs is zero by construction. The diagram canvas rect places
+    // the aurora field (diagram space); the focal line places the key light
+    // (host space).
+    const hostRect = hostEl.getBoundingClientRect();
+    const canvasEl = (canvasElRef.current ??=
+      hostEl.closest<HTMLElement>(".flow-diagram-canvas"));
+    const canvasRect = canvasEl?.getBoundingClientRect() ?? hostRect;
+    const focalY = window.innerHeight * FOCAL_LINE;
+    const focalHostY = focalY - hostRect.top;
+
     backdrop.position.set(0, 0, -120);
     backdrop.scale.set(size.width, size.height, 1);
     const backdropMat = backdrop.material as THREE.ShaderMaterial;
     backdropMat.uniforms.uTime.value = state.clock.elapsedTime;
-    backdropMat.uniforms.uAspect.value = size.width / Math.max(1, size.height);
-    (backdropMat.uniforms.uFlow.value as THREE.Color).copy(tints.current.flow);
+    (backdropMat.uniforms.uHostSize.value as THREE.Vector2).set(
+      size.width,
+      size.height,
+    );
+    (backdropMat.uniforms.uCanvas.value as THREE.Vector4).set(
+      canvasRect.left - hostRect.left,
+      canvasRect.top - hostRect.top,
+      canvasRect.width,
+      canvasRect.height,
+    );
+    backdropMat.uniforms.uFocalY.value = focalHostY;
 
-    // One host read per frame; every slab derives from it, so subpixel error
-    // between slabs is zero by construction.
-    const hostRect = hostEl.getBoundingClientRect();
-    const focalY = window.innerHeight * FOCAL_LINE;
+    // The in-scene key light tracks the same focal line, so the slab bevels
+    // catch their sheen where the light bed says the light is.
+    keyLightRef.current?.position.set(
+      -0.3 * size.width,
+      size.height / 2 - focalHostY,
+      520,
+    );
+
     const rects: SlabDebug[] = [];
 
     let slot = 0;
@@ -217,7 +398,8 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
       const r = el.getBoundingClientRect();
       if (r.width < 1 || r.height < 1) continue;
       const mesh = pool[slot];
-      if (!mesh) break;
+      const glow = glows[slot];
+      if (!mesh || !glow) break;
       slot += 1;
 
       // Host-relative CSS px → world units. The camera frustum spans the
@@ -225,8 +407,10 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
       // flip y.
       const cx = r.left - hostRect.left + r.width / 2;
       const cy = r.top - hostRect.top + r.height / 2;
+      const wx = cx - size.width / 2;
+      const wy = size.height / 2 - cy;
       mesh.visible = true;
-      mesh.position.set(cx - size.width / 2, size.height / 2 - cy, 0);
+      mesh.position.set(wx, wy, 0);
 
       // The slab is a real rounded volume sized to the tile, not a scaled
       // unit quad: non-uniform scale would distort the corner radius. Sizes
@@ -261,17 +445,29 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
       const material = mesh.material as THREE.MeshPhysicalMaterial;
       const shape = el.dataset.shape;
       const t = tints.current;
-      material.color.copy(
-        el.classList.contains("flow-prompt-node")
-          ? t.prompt
-          : shape === "checkpoint"
-            ? t.checkpoint
-            : shape === "loop"
-              ? t.loop
-              : t.step,
-      );
+      material.color
+        .copy(
+          el.classList.contains("flow-prompt-node")
+            ? t.prompt
+            : shape === "checkpoint"
+              ? t.checkpoint
+              : shape === "loop"
+                ? t.loop
+                : t.step,
+        )
+        .multiplyScalar(DIM_RECEDED + (1 - DIM_RECEDED) * focus);
       material.roughness =
         ROUGHNESS_FOCUSED + (1 - focus) * (ROUGHNESS_RECEDED - ROUGHNESS_FOCUSED);
+
+      // The focal glow rides the slab: same DOM box the ::before had
+      // (min(120%, 64rem) × 130%, centered), gain quadratic in focus so it
+      // exists only AT the plane and never reads as a permanent halo.
+      glow.visible = true;
+      glow.position.set(wx, wy, -60);
+      glow.scale.set(Math.min(1.2 * r.width, 1024), 1.3 * r.height, 1);
+      const glowMat = glow.material as THREE.ShaderMaterial;
+      (glowMat.uniforms.uColor.value as THREE.Color).copy(t.glow);
+      glowMat.uniforms.uAlpha.value = focus * focus * GLOW_GAIN;
 
       PROJECTED.set(
         mesh.position.x - r.width / 2,
@@ -292,17 +488,33 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
     for (let i = slot; i < POOL_SIZE; i += 1) {
       const mesh = pool[i];
       if (mesh) mesh.visible = false;
+      const glow = glows[i];
+      if (glow) glow.visible = false;
     }
 
     // The shared transmission pass: everything except the slabs, from the
     // same camera, so the material's screen-space buffer sampling lines up.
+    // The glows stay in — the glass refracts its own halo. The light-bed
+    // shaders switch to linear output for this pass only (see uLinearOut).
     for (let i = 0; i < slot; i += 1) {
       const mesh = pool[i];
       if (mesh) mesh.visible = false;
     }
+    backdropMat.uniforms.uLinearOut.value = 1;
+    for (const glow of glows) {
+      if (glow) {
+        (glow.material as THREE.ShaderMaterial).uniforms.uLinearOut.value = 1;
+      }
+    }
     state.gl.setRenderTarget(buffer);
     state.gl.render(state.scene, state.camera);
     state.gl.setRenderTarget(null);
+    backdropMat.uniforms.uLinearOut.value = 0;
+    for (const glow of glows) {
+      if (glow) {
+        (glow.material as THREE.ShaderMaterial).uniforms.uLinearOut.value = 0;
+      }
+    }
     for (let i = 0; i < slot; i += 1) {
       const mesh = pool[i];
       if (mesh) mesh.visible = true;
@@ -316,28 +528,56 @@ function SlabField({ host, nodes, flowColor }: GlassLayerProps) {
 
   return (
     <>
-      {/* Broad, diffuse light: a soft ambient bed plus one wide key from the
-          upper left, so the slab bevels carry a sheen and never a glint. */}
+      {/* Broad, diffuse light: a soft ambient bed plus one wide key whose
+          height tracks the focal line each frame, so the slab bevels carry
+          a sheen where the light bed is and never a glint. */}
       <ambientLight intensity={0.55} />
       <directionalLight
+        ref={keyLightRef}
         position={[-0.3 * size.width, 0.4 * size.height, 520]}
         intensity={1.1}
       />
-      <mesh ref={backdropRef} renderOrder={-1}>
+      <mesh ref={backdropRef} renderOrder={-2}>
         <planeGeometry args={[1, 1]} />
         <shaderMaterial
           vertexShader={AURORA_VERT}
           fragmentShader={AURORA_FRAG}
           uniforms={{
-            uBase: { value: new THREE.Color("#161718") },
-            uFlow: { value: new THREE.Color("#8b8b96") },
-            uViolet: { value: new THREE.Color("#7c5cff") },
-            uTeal: { value: new THREE.Color("#00b3cc") },
+            uBase: { value: new THREE.Color(0x161718) },
+            uFlow: { value: new THREE.Color(0x8b8b96) },
+            uViolet: { value: rawHsl(254, 90, 60) },
+            uSignal: { value: rawHsl(163, 95, 47) },
+            uCyan: { value: rawHsl(198, 90, 55) },
+            uMagenta: { value: rawHsl(322, 85, 58) },
+            uKeyA: { value: rawHsl(40, 60, 88) },
+            uKeyB: { value: rawHsl(40, 50, 80) },
             uTime: { value: 0 },
-            uAspect: { value: 1 },
+            uHostSize: { value: new THREE.Vector2(1, 1) },
+            uCanvas: { value: new THREE.Vector4(0, 0, 1, 1) },
+            uFocalY: { value: 0 },
+            uLinearOut: { value: 0 },
           }}
         />
       </mesh>
+      {Array.from({ length: POOL_SIZE }, (_, i) => (
+        <mesh key={`glow-${i}`} ref={(mesh: THREE.Mesh | null) => {
+          glowRefs.current[i] = mesh;
+        }} visible={false} renderOrder={-1}>
+          <planeGeometry args={[1, 1]} />
+          <shaderMaterial
+            vertexShader={AURORA_VERT}
+            fragmentShader={GLOW_FRAG}
+            uniforms={{
+              uColor: { value: new THREE.Color(1, 1, 1) },
+              uAlpha: { value: 0 },
+              uLinearOut: { value: 0 },
+            }}
+            transparent
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      ))}
       {Array.from({ length: POOL_SIZE }, (_, i) => (
         <mesh
           key={i}
