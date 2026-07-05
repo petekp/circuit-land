@@ -1,6 +1,6 @@
 ---
 title: How Circuit works
-description: Flows, stages, steps, routes, and the run folder.
+description: Flows, stages, routes, the run folder, and why every step is a micro-harness.
 ---
 
 A flow is a repeatable work pattern. You author it as a schematic, and Circuit
@@ -27,6 +27,24 @@ A step has a kind that decides what it does:
 - **Checkpoint**: pause for a decision.
 - **Fanout**: run branches and join their outputs.
 - **Sub-run**: run a child flow.
+
+## Every step is a micro-harness
+
+A harness is the machinery around a model: the context it sees, the tools it
+can reach, the instructions it starts from, the condition that counts as done.
+Most agent tools build one harness per session and stretch it across
+everything a task contains.
+
+Circuit builds one per step. A relay step assembles a fresh worker: model and
+effort resolved from its role and the [power dial](/docs/flows/modes#power), a
+tool scope, the skills it needs, and only the inputs its contract declares.
+The worker writes its typed output and is gone, so nothing it accumulated
+leaks into the next step.
+
+The kinds that carry no model are harness machinery promoted into the graph.
+A verification step is an exit check. A checkpoint is a stop condition. The
+engine enforces both, where a single long session leaves them to the model's
+discretion.
 
 ## Typed inputs and outputs
 

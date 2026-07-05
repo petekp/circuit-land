@@ -22,7 +22,7 @@ const PRIMARY: Array<{
   {
     title: "A process, not a chat",
     body:
-      "A flow is a set of typed steps compiled from a schematic, so the same work runs the same way every time. Each step gets a clean context with only what it needs, so a long session can't rot the steps that come after.",
+      "A flow is a set of typed steps compiled from a schematic, so the same work runs the same way every time. Each step is a micro-harness: its own model, tool scope, and a clean context with only what it needs, so a long session can't rot the steps that come after.",
     tell: "frame · plan · act · verify · review",
     link: { href: "/docs/concepts/how-it-works", label: "How a run works" },
   },

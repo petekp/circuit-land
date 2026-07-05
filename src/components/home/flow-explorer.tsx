@@ -2308,10 +2308,10 @@ export function FlowExplorer({
       <Legend />
       <p className="text-[11px] leading-relaxed text-muted-foreground/70">
         An illustrative composition, drawn to show every control shape in one
-        picture; the built-in flows each use a subset. Each step carries its
-        own model, effort, tools, and skills. Power is one dial over all of
-        them: turn it down and the bulk work goes cheap, while the steps that
-        decide direction hold their model.
+        picture; the built-in flows each use a subset. Each step is a
+        micro-harness with its own model, effort, tools, and skills. Power is
+        one dial over all of them: turn it down and the bulk work goes cheap,
+        while the steps that decide direction hold their model.
       </p>
     </div>
   );
