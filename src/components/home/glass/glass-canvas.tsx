@@ -41,16 +41,14 @@ import {
   lazy,
   Suspense,
   useEffect,
-  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MeshTransmissionMaterial, useFBO } from "@react-three/drei";
-import { EffectComposer, Bloom, Noise } from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
-import type { BloomEffect, NoiseEffect } from "postprocessing";
+import { EffectComposer } from "@react-three/postprocessing";
+import { BlendFunction, BloomEffect, NoiseEffect } from "postprocessing";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { FOCAL_LINE, focusFromDist } from "./depth-field";
@@ -410,8 +408,28 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
   const poolRef = useRef<THREE.Mesh | null>(null);
   const ambientRef = useRef<THREE.AmbientLight | null>(null);
   const keyLightRef = useRef<THREE.DirectionalLight | null>(null);
-  const bloomRef = useRef<BloomEffect | null>(null);
-  const noiseRef = useRef<NoiseEffect | null>(null);
+  // The post effects, built as raw postprocessing instances instead of the
+  // library's <Bloom>/<Noise> components. wrapEffect keys an internal
+  // useMemo on JSON.stringify(props), and React 19 passes ref inside props:
+  // stringifying a populated ref walks the live effect into a scene-graph
+  // cycle and throws, unwinding the GL tree. Raw instances feed <primitive>
+  // children, which nothing ever serializes. State, not memo, so Fast
+  // Refresh preserves the pair (a memo reset would remount the composer
+  // mid-edit); the frame loop writes through the ref mirror below, keeping
+  // the state value out of render-time mutation.
+  const [postFx] = useState(() => ({
+    bloom: new BloomEffect({
+      mipmapBlur: true,
+      intensity: glassParams.post.bloomIntensity,
+      luminanceThreshold: glassParams.post.bloomThreshold,
+      luminanceSmoothing: glassParams.post.bloomSmoothing,
+    }),
+    noise: new NoiseEffect({
+      premultiply: true,
+      blendFunction: BlendFunction.OVERLAY,
+    }),
+  }));
+  const postFxRef = useRef(postFx);
   const canvasElRef = useRef<HTMLElement | null>(null);
   // Structural param changes (post.enabled) re-render through this; scalar
   // tweaks skip React entirely — the frame loop reads them live.
@@ -750,16 +768,14 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
       }
     }
 
-    // The post chain reads its knobs live off the effect instances.
-    const bloom = bloomRef.current;
-    if (bloom) {
-      bloom.intensity = p.post.bloomIntensity;
-      bloom.luminanceMaterial.threshold = p.post.bloomThreshold;
-      bloom.luminanceMaterial.smoothing = p.post.bloomSmoothing;
-    }
-    if (noiseRef.current) {
-      noiseRef.current.blendMode.opacity.value = p.post.grainOpacity;
-    }
+    // The post chain reads its knobs live off the effect instances. The
+    // instances outlive the composer, so these writes stay valid (and
+    // harmless) while post.enabled is off.
+    const fx = postFxRef.current;
+    fx.bloom.intensity = p.post.bloomIntensity;
+    fx.bloom.luminanceMaterial.threshold = p.post.bloomThreshold;
+    fx.bloom.luminanceMaterial.smoothing = p.post.bloomSmoothing;
+    fx.noise.blendMode.opacity.value = p.post.grainOpacity;
 
     // The shared transmission pass: the base plane, glows, and wire light
     // from the same camera, so the material's screen-space buffer sampling
@@ -806,34 +822,6 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
       wires: wireDebug,
     };
   });
-
-  // Built once: @react-three/postprocessing's wrapEffect keys an internal
-  // useMemo on JSON.stringify(props), and React 19 passes ref inside props.
-  // On any re-render after mount ref.current is the live effect, so that
-  // stringify walks render targets into a scene-graph cycle and throws,
-  // unwinding the whole GL tree. Handing React the identical element lets it
-  // bail out before the effects re-render; the frame loop drives the live
-  // values through the refs, so these props are only the mount state.
-  const composer = useMemo(
-    () => (
-      <EffectComposer multisampling={4}>
-        <Bloom
-          ref={bloomRef}
-          mipmapBlur
-          intensity={glassParams.post.bloomIntensity}
-          luminanceThreshold={glassParams.post.bloomThreshold}
-          luminanceSmoothing={glassParams.post.bloomSmoothing}
-        />
-        <Noise
-          ref={noiseRef}
-          premultiply
-          blendFunction={BlendFunction.OVERLAY}
-          opacity={glassParams.post.grainOpacity}
-        />
-      </EffectComposer>
-    ),
-    [],
-  );
 
   return (
     <>
@@ -1005,7 +993,12 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
           />
         </mesh>
       ))}
-      {glassParams.post.enabled && composer}
+      {glassParams.post.enabled && (
+        <EffectComposer multisampling={4}>
+          <primitive object={postFx.bloom} />
+          <primitive object={postFx.noise} />
+        </EffectComposer>
+      )}
     </>
   );
 }
