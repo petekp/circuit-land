@@ -860,6 +860,33 @@
   pointer-events: none;
 }
 
+/* When the WebGL glass is live (data-gl on the canvas), the DOM tiles hand
+   their MATERIAL to the GL slabs — background, frosting, edge shadows, and
+   grain all render in-scene now, so painting them twice would double the
+   glass. The text layer keeps everything typographic: the veil (recession
+   darkness over content), the neon signals, captions, and the name glow.
+   The DOM aurora and key light also step aside: the GL backdrop plane is
+   opaque (the transmission buffer needs defined light), so they'd be
+   invisible work — and the GL scene re-creates them where the glass can
+   actually refract them. */
+.flow-diagram-canvas[data-gl] .flow-step-tile,
+.flow-diagram-canvas[data-gl] .flow-fanout-cluster,
+.flow-diagram-canvas[data-gl] .flow-prompt-node {
+  background: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+.flow-diagram-canvas[data-gl] .flow-step-tile::before,
+.flow-diagram-canvas[data-gl] .flow-fanout-cluster::before {
+  display: none;
+}
+
+.flow-diagram-canvas[data-gl] .flow-aurora,
+.flow-diagram-canvas[data-gl] .flow-keylight {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .flow-aurora-layer {
     animation: none;
