@@ -162,6 +162,12 @@
   }
   html {
     @apply font-sans;
+    /* The hero's explorer band pulls itself out to the viewport edges with
+       negative margins sized in vw; 100vw includes a classic scrollbar's
+       width, so clip the horizontal sliver that can create rather than grow
+       a second scrollbar. clip (unlike hidden) adds no scroll container, so
+       sticky descendants keep working. */
+    overflow-x: clip;
   }
 }
 
@@ -570,7 +576,9 @@
   }
 }
 
-@container (min-width: 50rem) {
+/* Three-up waits for room to seat three full 16rem tracks plus both 2rem gaps
+   (52rem), so columns never arrive narrower than they ran two-up. */
+@container (min-width: 52rem) {
   .flow-grid {
     grid-template-columns: repeat(3, minmax(0, 16rem));
   }
@@ -632,6 +640,16 @@
    down to see what changed, which is the whole reason the diagram sat too tall.
    Below the lg breakpoint it stacks: nav (as wrapping pills), explanation, then
    the diagram. */
+/* The hero band the focus layout sits in. The page column (max-w-5xl) holds
+   the diagram at a width where the grid can never go three-up, so the band
+   escapes it: negative inline margins stretch to the viewport edges (half the
+   containing column minus half the viewport, each side), and the inner
+   element re-caps and re-centers the content (max-w-[88rem] plus padding,
+   set as utilities in hero.tsx). */
+.hero-breakout {
+  margin-inline: calc(50% - 50vw);
+}
+
 .flow-focus-shell {
   display: flex;
   flex-direction: column;
@@ -697,6 +715,15 @@
 
   .flow-focus-info {
     min-height: 0;
+  }
+}
+
+/* Inside the hero band the shell can see ~85rem. Give the rails a step of
+   that room back so the nav labels and the blurb set more comfortably; the
+   diagram column keeps well clear of the 52rem three-up threshold. */
+@media (min-width: 90rem) {
+  .flow-focus-shell {
+    grid-template-columns: minmax(9rem, 11rem) minmax(0, 1fr) minmax(12rem, 16rem);
   }
 }
 

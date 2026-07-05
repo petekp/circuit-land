@@ -79,11 +79,12 @@ export function Hero() {
 
         {/* The focus treatment, promoted from /preview/flow-tour to the hero:
             tabs on the left, a windowed diagram in the center that scrolls to
-            the focused step, the explanation on the right. It fills the page
-            column so the three columns have room; it stacks to one column below
-            the lg breakpoint. */}
-        <div className="mt-16 sm:mt-20">
-          <div className="w-full">
+            the focused step, the explanation on the right. The band breaks out
+            of the page column (hero-breakout) and re-caps at 88rem so the
+            diagram column clears the width where the tile grid goes three-up;
+            it stacks to one column below the lg breakpoint. */}
+        <div className="hero-breakout mt-16 sm:mt-20">
+          <div className="mx-auto w-full max-w-[88rem] px-6">
             <FlowExplorer variant="focus" />
           </div>
         </div>
