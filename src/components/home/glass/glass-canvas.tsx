@@ -29,7 +29,7 @@
    The DOM tiles drop their CSS material, aurora, key light, and focal glow
    under [data-gl] (see globals.css) and keep text, veil, and neon. */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MeshTransmissionMaterial, useFBO } from "@react-three/drei";
 import { EffectComposer, Bloom, Noise } from "@react-three/postprocessing";
@@ -983,12 +983,46 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
   );
 }
 
+// Report a dying WebGL context to the owner. Lives inside the R3F tree so
+// the listener detaches during React's child-first cleanup, BEFORE the root's
+// own unmount disposes the renderer — a dispose-time loss event must not read
+// as a GPU failure. No preventDefault: we don't want restoration, we want the
+// CSS glass back (see onContextLost in glass-scene.tsx).
+function ContextGuard({ onContextLost }: { onContextLost?: () => void }) {
+  const gl = useThree((state) => state.gl);
+  useEffect(() => {
+    if (!onContextLost) return;
+    const el = gl.domElement;
+    el.addEventListener("webglcontextlost", onContextLost);
+    return () => el.removeEventListener("webglcontextlost", onContextLost);
+  }, [gl, onContextLost]);
+  return null;
+}
+
 export default function GlassCanvas(props: GlassLayerProps) {
+  // The render loop runs only while the diagram's sticky range is anywhere
+  // near the viewport. The host is pinned for the section's whole scroll
+  // range, so intersection flips exactly at section enter/exit; the 50%
+  // margin restarts the loop half a viewport early, so the first visible
+  // frame is already current. (Hidden tabs need nothing: rAF stops there.)
+  const [frameloop, setFrameloop] = useState<"always" | "never">("always");
+  useEffect(() => {
+    const el = props.host.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setFrameloop(entry.isIntersecting ? "always" : "never"),
+      { rootMargin: "50% 0% 50% 0%" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [props.host]);
+
   return (
     <Canvas
       orthographic
       camera={{ position: [0, 0, 600], near: 0.1, far: 2000, zoom: 1 }}
       dpr={[1, 2]}
+      frameloop={frameloop}
       gl={{
         antialias: true,
         alpha: true,
@@ -999,6 +1033,7 @@ export default function GlassCanvas(props: GlassLayerProps) {
       }}
       style={{ position: "absolute", inset: 0 }}
     >
+      <ContextGuard onContextLost={props.onContextLost} />
       <SlabField {...props} />
     </Canvas>
   );

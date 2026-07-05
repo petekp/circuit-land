@@ -2017,7 +2017,14 @@ function FlowDiagram({
     probeWebGL,
     webglServerSnapshot,
   );
-  const glActive = dofActive && glSupported;
+  // A lost context (GPU reset, driver reclaim) latches the session back to
+  // the CSS glass. One-way on purpose: keeping a canvas mounted in hope of
+  // restoration risks the worst render — a dead transparent layer over the
+  // [data-gl]-hidden CSS material, i.e. tiles with no material at all — and
+  // a flapping GPU would otherwise remount in a loop.
+  const [glFailed, setGlFailed] = useState(false);
+  const glActive = dofActive && glSupported && !glFailed;
+  const handleContextLost = useCallback(() => setGlFailed(true), []);
 
   const spring = reduceMotion
     ? { duration: 0 }
@@ -2233,6 +2240,7 @@ function FlowDiagram({
             nodes={nodeRefs}
             flowColor={flow.color}
             segments={segments}
+            onContextLost={handleContextLost}
           />
         </div>
       ) : null}

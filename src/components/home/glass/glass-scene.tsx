@@ -36,6 +36,10 @@ export type GlassLayerProps = {
   // The measured wire segments (canvas space), refreshed by the same pass
   // that feeds the SVG.
   segments: GlassSegment[];
+  // Fired if the WebGL context dies (GPU reset, driver reclaim). The owner
+  // unmounts the GL layer and lets the CSS glass return: a dead context
+  // under [data-gl] would leave the tiles with no material at all.
+  onContextLost?: () => void;
 };
 
 const GlassCanvas = dynamic(() => import("./glass-canvas"), { ssr: false });
