@@ -32,6 +32,8 @@
 import { useEffect, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MeshTransmissionMaterial, useFBO } from "@react-three/drei";
+import { EffectComposer, Bloom, Noise } from "@react-three/postprocessing";
+import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { FOCAL_LINE, focusFromDist } from "./depth-field";
@@ -93,6 +95,26 @@ const HEAD_GAIN = 0.25;
 // arrives on the same schedule so the light never precedes its conduit.
 const WIRE_STAGGER = 0.05;
 const WIRE_FADE_IN = 0.45;
+
+// The post chain. With a composer, the scene renders into a LINEAR buffer
+// and the final pass gamma-encodes, so the raw-sRGB light-bed shaders must
+// ship linear on the direct view too (uLinearOut stays 1 in both passes) or
+// the frame double-encodes and washes pale — same trap as the transmission
+// buffer. Bloom thresholds below are therefore LINEAR-space values.
+//
+// No bokeh pass: the camera is orthographic and every slab sits at z 0, so
+// a depth-of-field effect has no depth variance to act on. The recession
+// blur already comes from the DOM filter and the roughness ride.
+const POST = true;
+// Hot spots live well above the aurora bed (~0.03 linear) and below the
+// slab speculars: ports peak ~0.1, the keylight sheen ~0.3. The threshold
+// sits between bed and ports so only lit elements flare, never the field.
+const BLOOM_THRESHOLD = 0.06;
+const BLOOM_SMOOTHING = 0.3;
+const BLOOM_INTENSITY = 0.5;
+// The analog texture the tiles' CSS grain gave up under [data-gl], as one
+// full-frame pass: overlay keeps the blacks black where screen would milk.
+const GRAIN_OPACITY = 0.05;
 
 type SlabDebug = {
   id: string;
@@ -796,7 +818,9 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
     state.gl.setRenderTarget(buffer);
     state.gl.render(state.scene, state.camera);
     state.gl.setRenderTarget(null);
-    setLinearOut(0);
+    // Under the composer the direct view is ALSO a linear buffer (the final
+    // pass encodes); only the composer-less fallback writes display sRGB.
+    setLinearOut(POST ? 1 : 0);
     for (let i = 0; i < slot; i += 1) {
       const mesh = pool[i];
       if (mesh) mesh.visible = true;
@@ -940,6 +964,21 @@ function SlabField({ host, nodes, flowColor, segments }: GlassLayerProps) {
           />
         </mesh>
       ))}
+      {POST && (
+        <EffectComposer multisampling={4}>
+          <Bloom
+            mipmapBlur
+            intensity={BLOOM_INTENSITY}
+            luminanceThreshold={BLOOM_THRESHOLD}
+            luminanceSmoothing={BLOOM_SMOOTHING}
+          />
+          <Noise
+            premultiply
+            blendFunction={BlendFunction.OVERLAY}
+            opacity={GRAIN_OPACITY}
+          />
+        </EffectComposer>
+      )}
     </>
   );
 }
