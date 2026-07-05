@@ -695,6 +695,25 @@
   gap: 0.5rem;
 }
 
+/* Cluster headings inside the feature nav. Below lg the nav renders as a flat
+   wrapped pill row where headings would land mid-flow, so they hide; at lg+
+   the column shows them, with a step of air above every cluster but the
+   first. Typography lives on the element (mono, tracked caps — the same
+   register as the dial's "power" label). */
+.flow-feature-group-label {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .flow-feature-group-label {
+    display: block;
+  }
+
+  .flow-feature-group-label:not(:first-child) {
+    margin-top: 0.55rem;
+  }
+}
+
 .flow-focus-info {
   min-height: 5rem;
 }

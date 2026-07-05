@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -420,12 +421,19 @@ type Feature = {
   // step.id values in the canvas flow this feature highlights.
   stepIds: string[];
   element: FeatureElement;
+  // What the feature IS to a reader: a guarantee the engine enforces, a scope
+  // a step is boxed to, or a structural shape a flow can take. The vertical
+  // nav renders these as labeled clusters.
+  group: "guarantees" | "scoping" | "structure";
 };
 
 // The flow the tour is pinned to. Feature selection never swaps the flow, so the
 // diagram stays put (no morph) while a feature lights up inside it.
 const TOUR_FLOW_KEY = "prototype-react";
 
+// Ordered group-contiguous so the vertical nav can render labeled clusters by
+// walking the array once. Nothing keys off array position (resolveSelection
+// finds by key, no default selection), so the order is free to serve reading.
 const FEATURES: Feature[] = [
   {
     key: "mechanical-check",
@@ -434,6 +442,25 @@ const FEATURES: Feature[] = [
       "The engine runs the build, lint, and tests itself. A step cannot close until that check actually passes, so 'done' has to clear a real bar, not just get asserted.",
     stepIds: ["verify"],
     element: "whole",
+    group: "guarantees",
+  },
+  {
+    key: "converge-loop",
+    label: "Loops until it passes",
+    blurb:
+      "If the check fails, the flow loops back, reworks, and re-checks. It keeps going until the gate passes, within a bounded number of tries.",
+    stepIds: ["converge", "verify"],
+    element: "whole",
+    group: "guarantees",
+  },
+  {
+    key: "checkpoint",
+    label: "Checkpoint",
+    blurb:
+      "The run can pause and hand you a decision, then pick back up with your choice. You make the call the flow shouldn't make for you.",
+    stepIds: ["checkpoint"],
+    element: "options",
+    group: "guarantees",
   },
   {
     key: "context-isolation",
@@ -442,6 +469,7 @@ const FEATURES: Feature[] = [
       "Each step starts from a clean slate and sees only the inputs it declares, not the full running transcript. Later steps don't get polluted by the chatter of earlier ones.",
     stepIds: ["frame", "synthesize", "plan", "implement", "verify", "review"],
     element: "ctx",
+    group: "scoping",
   },
   {
     key: "tool-scope",
@@ -450,6 +478,7 @@ const FEATURES: Feature[] = [
       "The step that writes code can be walled to just its editor tools (a hard wall on Claude Code); the research and review steps stay read-only by role.",
     stepIds: ["implement"],
     element: "tools",
+    group: "scoping",
   },
   {
     key: "model-routing",
@@ -466,6 +495,7 @@ const FEATURES: Feature[] = [
       "review",
     ],
     element: "model",
+    group: "scoping",
   },
   {
     key: "fan-out",
@@ -474,6 +504,7 @@ const FEATURES: Feature[] = [
       "One step can fan out into parallel scouts that each explore a slice, then merge into a single brief. The badge counts the real branches.",
     stepIds: ["research"],
     element: "branches",
+    group: "structure",
   },
   {
     key: "subrun",
@@ -482,23 +513,17 @@ const FEATURES: Feature[] = [
       "A step can expand into its own run with its own steps. The build here hands off to a child flow instead of trying to do everything in one step.",
     stepIds: ["implement"],
     element: "note",
+    group: "structure",
   },
-  {
-    key: "checkpoint",
-    label: "Checkpoint",
-    blurb:
-      "The run can pause and hand you a decision, then pick back up with your choice. You make the call the flow shouldn't make for you.",
-    stepIds: ["checkpoint"],
-    element: "options",
-  },
-  {
-    key: "converge-loop",
-    label: "Loops until it passes",
-    blurb:
-      "If the check fails, the flow loops back, reworks, and re-checks. It keeps going until the gate passes, within a bounded number of tries.",
-    stepIds: ["converge", "verify"],
-    element: "whole",
-  },
+];
+
+// The cluster headings, in nav order. "Guarantees" leads because it is the
+// pitch (what the engine enforces); scoping explains the per-step box;
+// structure names the shapes a flow can take.
+const FEATURE_GROUPS: Array<{ key: Feature["group"]; label: string }> = [
+  { key: "guarantees", label: "Guarantees" },
+  { key: "scoping", label: "Scoping" },
+  { key: "structure", label: "Structure" },
 ];
 
 // ---- Unified selection ------------------------------------------------------
@@ -2282,31 +2307,50 @@ function FeatureTabs({
         ? "flow-feature-nav"
         : "flex flex-wrap items-center gap-2";
   const align = layout === "vertical" ? "justify-start text-left" : "items-center";
+  const renderTab = (f: Feature) => {
+    const selected = f.key === active;
+    return (
+      <button
+        key={f.key}
+        type="button"
+        aria-pressed={selected}
+        onClick={() => onSelect(f.key)}
+        className={`flow-feature-tab inline-flex min-h-8 ${align} px-3 py-1 text-[12.5px] font-medium transition-colors`}
+        style={{
+          color: selected ? "var(--foreground)" : "var(--muted-foreground)",
+          background: selected
+            ? "color-mix(in oklab, var(--flow-color) 22%, var(--muted))"
+            : "color-mix(in oklab, var(--muted) 38%, transparent)",
+          boxShadow: selected
+            ? "inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 45%, transparent)"
+            : "none",
+        }}
+      >
+        {f.label}
+      </button>
+    );
+  };
+  // The vertical nav clusters the tabs under group headings. The headings are
+  // direct flex children (not wrappers) because the same markup renders as a
+  // wrapped pill row below lg — there the labels display:none away and the
+  // pills flow flat, so the fallback needs no branching here.
+  if (layout === "vertical") {
+    return (
+      <div role="group" aria-label="Circuit features" className={wrap}>
+        {FEATURE_GROUPS.map((g) => (
+          <Fragment key={g.key}>
+            <span className="flow-feature-group-label px-3 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground/60">
+              {g.label}
+            </span>
+            {FEATURES.filter((f) => f.group === g.key).map(renderTab)}
+          </Fragment>
+        ))}
+      </div>
+    );
+  }
   return (
     <div role="group" aria-label="Circuit features" className={wrap}>
-      {FEATURES.map((f) => {
-        const selected = f.key === active;
-        return (
-          <button
-            key={f.key}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onSelect(f.key)}
-            className={`flow-feature-tab inline-flex min-h-8 ${align} px-3 py-1 text-[12.5px] font-medium transition-colors`}
-            style={{
-              color: selected ? "var(--foreground)" : "var(--muted-foreground)",
-              background: selected
-                ? "color-mix(in oklab, var(--flow-color) 22%, var(--muted))"
-                : "color-mix(in oklab, var(--muted) 38%, transparent)",
-              boxShadow: selected
-                ? "inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 45%, transparent)"
-                : "none",
-            }}
-          >
-            {f.label}
-          </button>
-        );
-      })}
+      {FEATURES.map(renderTab)}
     </div>
   );
 }
