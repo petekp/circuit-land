@@ -19,12 +19,12 @@ import {
   LayoutGroup,
   domMax,
   m,
-  useMotionTemplate,
   useMotionValue,
   useReducedMotion,
   useScroll,
   useTransform,
   type MotionProps,
+  type MotionStyle,
   type MotionValue,
 } from "motion/react";
 
@@ -684,7 +684,6 @@ function withDim(
 // measured by their real boxes, so richer tiles still get correctly routed
 // wires. Everything tints off the inline --flow-color.
 
-const TILE_FILL = "color-mix(in oklab, var(--flow-color) 16%, var(--muted))";
 const CONNECTOR_STROKE =
   "color-mix(in oklab, var(--flow-color) 60%, var(--border))";
 // The loop's return edge sits under the sequential wires: dimmer and dashed,
@@ -713,7 +712,10 @@ const DOF_FALLOFF = 380;
 // (see WireSegment), which is what keeps the drift invisible.
 const DOF_SCALE_MIN = 0.945;
 const DOF_BLUR_MAX = 4.5;
-const DOF_OPACITY_MIN = 0.55;
+// The veil (flow-veil, riding --illum) owns the darkness of a receded tile
+// now, so wrapper opacity only assists; a 0.55 floor on top of the veil
+// crushed the neon elements that are supposed to survive recession.
+const DOF_OPACITY_MIN = 0.72;
 const DOF_WIRE_OPACITY_MIN = 0.25;
 
 // Geometry the depth transforms read on every scroll frame: the canvas's
@@ -1036,7 +1038,7 @@ function ModelBadge({
   return (
     <span
       key={pulse}
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[11px] ${className} ${hot ? "flow-badge-hot" : ""} ${pulse > 0 ? "flow-badge-pulse" : ""}`}
+      className={`flow-neon inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 font-mono text-[11px] ${className} ${hot ? "flow-badge-hot" : ""} ${pulse > 0 ? "flow-badge-pulse" : ""}`}
       style={style}
     >
       {prefix}
@@ -1074,7 +1076,7 @@ function DetailRow({
     state === "hot" ? "flow-row-hot" : state === "cool" ? "flow-row-cool" : "";
   return (
     <div className={`flex items-start gap-2 ${cls}`}>
-      <span className="w-11 shrink-0 pt-[2px] text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+      <span className="w-14 shrink-0 pt-[2px] text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
         {label}
       </span>
       {/* min-w-0: without it this wrapper's min-width:auto tracks the widest
@@ -1140,7 +1142,7 @@ function StepDetail({
   return (
     <div className="flow-scope-well mt-3 flex flex-col gap-1.5">
       {hasContext ? (
-        <DetailRow label="ctx" state={rowState("ctx")}>
+        <DetailRow label="context" state={rowState("ctx")}>
           {step.context!.map((c) => (
             <Chip key={c}>{c}</Chip>
           ))}
@@ -1179,9 +1181,21 @@ function StepDetail({
         </DetailRow>
       ) : null}
       {showNote ? (
-        <span className="font-mono text-[11px] text-muted-foreground">
-          {step.note}
-        </span>
+        step.kind === "verification" ? (
+          // The engine's line, not the model's: a gate step's check runs
+          // deterministically, so it reads in the run-output register with
+          // the signal caret.
+          <span className="font-mono text-[11px] leading-snug text-foreground/85">
+            <span aria-hidden="true" className="flow-neon mr-1.5 text-signal">
+              ›
+            </span>
+            {step.note}
+          </span>
+        ) : (
+          <span className="font-mono text-[11px] text-muted-foreground">
+            {step.note}
+          </span>
+        )
       ) : null}
     </div>
   );
@@ -1249,12 +1263,13 @@ function PromptTile({
         <span className="flow-prompt-cmd font-mono">/circuit:run</span>
       </div>
       <div className="flow-prompt-line font-mono">
-        <span className="flow-prompt-caret" aria-hidden="true">
+        <span className="flow-prompt-caret flow-neon" aria-hidden="true">
           ❯
         </span>
         <span className="flow-prompt-text">{step.role}</span>
         <span className="flow-prompt-cursor" aria-hidden="true" />
       </div>
+      <span aria-hidden="true" className="flow-veil" />
     </m.div>
   );
 }
@@ -1294,26 +1309,26 @@ function StepTile({
   );
   const isCheckpoint = step.shape === "checkpoint";
   const isLoop = step.shape === "loop";
-  const tileStyle: CSSProperties = isCheckpoint
-    ? {
-        background: "color-mix(in oklab, var(--flow-color) 10%, var(--muted))",
-        boxShadow:
-          "inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 45%, transparent)",
-      }
+  // Every mark on the block answers to a Circuit concept; the caption names
+  // the shape in words so the glyph never has to be decoded.
+  const kindCaption = isCheckpoint
+    ? "pause"
     : isLoop
-      ? {
-          background: "color-mix(in oklab, var(--muted) 50%, transparent)",
-          boxShadow:
-            "inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 32%, transparent)",
-        }
-      : { backgroundColor: TILE_FILL };
+      ? "loop"
+      : step.shape === "subrun"
+        ? "sub-run"
+        : step.kind === "verification"
+          ? "gate"
+          : step.kind === "compose"
+            ? "compose"
+            : null;
   return (
     <m.div
       ref={composedRef}
       {...layoutProps(disableLayout, step.id)}
       {...motionProps}
+      data-shape={step.shape ?? "step"}
       className="flow-step-tile relative flex w-full flex-col p-4 text-left text-foreground"
-      style={tileStyle}
     >
       {onSelect ? (
         // A full-bleed hit target so the whole tile is clickable and keyboard
@@ -1336,13 +1351,18 @@ function StepTile({
         />
       ) : null}
       <div className="flex items-start justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 text-[14px] font-medium leading-tight tracking-tight">
-          {isCheckpoint ? <PauseIcon /> : null}
-          {isLoop ? <LoopIcon /> : null}
-          {step.shape === "subrun" ? <SubrunIcon /> : null}
-          {step.kind === "verification" ? <GateIcon /> : null}
-          {step.kind === "compose" ? <ComposeIcon /> : null}
+        <span className="flow-step-name inline-flex items-baseline gap-1.5 text-[14px] font-medium leading-tight tracking-tight">
+          <span className="inline-flex items-center gap-1.5 self-center">
+            {isCheckpoint ? <PauseIcon /> : null}
+            {isLoop ? <LoopIcon /> : null}
+            {step.shape === "subrun" ? <SubrunIcon /> : null}
+            {step.kind === "verification" ? <GateIcon /> : null}
+            {step.kind === "compose" ? <ComposeIcon /> : null}
+          </span>
           {step.name}
+          {kindCaption ? (
+            <span className="flow-kind-caption font-mono">{kindCaption}</span>
+          ) : null}
         </span>
         <ModelBadge
           step={step}
@@ -1404,6 +1424,9 @@ function StepTile({
       ) : null}
 
       <StepDetail step={step} highlightElement={highlightElement} />
+      {/* The recession scrim. Last child so it overlays the body; the neon
+          signals ride above it on their own z. */}
+      <span aria-hidden="true" className="flow-veil" />
     </m.div>
   );
 }
@@ -1675,6 +1698,7 @@ function FanoutCluster({
             </div>
           ))}
         </div>
+        <span aria-hidden="true" className="flow-veil" />
       </div>
     </m.div>
   );
@@ -1726,7 +1750,17 @@ function flowRows(flow: ExampleFlow): StepRow[] {
   return [[promptStep], ...flow.rows];
 }
 
-function placeRows(rows: StepRow[]): PlacedStep[] {
+function placeRows(rows: StepRow[], depth = false): PlacedStep[] {
+  // Depth mode reads one step per row: the scroll IS the pacing, so each
+  // step gets the stage to itself and passes the focal plane alone. Tiles
+  // cap their own width and center via CSS ([data-depth]); the wires
+  // become a single vertical spine.
+  if (depth) {
+    return rows.flat().map((step) => ({
+      step,
+      gridStyle: { gridColumn: "1 / -1" } as CSSProperties,
+    }));
+  }
   let entryPlaced = false;
   return rows.flat().map((step) => {
     if (step.shape === "prompt") {
@@ -1772,24 +1806,33 @@ function DepthTile({
   );
   const scale = useTransform(focus, [0, 1], [DOF_SCALE_MIN, 1]);
   const blur = useTransform(focus, [0, 1], [DOF_BLUR_MAX, 0]);
-  const filter = useMotionTemplate`blur(${blur}px)`;
+  // At the plane the filter must be literally ABSENT, not blur(0px): any
+  // filter value makes this wrapper a backdrop root, and the glass tile
+  // inside would sample its (empty) subtree instead of the aurora bed behind
+  // the diagram. Same reason willChange pins only transform.
+  const filter = useTransform(blur, (b) =>
+    b < 0.05 ? "none" : `blur(${b}px)`,
+  );
   const opacity = useTransform(focus, [0, 1], [DOF_OPACITY_MIN, 1]);
+  // The recession also feeds CSS as --illum: the tile's material reads it to
+  // fall into shadow, and the neon bits read its inverse to bloom through
+  // the blur like bokeh.
+  const illum = useTransform(focus, (f) => Math.round(f * 1000) / 1000);
   return (
     <m.li
       className="flow-grid-item relative z-10 w-full list-none"
       style={
         dof.active
-          ? {
+          ? ({
               ...gridStyle,
               scale,
               filter,
               opacity,
+              "--illum": illum,
               transformOrigin: "50% 50%",
-              // All three channels move on every scroll frame; pinning the
-              // layer up front beats re-promoting it mid-scroll.
-              willChange: "transform, filter, opacity",
-            }
-          : gridStyle
+              willChange: "transform",
+            } as MotionStyle)
+          : ({ ...gridStyle, "--illum": 1 } as MotionStyle)
       }
     >
       {children}
@@ -1956,6 +1999,15 @@ function FlowDiagram({
     () => ({ active: dofActive, scrollY, geomTick, geom: dofGeom }),
     [dofActive, scrollY, geomTick],
   );
+  // The key light: a soft glow that sits AT the focal plane in the viewport,
+  // so the diagram scrolls through it and whatever crosses the plane is lit.
+  // It renders inside the canvas (a fixed element would break under any
+  // transformed ancestor), so its canvas-space y re-derives from scroll:
+  // page-space plane minus canvas top.
+  const lightY = useTransform([scrollY, geomTick], ([y]: number[]) => {
+    if (typeof window === "undefined") return 0;
+    return y + window.innerHeight * FOCAL_LINE - dofGeom.current.canvasTop;
+  });
 
   const spring = reduceMotion
     ? { duration: 0 }
@@ -1965,7 +2017,7 @@ function FlowDiagram({
   // The terminal prompt node leads; the real steps follow. One sequence feeds
   // placement, the connector measurement, and the aria order.
   const sequence = flowRows(flow);
-  const placed = placeRows(sequence);
+  const placed = placeRows(sequence, depth);
 
   const registerNode = useCallback(
     (id: string) => {
@@ -2086,11 +2138,23 @@ function FlowDiagram({
   // moves it even when the canvas keeps its own size (a pure height change
   // never fires the canvas ResizeObserver). Re-measuring refreshes the depth
   // geometry against the new viewport.
+  //
+  // The body observer covers the other way geometry goes stale: content ABOVE
+  // the canvas settling after mount (hydration, font swap, streamed sections).
+  // That shifts the canvas in page space without resizing the window or the
+  // canvas, which orphaned the cached canvasTop on phone loads with restored
+  // scroll. Any such shift changes the body's height, and the depth transforms
+  // are pure paint (scale/filter/opacity), so observing body can't feed back.
   useEffect(() => {
     if (!dofActive || typeof window === "undefined") return;
     const onResize = () => measure();
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const bodyRo = new ResizeObserver(() => measure());
+    bodyRo.observe(document.body);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      bodyRo.disconnect();
+    };
   }, [dofActive, measure]);
 
   // Selecting a feature brings its anchor tile's center to the page's focal
@@ -2125,6 +2189,23 @@ function FlowDiagram({
 
   const canvas = (
     <div ref={containerRef} className="flow-diagram-canvas relative">
+      {/* The light bed the frosted glass diffuses. Two counter-drifting
+          aurora layers carry the flow's hue plus fixed brand complements;
+          the key light rides the focal plane. Both are invisible to the
+          layout and the reader's pointer — pure atmosphere. */}
+      {depth ? (
+        <div aria-hidden="true" className="flow-aurora">
+          <div className="flow-aurora-layer flow-aurora-a" />
+          <div className="flow-aurora-layer flow-aurora-b" />
+        </div>
+      ) : null}
+      {dofActive ? (
+        <m.div
+          aria-hidden="true"
+          className="flow-keylight"
+          style={{ y: lightY }}
+        />
+      ) : null}
       <svg
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible"
@@ -2146,7 +2227,11 @@ function FlowDiagram({
         </AnimatePresence>
       </svg>
 
-      <ul aria-label={ariaLabel} className="flow-grid relative z-10 p-0">
+      <ul
+        aria-label={ariaLabel}
+        data-depth={depth || undefined}
+        className="flow-grid relative z-10 p-0"
+      >
         <AnimatePresence mode="popLayout" initial={false}>
           {placed.map(({ step, gridStyle }) => {
             const targeted = focus ? focus.stepIds.includes(step.id) : false;
