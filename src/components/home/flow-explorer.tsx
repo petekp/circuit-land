@@ -19,9 +19,7 @@ import {
   LayoutGroup,
   domMax,
   m,
-  useMotionValue,
   useReducedMotion,
-  useSpring,
   type MotionProps,
 } from "motion/react";
 
@@ -688,6 +686,14 @@ const CONNECTOR_STROKE =
 // so "again" never outshouts "then".
 const RETURN_STROKE =
   "color-mix(in oklab, var(--flow-color) 42%, var(--border))";
+
+// The page-space focal plane, as a fraction of the viewport height. A step
+// whose center sits on this line reads fully sharp; the depth-of-field layer
+// grades everything else by its distance from it, and selecting a feature
+// scrolls the page to bring the anchor step here. Above center: the reader's
+// eye rests in the upper third, and it leaves room below for the next steps
+// to visibly wait out of focus.
+const FOCAL_LINE = 0.38;
 
 const ROW_EPSILON = 18;
 const EDGE_INSET = 6;
@@ -1700,11 +1706,9 @@ function FlowDiagram({
   selectedElementStepId,
   focusTick,
   variant,
-  windowed = false,
+  depth = false,
   dialPulse,
   onSelectElement,
-  onClear,
-  onFocalAlign,
 }: {
   flow: ExampleFlow;
   reduceMotion: boolean;
@@ -1712,15 +1716,15 @@ function FlowDiagram({
   selectedElementStepId: string | null;
   focusTick: number;
   variant: TourVariant;
-  windowed?: boolean;
+  // Depth mode (the focus variant): the diagram runs at full height in the
+  // page flow and reads through a scroll-linked depth of field — the plane at
+  // FOCAL_LINE is sharp, everything else recedes. Selection scrolls the PAGE
+  // to bring the anchor step to that plane.
+  depth?: boolean;
   // The steps the last dial move re-tiered, and a tick that keys the
   // one-shot badge flash.
   dialPulse: { ids: Set<string>; tick: number };
   onSelectElement: (stepId: string, element: FeatureElement) => void;
-  onClear: () => void;
-  onFocalAlign: (
-    info: { focalTop: number; frameTop: number; frameBottom: number } | null,
-  ) => void;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const nodeRefs = useRef<Map<string, HTMLElement> | null>(null);
@@ -1728,37 +1732,13 @@ function FlowDiagram({
   const lastSig = useRef("");
   const [segments, setSegments] = useState<Segment[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
-  // Windowed mode (the focus variant): the diagram sits in a fixed-height frame
-  // (frameRef, .flow-window) that holds the edge fades and does not scroll; inside
-  // it a native scroll container (windowRef, .flow-window-scroll) holds the canvas.
-  // A focus scrolls the container with scrollTo; a manual scroll deselects. The
-  // connector measurement is unaffected because the canvas (containerRef, the
-  // measurement origin) scrolls as one unit, so every tile's box minus the origin
-  // box is invariant to scrollTop — the same property the old translate relied on.
-  const frameRef = useRef<HTMLDivElement | null>(null);
-  const windowRef = useRef<HTMLDivElement | null>(null);
-  // The focus prop is rebuilt every render (a fresh object), so the scroll handler
-  // and the focus-scroll effect read it through a ref to avoid stale closures and
-  // to avoid re-subscribing the listener on every render. Synced in a layout effect
-  // (not during render) so the refs are current before any effect or scroll event
-  // reads them — layout effects run before passive effects and before paint.
+  // The focus prop is rebuilt every render (a fresh object), so the focus-scroll
+  // effect reads it through a ref to avoid stale closures. Synced in a layout
+  // effect (not during render) so the ref is current before any effect reads it.
   const focusRef = useRef<ResolvedFocus | null>(focus);
-  const onClearRef = useRef(onClear);
-  const onFocalAlignRef = useRef(onFocalAlign);
   useIsomorphicLayoutEffect(() => {
     focusRef.current = focus;
-    onClearRef.current = onClear;
-    onFocalAlignRef.current = onFocalAlign;
   });
-  // Deselect-on-scroll disambiguation. programmaticUntil is a self-expiring
-  // timestamp set just before every engine scrollTo; while now() is below it, the
-  // scroll handler treats scroll events as the engine's own (and its smooth tail)
-  // and never deselects. lastTarget is the scrollTop we asked for, used to ignore
-  // synthetic no-movement scroll events. scrollRaf coalesces scroll work to one
-  // pass per frame.
-  const programmaticUntil = useRef(0);
-  const lastTarget = useRef(0);
-  const scrollRaf = useRef(0);
   if (nodeRefs.current === null) nodeRefs.current = new Map();
   if (refCallbacks.current === null) refCallbacks.current = new Map();
   const nodeRefMap = nodeRefs.current;
@@ -1773,8 +1753,6 @@ function FlowDiagram({
   // placement, the connector measurement, and the aria order.
   const sequence = flowRows(flow);
   const placed = placeRows(sequence);
-
-  const showWindow = windowed && !reduceMotion;
 
   const registerNode = useCallback(
     (id: string) => {
@@ -1868,177 +1846,32 @@ function FlowDiagram({
     };
   }, [measure]);
 
-  // The scrollTop that brings the focused steps into the frame. We measure the
-  // targeted tiles' union box relative to the canvas top (scroll-invariant, since
-  // both the tile and the canvas-origin move together under scroll), then center
-  // that box in the frame if it fits, else pin its top just inside the frame so a
-  // long span reads from its first step down. Clamped to the scroll range.
-  const computeScrollTarget = useCallback(
-    (stepIds: string[]): number | null => {
-      const win = windowRef.current;
-      const canvas = containerRef.current;
-      if (!win || !canvas) return null;
-      const winH = win.clientHeight;
-      const max = Math.max(0, win.scrollHeight - winH);
-      if (max === 0) return 0;
-      const canvasRect = canvas.getBoundingClientRect();
-      let top = Number.POSITIVE_INFINITY;
-      let bottom = Number.NEGATIVE_INFINITY;
-      for (const id of stepIds) {
-        const el = nodeRefMap.get(id);
-        if (!el) continue;
-        const r = el.getBoundingClientRect();
-        top = Math.min(top, r.top - canvasRect.top);
-        bottom = Math.max(bottom, r.bottom - canvasRect.top);
-      }
-      if (!Number.isFinite(top)) return 0;
-      const unionH = bottom - top;
-      const desired =
-        unionH <= winH ? (top + bottom) / 2 - winH / 2 : top - winH * 0.1;
-      return Math.min(Math.max(0, desired), max);
-    },
-    [nodeRefMap],
-  );
-
-  // Toggle the edge fades from the live scroll position (imperative, via dataset,
-  // so a scroll never forces a React re-render). The fades live on the frame
-  // wrapper, which does not scroll, so they stay pinned to the frame edges.
-  const updateClip = useCallback(() => {
-    const win = windowRef.current;
-    const frame = frameRef.current;
-    if (!win || !frame) return;
-    const top = win.scrollTop;
-    const maxScroll = win.scrollHeight - win.clientHeight;
-    if (top > 1) frame.dataset.clipTop = "";
-    else delete frame.dataset.clipTop;
-    if (top < maxScroll - 1) frame.dataset.clipBottom = "";
-    else delete frame.dataset.clipBottom;
-  }, []);
-
-  // Report the focal tile's viewport position (and the frame's band) so the blurb
-  // can align to it on desktop. null when nothing is focused, so the blurb rests.
-  const reportFocalAlign = useCallback(() => {
-    const win = windowRef.current;
-    const focusNow = focusRef.current;
-    if (!win || !focusNow) {
-      onFocalAlignRef.current(null);
-      return;
-    }
-    const el = nodeRefMap.get(focusNow.anchorStepId);
-    if (!el) {
-      onFocalAlignRef.current(null);
-      return;
-    }
-    const frameRect = win.getBoundingClientRect();
-    onFocalAlignRef.current({
-      focalTop: el.getBoundingClientRect().top,
-      frameTop: frameRect.top,
-      frameBottom: frameRect.bottom,
-    });
-  }, [nodeRefMap]);
-
-  // Scroll the frame so the focus reads. Stamp the programmatic latch first so the
-  // scroll handler swallows this scroll (and its smooth tail) instead of reading it
-  // as a manual scroll and deselecting.
+  // Selecting a feature brings its anchor tile's center to the page's focal
+  // line — the same line the depth-of-field layer treats as sharp — so a
+  // selection always lands in focus. The page is the scroll container now;
+  // there is no inner frame. A deselect never scrolls, and a manual scroll
+  // never clears the selection (a page scroll is too global a gesture to
+  // read as "dismiss").
   const applyFocusScroll = useCallback(() => {
-    const win = windowRef.current;
     const focusNow = focusRef.current;
-    if (!win || !focusNow) return;
-    // When the frame has no scroll range (the stacked layout opens it to full
-    // height; a short diagram can also fit whole), the page is the scroll
-    // container instead. Bring the focal tile to the viewport there — but only
-    // when it actually sits outside it, so selecting a visible tile never
-    // jolts the page. Page scrolls don't fire the frame's scroll handler, so
-    // this path needs no programmatic-scroll latch.
-    if (win.scrollHeight - win.clientHeight <= 1) {
-      const el = nodeRefMap.get(focusNow.anchorStepId);
-      if (!el || typeof window === "undefined") return;
-      const r = el.getBoundingClientRect();
-      if (r.top < 0 || r.bottom > window.innerHeight) {
-        el.scrollIntoView({
-          block: "center",
-          behavior: reduceMotion ? "auto" : "smooth",
-        });
-      }
-      return;
-    }
-    const target = computeScrollTarget(focusNow.stepIds);
-    if (target == null) return;
-    lastTarget.current = target;
-    programmaticUntil.current =
-      performance.now() + (reduceMotion ? 60 : 700);
-    win.scrollTo({ top: target, behavior: reduceMotion ? "auto" : "smooth" });
-  }, [computeScrollTarget, nodeRefMap, reduceMotion]);
+    if (!focusNow || typeof window === "undefined") return;
+    const el = nodeRefMap.get(focusNow.anchorStepId);
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const focal = window.innerHeight * FOCAL_LINE;
+    const delta = r.top + r.height / 2 - focal;
+    // Already at the plane: don't jolt the page over a rounding error.
+    if (Math.abs(delta) < 24) return;
+    window.scrollBy({ top: delta, behavior: reduceMotion ? "auto" : "smooth" });
+  }, [nodeRefMap, reduceMotion]);
 
-  // A new (or changed) selection scrolls it into the frame. Keyed on focusTick,
+  // A new (or changed) selection scrolls it to the plane. Keyed on focusTick,
   // which bumps ONLY on a fresh selection, never on a reflow or resize, so the
-  // engine never yanks a manually-scrolled, deselected diagram back to the top.
+  // engine never yanks a manually-scrolled page back.
   useEffect(() => {
-    if (!showWindow || focusTick === 0) return;
+    if (!depth || focusTick === 0) return;
     applyFocusScroll();
-    reportFocalAlign();
-  }, [focusTick, showWindow, applyFocusScroll, reportFocalAlign]);
-
-  // One rAF-throttled scroll handler: refresh the edge fades, keep the blurb
-  // aligned, and decide whether a manual scroll should deselect. Deselect only
-  // fires for a genuine user scroll (past the programmatic latch, with real
-  // movement, and not a focus-into-view auto-scroll while a tile button has focus).
-  const handleScroll = useCallback(() => {
-    if (scrollRaf.current) return;
-    scrollRaf.current = requestAnimationFrame(() => {
-      scrollRaf.current = 0;
-      const win = windowRef.current;
-      if (!win) return;
-      updateClip();
-      reportFocalAlign();
-      if (performance.now() < programmaticUntil.current) return;
-      if (!focusRef.current) return;
-      if (Math.abs(win.scrollTop - lastTarget.current) <= 4) return;
-      const active = typeof document !== "undefined" ? document.activeElement : null;
-      if (active && active !== win && win.contains(active)) return;
-      onClearRef.current();
-    });
-  }, [updateClip, reportFocalAlign]);
-
-  // An interrupting wheel/touch during an in-flight programmatic scroll is
-  // unambiguously the user; drop the latch so the next scroll tick deselects
-  // immediately instead of waiting it out.
-  const handleUserIntent = useCallback(() => {
-    if (performance.now() < programmaticUntil.current) {
-      programmaticUntil.current = 0;
-    }
-  }, []);
-
-  // Keep the fades and blurb-align correct when the diagram reflows or the frame
-  // resizes (container-query column change, fonts settling, viewport resize). This
-  // path NEVER scrolls — only a fresh selection (focusTick) scrolls — so a
-  // post-deselect reflow can't teleport the user.
-  useIsomorphicLayoutEffect(() => {
-    if (!showWindow) return;
-    updateClip();
-    reportFocalAlign();
-  }, [showWindow, size, updateClip, reportFocalAlign]);
-
-  useEffect(() => {
-    if (!showWindow || typeof ResizeObserver === "undefined") return;
-    const win = windowRef.current;
-    if (!win) return;
-    const ro = new ResizeObserver(() => {
-      updateClip();
-      reportFocalAlign();
-    });
-    ro.observe(win);
-    return () => ro.disconnect();
-  }, [showWindow, updateClip, reportFocalAlign]);
-
-  // A page (window) resize moves the focal tile in viewport space even when the
-  // frame itself hasn't reflowed, so the blurb-align must re-read.
-  useEffect(() => {
-    if (!showWindow || typeof window === "undefined") return;
-    const onResize = () => reportFocalAlign();
-    window.addEventListener("resize", onResize, { passive: true });
-    return () => window.removeEventListener("resize", onResize);
-  }, [showWindow, reportFocalAlign]);
+  }, [focusTick, depth, applyFocusScroll]);
 
   const orderedLabels = flow.rows.flat().map((s) => s.name).join(", then ");
   const ariaLabel = `${flow.name} flow. It starts from the prompt: "${flow.prompt}". Then it runs in order: ${orderedLabels}. Each step shows the scope it runs with.`;
@@ -2149,7 +1982,7 @@ function FlowDiagram({
                 motionProps={tileMotion}
                 gridStyle={gridStyle}
                 registerNode={registerNode}
-                disableLayout={showWindow}
+                disableLayout={depth}
               />
             ) : step.shape === "fanout" ? (
               <FanoutCluster
@@ -2162,7 +1995,7 @@ function FlowDiagram({
                 highlightElement={element}
                 onSelect={() => onSelectElement(step.id, defaultElementFor(step))}
                 selected={pressed}
-                disableLayout={showWindow}
+                disableLayout={depth}
                 dialPulseTick={pulseTick}
               />
             ) : (
@@ -2177,7 +2010,7 @@ function FlowDiagram({
                 variant={variant}
                 onSelect={() => onSelectElement(step.id, defaultElementFor(step))}
                 selected={pressed}
-                disableLayout={showWindow}
+                disableLayout={depth}
                 dialPulseTick={pulseTick}
               />
             );
@@ -2187,28 +2020,10 @@ function FlowDiagram({
     </div>
   );
 
-  // Spotlight and glow (and reduced-motion focus) render the diagram inline,
-  // exactly as before. Only the focus variant under motion gets the scroll frame.
-  if (!showWindow) return canvas;
-
-  // The frame wrapper holds the edge fades and does NOT scroll; the inner element
-  // is the native scroll container (windowRef). Keeping the fades on the
-  // non-scrolling wrapper is what pins them to the frame edges instead of letting
-  // them scroll away with the content. data-clip-* are written imperatively on the
-  // wrapper by the scroll handler.
-  return (
-    <div ref={frameRef} className="flow-window">
-      <div
-        ref={windowRef}
-        className="flow-window-scroll"
-        onScroll={handleScroll}
-        onWheel={handleUserIntent}
-        onTouchMove={handleUserIntent}
-      >
-        {canvas}
-      </div>
-    </div>
-  );
+  // Every variant renders the diagram inline at its natural height; the page
+  // is the only scroll container. Depth mode adds its treatment per tile, not
+  // per wrapper, so there is nothing to wrap here.
+  return canvas;
 }
 
 // ---- Legend -----------------------------------------------------------------
@@ -2564,67 +2379,6 @@ export function FlowExplorer({
     },
     [applySelection],
   );
-  const clearSelection = useCallback(
-    () => applySelection(null),
-    [applySelection],
-  );
-
-  // Desktop blurb-align: the blurb translates its Y to sit beside the focused
-  // diagram element. We drive a raw motion value from the focal geometry and let a
-  // spring smooth it so the text glides as the diagram scrolls into place. Only on
-  // lg+ and only under motion; otherwise it stays at 0 (the sticky resting spot).
-  const blurbYRaw = useMotionValue(0);
-  const blurbY = useSpring(blurbYRaw, {
-    stiffness: 260,
-    damping: 30,
-    mass: 0.7,
-  });
-  const blurbRef = useRef<HTMLDivElement | null>(null);
-  const isLgRef = useRef(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const mq = window.matchMedia("(min-width: 64rem)");
-    const update = () => {
-      isLgRef.current = mq.matches;
-      if (!mq.matches) blurbYRaw.set(0);
-    };
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, [blurbYRaw]);
-
-  // When nothing is selected the blurb rests at its natural sticky position. This
-  // covers every deselect path (toggle off, scroll-to-clear) in one place.
-  useEffect(() => {
-    if (!selection) blurbYRaw.set(0);
-  }, [selection, blurbYRaw]);
-
-  const handleFocalAlign = useCallback(
-    (info: { focalTop: number; frameTop: number; frameBottom: number } | null) => {
-      if (reduceMotion || !isLgRef.current) {
-        blurbYRaw.set(0);
-        return;
-      }
-      const el = blurbRef.current;
-      if (!el || !info) {
-        blurbYRaw.set(0);
-        return;
-      }
-      const rect = el.getBoundingClientRect();
-      // The rect includes the spring's CURRENT rendered transform (blurbY), not the
-      // raw target (blurbYRaw) — those differ mid-animation. Subtract the rendered
-      // value to recover the blurb's natural (untranslated) top; using the raw
-      // target here would compound an error every frame the spring is catching up.
-      const naturalTop = rect.top - blurbY.get();
-      // Align the blurb top to the focal element, but keep it within the frame band
-      // so it never drifts above or below the diagram it describes.
-      const maxTop = Math.max(info.frameTop, info.frameBottom - rect.height);
-      const desiredTop = Math.min(Math.max(info.focalTop, info.frameTop), maxTop);
-      blurbYRaw.set(desiredTop - naturalTop);
-    },
-    [reduceMotion, blurbYRaw, blurbY],
-  );
 
   const diagram = (
     <LayoutGroup>
@@ -2635,11 +2389,9 @@ export function FlowExplorer({
         selectedElementStepId={selectedElementStepId}
         focusTick={focusTick}
         variant={variant}
-        windowed={variant === "focus"}
+        depth={variant === "focus"}
         dialPulse={dialPulse}
         onSelectElement={selectElement}
-        onClear={clearSelection}
-        onFocalAlign={handleFocalAlign}
       />
     </LayoutGroup>
   );
@@ -2712,22 +2464,15 @@ export function FlowExplorer({
     // Three columns on desktop: the vertical feature nav on the left, the diagram
     // in the center, the explanation on the right (the columns are placed by CSS;
     // the DOM order stays nav, blurb, diagram so the mobile stack reads tabs ->
-    // blurb -> diagram). The nav and explanation pin (sticky) so switching a
-    // feature and seeing what changed never costs a scroll up and back down.
-    // Stacks to a single column below lg.
+    // blurb -> diagram). The nav pins near the top; the blurb pins at the focal
+    // plane's height, so whatever the page scroll brings into focus sits right
+    // beside its explanation. Stacks to a single column below lg.
     body = (
       <>
         {header}
         <div className="flow-focus-shell">
           <div className="flow-focus-nav">{tabs}</div>
-          <div className="flow-focus-info">
-            {/* The inner layer carries the blurb-align translate so the sticky
-                column box stays put while the text glides to meet the focal step.
-                y rests at 0 (and is forced to 0 below lg / under reduced motion). */}
-            <m.div ref={blurbRef} style={{ y: blurbY }}>
-              {info}
-            </m.div>
-          </div>
+          <div className="flow-focus-info">{info}</div>
           <div className="flow-focus-diagram min-w-0">{diagram}</div>
         </div>
       </>
