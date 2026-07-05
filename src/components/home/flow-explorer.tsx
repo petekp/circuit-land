@@ -1798,7 +1798,7 @@ function DepthTile({
   const blur = useTransform(focus, [0, 1], [DOF_BLUR_MAX, 0]);
   // At the plane the filter must be literally ABSENT, not blur(0px): any
   // filter value makes this wrapper a backdrop root, and the glass tile
-  // inside would sample its (empty) subtree instead of the aurora bed behind
+  // inside would sample its (empty) subtree instead of the page behind
   // the diagram. Same reason willChange pins only transform.
   const filter = useTransform(blur, (b) =>
     b < 0.05 ? "none" : `blur(${b}px)`,
@@ -2210,16 +2210,8 @@ function FlowDiagram({
       className="flow-diagram-canvas relative"
       data-gl={glActive || undefined}
     >
-      {/* The light bed the frosted glass diffuses. Two counter-drifting
-          aurora layers carry the flow's hue plus fixed brand complements;
-          the key light rides the focal plane. Both are invisible to the
-          layout and the reader's pointer — pure atmosphere. */}
-      {depth ? (
-        <div aria-hidden="true" className="flow-aurora">
-          <div className="flow-aurora-layer flow-aurora-a" />
-          <div className="flow-aurora-layer flow-aurora-b" />
-        </div>
-      ) : null}
+      {/* The key light rides the focal plane: invisible to the layout and
+          the reader's pointer — pure atmosphere the tiles scroll into. */}
       {dofActive ? (
         <m.div
           aria-hidden="true"
@@ -2231,8 +2223,8 @@ function FlowDiagram({
           because the canvas div's container-type gives it layout containment,
           which captures fixed descendants. The negative margin hands the
           height back so the grid below still starts at the canvas top. Wedged
-          between the atmosphere and the wires: slabs above the aurora, text
-          and wires above the slabs. */}
+          between the atmosphere and the wires: slabs above the key light,
+          text and wires above the slabs. */}
       {glActive ? (
         <div ref={glassHostRef} aria-hidden="true" className="flow-gl-host">
           <GlassLayer

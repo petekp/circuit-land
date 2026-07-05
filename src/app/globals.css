@@ -533,7 +533,7 @@
 /* ---- The block material ---------------------------------------------------
    Frosted glass. A step tile is a semi-transparent plastic slab with the hazy
    tinge of its flow's color: the tint names the flow it belongs to, and the
-   frosting (backdrop blur + saturate) diffuses whatever the aurora bed and the
+   frosting (backdrop blur + saturate) diffuses whatever the page and the
    key light put behind it. Everything physical rides --illum, the per-tile
    illumination the depth engine writes on the wrapper: frosting strength and
    surface grain follow the light, so a tile "wakes up" as it crosses the
@@ -658,7 +658,7 @@
 }
 
 /* The focal glow: a wide anamorphic ellipse behind whichever tile holds the
-   plane, added over the aurora with plus-lighter. Quadratic in --illum so it
+   plane, added over the page with plus-lighter. Quadratic in --illum so it
    exists only AT the plane and never reads as a permanent halo. */
 .flow-grid[data-depth] > li::before {
   content: "";
@@ -755,79 +755,11 @@
   margin-inline: auto;
 }
 
-/* ---- The light bed --------------------------------------------------------
-   Frosted glass is invisible over a void: the material only reads once there
-   is colored light behind it to diffuse. Two aurora layers drift slowly in
-   counter-phase, carrying the active flow's hue plus two fixed brand
-   complements, and the whole bed fades out toward the canvas edges so it
-   reads as atmosphere, not a poster. The tiles' backdrop-filter does the
-   frosting; these layers are what it frosts. */
-.flow-aurora {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  mask-image: radial-gradient(120% 90% at 50% 50%, black 55%, transparent 98%);
-}
-
-.flow-aurora-layer {
-  position: absolute;
-  inset: -18%;
-}
-
-.flow-aurora-a {
-  background:
-    radial-gradient(
-      42% 26% at 24% 12%,
-      color-mix(in oklab, var(--flow-color) 30%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      38% 22% at 78% 42%,
-      color-mix(in oklab, hsl(254 90% 60%) 22%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      44% 24% at 30% 76%,
-      color-mix(in oklab, var(--signal) 18%, transparent),
-      transparent 72%
-    );
-  animation: flow-aurora-drift 90s ease-in-out infinite alternate;
-}
-
-.flow-aurora-b {
-  background:
-    radial-gradient(
-      36% 22% at 70% 16%,
-      color-mix(in oklab, hsl(198 90% 55%) 16%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      46% 26% at 26% 48%,
-      color-mix(in oklab, var(--flow-color) 24%, transparent),
-      transparent 72%
-    ),
-    radial-gradient(
-      40% 24% at 72% 84%,
-      color-mix(in oklab, hsl(322 85% 58%) 14%, transparent),
-      transparent 70%
-    );
-  animation: flow-aurora-drift 120s ease-in-out infinite alternate-reverse;
-}
-
-@keyframes flow-aurora-drift {
-  from {
-    transform: translate3d(-2.5%, -1.5%, 0) scale(1);
-  }
-  to {
-    transform: translate3d(2.5%, 2%, 0) scale(1.08);
-  }
-}
-
-/* The key light: a wide soft ellipse pinned to the focal plane in the
-   viewport (its y is driven from scroll by the depth engine), so blocks
-   scroll INTO the light rather than carrying lights of their own. plus-lighter
-   adds it over the aurora; everything crossing the plane brightens. */
+/* ---- The key light --------------------------------------------------------
+   A wide soft ellipse pinned to the focal plane in the viewport (its y is
+   driven from scroll by the depth engine), so blocks scroll INTO the light
+   rather than carrying lights of their own. plus-lighter adds it over the
+   page; everything crossing the plane brightens. */
 .flow-keylight {
   position: absolute;
   top: -260px;
@@ -850,8 +782,8 @@
    .flow-diagram-canvas has container-type, whose layout containment would
    capture a fixed descendant. The negative margin returns the reserved
    height to the flow, so the wires and grid after it still start at the
-   canvas top. Sits above the aurora and key light (later in the DOM, same
-   stacking level) and below the wires (z-0) and tile text (z-10). */
+   canvas top. Sits above the key light (later in the DOM, same stacking
+   level) and below the wires (z-0) and tile text (z-10). */
 .flow-gl-host {
   position: sticky;
   top: 0;
@@ -865,10 +797,8 @@
    grain all render in-scene now, so painting them twice would double the
    glass. The text layer keeps everything typographic: the veil (recession
    darkness over content), the neon signals, captions, and the name glow.
-   The DOM aurora and key light also step aside: the GL backdrop plane is
-   opaque (the transmission buffer needs defined light), so they'd be
-   invisible work — and the GL scene re-creates them where the glass can
-   actually refract them. */
+   The DOM key light steps aside too: the GL scene re-creates the focal
+   light in-scene, where the glass can actually refract it. */
 .flow-diagram-canvas[data-gl] .flow-step-tile,
 .flow-diagram-canvas[data-gl] .flow-fanout-cluster,
 .flow-diagram-canvas[data-gl] .flow-prompt-node {
@@ -882,7 +812,6 @@
   display: none;
 }
 
-.flow-diagram-canvas[data-gl] .flow-aurora,
 .flow-diagram-canvas[data-gl] .flow-keylight {
   display: none;
 }
@@ -892,12 +821,6 @@
    only sit flatly behind the tile. */
 .flow-diagram-canvas[data-gl] .flow-grid[data-depth] > li::before {
   display: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .flow-aurora-layer {
-    animation: none;
-  }
 }
 
 @container (min-width: 32rem) {
@@ -1104,7 +1027,7 @@
   border-radius: 14px;
   corner-shape: squircle;
   /* The same glass family as the step tiles, but neutral: terminal chrome,
-     not a colored step. Translucent so the aurora reads through the frost. */
+     not a colored step. Translucent so the page reads through the frost. */
   background: color-mix(in oklab, var(--foreground) 8%, hsl(222 5% 8% / 0.6));
   backdrop-filter: blur(calc(var(--illum, 1) * 18px));
   box-shadow:
