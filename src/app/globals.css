@@ -74,25 +74,25 @@
    diagrams, deliberately not part of the brand theme.
    ========================================================================== */
 :root {
-  --brand-bg: hsl(220 3% 9%);
-  --brand-panel: hsl(220 3% 13%); /* cards, raised surfaces */
-  --brand-panel-deep: hsl(220 4% 6.5%); /* terminal wells, darker than bg */
-  --brand-surface: hsl(220 3% 18%); /* muted fills, hover washes */
-  --brand-border: hsl(220 3% 24%);
-  --brand-text: hsl(60 10% 92%);
-  --brand-muted: hsl(220 3% 62%);
-  --brand-signal: hsl(163 95% 47%); /* the one accent */
-  --brand-second: hsl(220 15% 72%); /* quiet links, marginalia, diagram ink */
-  --brand-error: hsl(0 75% 62%);
-  --brand-ink-dim: hsl(220 3% 46%); /* diagram "without" lane */
-  --brand-ink-bright: hsl(160 15% 94%); /* diagram pulse */
+  --brand-bg: oklch(0.2033 0.002 264.52);
+  --brand-panel: oklch(0.2468 0.0027 264.51); /* cards, raised surfaces */
+  --brand-panel-deep: oklch(0.1745 0.002 264.51); /* terminal wells, darker than bg */
+  --brand-surface: oklch(0.2987 0.0035 264.51); /* muted fills, hover washes */
+  --brand-border: oklch(0.3582 0.0045 264.51);
+  --brand-text: oklch(0.9439 0.0054 106.5);
+  --brand-muted: oklch(0.696 0.0061 264.52);
+  --brand-signal: oklch(0.8294 0.175 164.48); /* the one accent */
+  --brand-second: oklch(0.7689 0.0219 264.44); /* quiet links, marginalia, diagram ink */
+  --brand-error: oklch(0.6447 0.1808 23.67);
+  --brand-ink-dim: oklch(0.5589 0.0078 264.5); /* diagram "without" lane */
+  --brand-ink-bright: oklch(0.9572 0.0053 174.43); /* diagram pulse */
   /* Light register (paper surfaces, e.g. docs/readme previews): the signal
      becomes a highlighter behind text — never colored text on white. */
-  --brand-paper: hsl(180 20% 97%);
-  --brand-paper-ink: hsl(220 10% 15%);
-  --brand-highlight: hsl(160 85% 62%);
+  --brand-paper: oklch(0.9794 0.0033 197.1);
+  --brand-paper-ink: oklch(0.2639 0.0102 264.38);
+  --brand-highlight: oklch(0.8585 0.1562 166.37);
   /* Third-party ink: the Claude Code mark renders in its own brand orange. */
-  --brand-claude-code: #d97757;
+  --brand-claude-code: oklch(0.6724 0.1308 38.76);
 }
 
 :root {
@@ -122,44 +122,44 @@
   --border: var(--brand-border);
   --input: var(--brand-border);
   --ring: var(--brand-muted);
-  --chart-1: hsl(0 0% 87%);
-  --chart-2: hsl(0 0% 56%);
-  --chart-3: hsl(0 0% 44%);
-  --chart-4: hsl(0 0% 37%);
-  --chart-5: hsl(0 0% 27%);
+  --chart-1: oklch(0.9001 0 0);
+  --chart-2: oklch(0.6494 0 0);
+  --chart-3: oklch(0.5459 0 0);
+  --chart-4: oklch(0.4832 0 0);
+  --chart-5: oklch(0.3899 0 0);
   --radius: 0.625rem;
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(0 0% 15%);
-  --sidebar-primary: hsl(0 0% 21%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(0 0% 97%);
-  --sidebar-accent-foreground: hsl(0 0% 21%);
-  --sidebar-border: hsl(0 0% 92%);
-  --sidebar-ring: hsl(0 0% 71%);
-  --panel: hsl(0 0% 0% / 40%);
-  --sticker-light: hsl(0 0% 100%);
-  --sticker-shadow: hsl(0 0% 0%);
-  --flow-explore: hsl(188 100% 42%);
-  --flow-explore-accent: hsl(72 100% 62%);
-  --flow-build: hsl(21 100% 55%);
-  --flow-build-accent: hsl(167 80% 50%);
-  --flow-fix: hsl(339 82% 52%);
-  --flow-fix-accent: hsl(73 100% 50%);
-  --flow-review: hsl(145 100% 39%);
-  --flow-review-accent: hsl(338 100% 65%);
-  --flow-prototype: hsl(167 80% 50%);
-  --flow-prototype-accent: hsl(156 100% 62%);
-  --flow-pursue: hsl(43 92% 55%);
-  --flow-pursue-accent: hsl(54 96% 68%);
+  --sidebar: oklch(0.9848 0 0);
+  --sidebar-foreground: oklch(0.2697 0 0);
+  --sidebar-primary: oklch(0.3311 0 0);
+  --sidebar-primary-foreground: oklch(0.9848 0 0);
+  --sidebar-accent: oklch(0.9772 0 0);
+  --sidebar-accent-foreground: oklch(0.3311 0 0);
+  --sidebar-border: oklch(0.9389 0 0);
+  --sidebar-ring: oklch(0.7733 0 0);
+  --panel: oklch(0 0 0 / 0.4);
+  --sticker-light: oklch(1 0 0);
+  --sticker-shadow: oklch(0 0 0);
+  --flow-explore: oklch(0.7243 0.1272 213.88);
+  --flow-explore-accent: oklch(0.9406 0.208 120.78);
+  --flow-build: oklch(0.7013 0.1989 43.02);
+  --flow-build-accent: oklch(0.8239 0.157 171.82);
+  --flow-fix: oklch(0.6079 0.2291 8.57);
+  --flow-fix-accent: oklch(0.928 0.2305 124.03);
+  --flow-review: oklch(0.7236 0.2073 148.4);
+  --flow-review-accent: oklch(0.6862 0.2186 2.65);
+  --flow-prototype: oklch(0.8239 0.157 171.82);
+  --flow-prototype-accent: oklch(0.8892 0.1846 160.81);
+  --flow-pursue: oklch(0.8218 0.1617 83.91);
+  --flow-pursue-accent: oklch(0.9303 0.1591 102.98);
   /* The interaction color. Distinct from every flow tint (teal/green) so a
      selection or hover reads as "you're acting on this," not as more of the
      flow's own wiring. A cool brand-blue: high contrast against the teal-tinted
      cards, and it never clashes with the warm provider badges. */
-  --flow-highlight: hsl(210 95% 66%);
+  --flow-highlight: oklch(0.7171 0.1452 250.54);
   /* Provider identity for the model badges. Anthropic's own clay (their brand
      token --swatch--clay); OpenAI reads monochrome, so a light cool neutral. */
-  --prov-anthropic: #d97757;
-  --prov-openai: hsl(216 12% 84%);
+  --prov-anthropic: oklch(0.6724 0.1308 38.76);
+  --prov-openai: oklch(0.8724 0.0091 258.34);
 }
 
 @layer base {
@@ -563,6 +563,11 @@
 
 .flow-step-tile {
   border-radius: 18px;
+  /* Squircle corners, matching the fan-out cluster and every overlay ring that
+     frames a tile (resting edge, hover cue, selection ring). corner-shape does
+     not inherit, so each ::before/::after overlay that traces the tile has to
+     name it too, or its plain-round corners fan away from the squircle edge. */
+  corner-shape: squircle;
 }
 
 /* The less-than-smooth surface: film grain, overlay-blended so it textures
@@ -654,14 +659,10 @@
 }
 
 /* The step's spec sheet: what the micro-harness is scoped on (context, tools,
-   skills, the note). Printed straight on the glass under a hairline — no
-   sunken well — so the tile reads as one continuous card, head then spec,
+   skills, the note). Printed straight on the glass with no divider and no
+   sunken well, so the tile reads as one continuous card, head then spec,
    instead of a box nested in a box. The checkpoint's decision panel keeps the
    well above; a spec sheet reads, a decision waits. */
-.flow-spec {
-  border-top: 1px solid
-    color-mix(in oklab, var(--foreground) 8%, transparent);
-}
 
 /* Scope tokens, one ladder read by weight, not hue (the model badge carries the
    tile's color). Three grants, three weights: a tool is a power the step was
@@ -848,30 +849,20 @@
 }
 
 /* The button rail. Wrapping pills when stacked; a stretched vertical list when
-   it becomes the left-hand column. */
+   it becomes the left-hand column. Idle pills rest transparent on the panel and
+   lift on hover; the selected pill's flow-color fill is set inline and wins. */
 .flow-feature-nav {
   display: flex;
   flex-flow: row wrap;
   gap: 0.5rem;
 }
 
-/* Cluster headings inside the feature nav. Below lg the nav renders as a flat
-   wrapped pill row where headings would land mid-flow, so they hide; at lg+
-   the column shows them, with a step of air above every cluster but the
-   first. Typography lives on the element (mono, tracked caps — the same
-   register as the dial's "power" label). */
-.flow-feature-group-label {
-  display: none;
+.flow-feature-nav .flow-feature-tab {
+  background: transparent;
 }
 
-@media (min-width: 64rem) {
-  .flow-feature-group-label {
-    display: block;
-  }
-
-  .flow-feature-group-label:not(:first-child) {
-    margin-top: 0.55rem;
-  }
+.flow-feature-nav .flow-feature-tab:hover {
+  background: color-mix(in oklab, var(--foreground) 7%, transparent);
 }
 
 .flow-focus-info {
@@ -883,10 +874,17 @@
     display: grid;
     /* nav | diagram | blurb. The DOM order stays nav, blurb, diagram (so the
        mobile stack reads tabs -> blurb -> diagram); the columns below re-place
-       them, putting the diagram in the center and the explanation on the right. */
-    grid-template-columns: minmax(9rem, 10.5rem) minmax(0, 1fr) minmax(12rem, 15rem);
-    gap: 1.75rem;
+       them, putting the diagram in the center and the explanation on the right.
+       The diagram column is capped near the widest tile (the fan-out cluster at
+       34rem) rather than 1fr, so the rails stay near the diagram rather than
+       drifting across a wide 1fr gap. The column gap is a deliberate gutter:
+       enough air that the nav and blurb read as their own panels, not so much
+       that the blurb loses its tie to the tile it explains. justify-content
+       centers the whole cluster in the band. */
+    grid-template-columns: minmax(9rem, 10.5rem) minmax(0, 34rem) minmax(12rem, 15rem);
+    gap: 2.25rem;
     align-items: start;
+    justify-content: center;
   }
 
   /* All three share grid row 1. The DOM order is nav, blurb, diagram (so the
@@ -910,16 +908,51 @@
     grid-row: 1;
   }
 
+  /* The rail rides in a quiet panel (faint fill + a hairline) so it reads as
+     one deliberate control instead of loose pills that get lost against the
+     diagram. The panel wraps just the tabs; the column around it
+     (.flow-focus-nav) does the centering, so the visible panel stays snug. */
   .flow-feature-nav {
     flex-flow: column nowrap;
     align-items: stretch;
     gap: 0.4rem;
+    padding: 0.55rem;
+    border-radius: 18px;
+    corner-shape: squircle;
+    background: color-mix(in oklab, var(--background) 62%, transparent);
+    box-shadow: inset 0 0 0 1px
+      color-mix(in oklab, var(--foreground) 9%, transparent);
   }
 
+  /* The nav column is a viewport-tall sticky rail that flex-centers its panel
+     at eye level with the focal tile. Height + centering (rather than
+     top:50% + translateY, which escapes the sticky clamp and rode up over the
+     masthead at the top of the page) keeps the panel inside the diagram band:
+     when the diagram fills the viewport the panel sits dead center, and at the
+     very top it tucks to the top of the band instead of floating into the hero
+     copy above it. */
   .flow-focus-nav {
     position: sticky;
-    top: 1.5rem;
-    align-self: start;
+    top: 0;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* JS choreography active (desktop, hydrated, motion allowed): the rail leaves
+     the sticky-centering box and becomes a normal in-flow block at the top of
+     column 1. Framer then pins its midline on the focal plane via translateY
+     and fades it at the band edges (see the nav choreography in
+     flow-explorer.tsx). A constant viewport Y is what kills the edge wobble the
+     sticky box produced; the sticky rule above stays as the pre-hydration,
+     reduce-motion, and no-JS baseline. */
+  .flow-focus-nav[data-nav-driven="1"] {
+    position: relative;
+    top: auto;
+    height: auto;
+    justify-content: flex-start;
+    will-change: transform, opacity;
   }
 
   /* The blurb pins at the depth-of-field focal plane (FOCAL_LINE = 0.38 in
@@ -935,11 +968,14 @@
 }
 
 /* Inside the hero band the shell can see ~85rem. Give the rails a step of
-   that room back so the nav labels and the blurb set more comfortably; the
-   diagram column keeps well clear of the 52rem three-up threshold. */
+   that room back so the nav labels and the blurb set more comfortably, and
+   open the gutter a little further so both panels breathe clear of the
+   diagram; the diagram column keeps well clear of the 52rem three-up
+   threshold. */
 @media (min-width: 90rem) {
   .flow-focus-shell {
-    grid-template-columns: minmax(9rem, 11rem) minmax(0, 1fr) minmax(12rem, 16rem);
+    grid-template-columns: minmax(9rem, 11rem) minmax(0, 34rem) minmax(12rem, 16rem);
+    gap: 3rem;
   }
 }
 
@@ -1065,20 +1101,23 @@
    straight through to the button underneath. */
 .flow-elhit {
   cursor: pointer;
-  transition: box-shadow 160ms ease;
+  /* A resting transparent ring, offset off the element so it never touches what
+     it highlights and never reflows. Hover fades its color in; the ring follows
+     each element's own border-radius, so it always reads rounded. */
+  outline: 2px solid transparent;
+  outline-offset: 3px;
+  transition: outline-color 160ms ease;
 }
 
 @media (hover: hover) {
   .flow-elhit:hover {
-    box-shadow:
-      0 0 0 4px color-mix(in oklab, var(--flow-highlight) 10%, transparent),
-      0 0 0 5px color-mix(in oklab, var(--flow-highlight) 34%, transparent);
+    outline-color: color-mix(in oklab, var(--flow-highlight) 68%, transparent);
   }
 }
 
 .flow-elhit:focus-visible {
   outline: 2px solid var(--flow-highlight);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1099,6 +1138,9 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
+  /* inherit copies the radius but not corner-shape, so name the squircle here
+     or the hover ring traces plain-round corners inside a squircle tile. */
+  corner-shape: squircle;
   pointer-events: none;
   opacity: 0;
   box-shadow:
@@ -1155,9 +1197,13 @@
    resizing it. */
 .flow-tile-ring {
   position: absolute;
-  inset: 0;
+  /* Float the ring a few px inside the tile edge so it frames the contents with
+     a margin instead of tracing the card border, and keep it concentric (tile
+     radius 18px minus the 4px inset). */
+  inset: 4px;
   z-index: 20;
-  border-radius: 18px;
+  border-radius: 14px;
+  corner-shape: squircle;
   pointer-events: none;
 }
 
@@ -1167,40 +1213,29 @@
 
 .flow-tile-ring--glow {
   box-shadow: inset 0 0 0 2px
-    color-mix(in oklab, var(--flow-highlight) 80%, transparent);
+    color-mix(in oklab, var(--flow-highlight) 85%, transparent);
 }
 
 .flow-tile-ring--focus {
   box-shadow: inset 0 0 0 2px var(--flow-highlight);
 }
 
-/* A detail row the selection points at, and the siblings it quiets. The halo is
-   the interaction color, not the flow tint, so it reads clearly against the
-   teal-tinted card instead of dissolving into it. */
-.flow-row-hot {
-  border-radius: 8px;
-  box-shadow:
-    0 0 0 5px color-mix(in oklab, var(--flow-highlight) 14%, transparent),
-    0 0 0 6px color-mix(in oklab, var(--flow-highlight) 60%, transparent);
+/* A selected element wears a solid ring in the interaction color, offset off the
+   element so it frames rather than touches it, and rounded to the element's own
+   corners. Solid (not a faint wash) so the pick reads at full contrast against
+   the flow-tinted card. The ring is an outline, so it never reflows the box and
+   the measured connectors hold. */
+.flow-row-hot,
+.flow-badge-hot,
+.flow-note-hot,
+.flow-branches-hot,
+.flow-options-hot {
+  outline: 2px solid var(--flow-highlight);
+  outline-offset: 3px;
 }
 
 .flow-row-cool {
   opacity: 0.4;
-}
-
-/* Inner blocks the selection points at: the model badge, the subrun pill,
-   the checkpoint options, the fan-out branches. Outset halo, no reflow. */
-.flow-badge-hot {
-  box-shadow: 0 0 0 2px var(--flow-highlight);
-}
-
-.flow-note-hot,
-.flow-branches-hot,
-.flow-options-hot {
-  border-radius: 10px;
-  box-shadow:
-    0 0 0 4px color-mix(in oklab, var(--flow-highlight) 14%, transparent),
-    0 0 0 5px color-mix(in oklab, var(--flow-highlight) 58%, transparent);
 }
 
 .flow-feature-tab,
@@ -1211,7 +1246,7 @@
 .flow-branches-hot,
 .flow-options-hot {
   transition:
-    box-shadow 200ms ease,
+    outline-color 200ms ease,
     opacity 200ms ease;
 }
 

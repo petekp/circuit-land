@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Fragment,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -17,12 +16,14 @@ import {
   AnimatePresence,
   LazyMotion,
   LayoutGroup,
+  animate,
   domMax,
   m,
   useMotionValue,
   useReducedMotion,
   useScroll,
   useTransform,
+  type AnimationPlaybackControls,
   type MotionProps,
   type MotionStyle,
   type MotionValue,
@@ -39,8 +40,7 @@ import {
    diagram morphs. The whole point is legible in one read: expensive judgment
    (opus, high effort) sits at the few steps that decide direction, and the
    bulk work runs on cheap models, sometimes many at once in a fan-out. Model
-   names use the same lowercase tier vocabulary as `circuit preview` output
-   and the dial section's matrix.
+   names use the same lowercase tier vocabulary as `circuit preview` output.
 
    These are EXAMPLE flows. The per-step model, effort, tools, and skills are a
    real Circuit capability (each step is configured on its own); the specific
@@ -346,59 +346,6 @@ const FLOWS: ExampleFlow[] = [
   },
 ];
 
-// ---- Power dial -------------------------------------------------------------
-
-// One control moves the whole flow's model and effort at once — but not
-// uniformly. The steps that decide direction hold their model at every setting
-// (a floor: judgment compounds, so it never runs cheap). The balanced and bulk
-// steps track the dial. This mirrors Circuit's real per-role power allocation:
-// the researcher is pinned high while the implementer follows the dial.
-//
-// The authored values in FLOWS above are the MEDIUM setting. So at medium the
-// diagram is exactly what each step is authored with; low and high are derived
-// shifts from that baseline.
-type Dial = "low" | "medium" | "high";
-
-const DIALS: Dial[] = ["low", "medium", "high"];
-
-// How a tracking step's (model, effort, tier) resolves at each dial, keyed by
-// its authored (medium) tier. "strategic" and "none" are absent on purpose:
-// strategic is pinned to its authored value (the floor) and "none" has no model
-// opinion at all — both are returned unchanged.
-const DIAL_TABLE: Record<
-  "balanced" | "execution",
-  Record<Dial, { model: string; effort: Effort; tier: Tier }>
-> = {
-  balanced: {
-    low: { model: "haiku", effort: "low", tier: "execution" },
-    medium: { model: "sonnet", effort: "medium", tier: "balanced" },
-    high: { model: "opus", effort: "high", tier: "strategic" },
-  },
-  execution: {
-    low: { model: "haiku", effort: "minimal", tier: "execution" },
-    medium: { model: "haiku", effort: "low", tier: "execution" },
-    high: { model: "sonnet", effort: "medium", tier: "balanced" },
-  },
-};
-
-function resolveStepForDial(step: StepSpec, dial: Dial): StepSpec {
-  const tier = step.tier ?? "none";
-  // No model opinion (gate, checkpoint, record) or a pinned direction-setting
-  // step: unchanged at every dial.
-  if (tier === "none" || tier === "strategic") return step;
-  return { ...step, ...DIAL_TABLE[tier][dial] };
-}
-
-function flowAtDial(flow: ExampleFlow, dial: Dial): ExampleFlow {
-  // Medium is the authored baseline. Return the same object so its identity is
-  // stable and the diagram never re-measures just for sitting at rest.
-  if (dial === "medium") return flow;
-  return {
-    ...flow,
-    rows: flow.rows.map((row) => row.map((step) => resolveStepForDial(step, dial))),
-  };
-}
-
 // ---- Feature tour -----------------------------------------------------------
 
 // The tabs along the top are NAMED FEATURES, not flow types. Selecting one
@@ -523,14 +470,26 @@ const FEATURES: Feature[] = [
   },
 ];
 
-// The cluster headings, in nav order. "Guarantees" leads because it is the
-// pitch (what the engine enforces); scoping explains the per-step box;
-// structure names the shapes a flow can take.
-const FEATURE_GROUPS: Array<{ key: Feature["group"]; label: string }> = [
-  { key: "guarantees", label: "Guarantees" },
-  { key: "scoping", label: "Scoping" },
-  { key: "structure", label: "Structure" },
-];
+// The nav lists features in the order their steps appear in the flow, so
+// reading it top-to-bottom sweeps the diagram in sequence instead of jumping
+// around. A feature is ranked by its earliest step; ties keep authored order.
+const TOUR_STEP_ORDER: string[] = (
+  FLOWS.find((f) => f.key === TOUR_FLOW_KEY) ?? FLOWS[0]
+).rows
+  .flat()
+  .map((s) => s.id);
+
+const SEQUENTIAL_FEATURES: Feature[] = FEATURES.map((f, i) => {
+  const rank = Math.min(
+    ...f.stepIds.map((id) => {
+      const idx = TOUR_STEP_ORDER.indexOf(id);
+      return idx === -1 ? Number.POSITIVE_INFINITY : idx;
+    }),
+  );
+  return { f, rank, i };
+})
+  .sort((a, b) => a.rank - b.rank || a.i - b.i)
+  .map((x) => x.f);
 
 // ---- Unified selection ------------------------------------------------------
 
@@ -571,38 +530,63 @@ function sentence(text: string): string {
   return /[.!?·]$/.test(capped) ? capped : `${capped}.`;
 }
 
-// The blurb shown when a tile is clicked. It only ever restates fields the tile
-// already carries (role, the scope it runs with, its branches/options/note), so
-// it stays mechanism-only and invents no new copy.
+// The blurb shown when a tile element is clicked. Each element gets a short
+// explanation of what that piece IS — the durable Circuit mechanic it shows
+// off — grounded in this step's real values, so the copy teaches the concept
+// and stays honest to the diagram. Missing fields fall back to the concept
+// alone, never inventing a value the step doesn't have.
 function stepBlurb(step: StepSpec, element: FeatureElement): string {
   const lead = sentence(step.role);
   switch (element) {
-    case "branches":
-      return step.branches && step.branches.length > 0
-        ? `${lead} It fans out into ${step.branches.length} parallel scouts: ${step.branches.join(", ")}.`
-        : lead;
-    case "options":
-      return step.options && step.options.length > 0
-        ? `${lead} It pauses and hands you the call: ${step.options.join(" · ")}.`
-        : lead;
-    case "note":
-      return step.note ? `${lead} ${sentence(step.note)}` : lead;
-    default: {
-      const scope: string[] = [];
+    case "model": {
+      if (step.model && step.tier !== "none") {
+        const at = step.effort ? ` at ${step.effort} effort` : "";
+        const hold =
+          step.tier === "strategic"
+            ? " A direction-setting step like this holds a top model on purpose."
+            : "";
+        return `${lead} Every step names its own model, effort, and provider; this one runs on ${step.model}${at}.${hold}`;
+      }
+      return `${lead} Every step names its own model, effort, and provider.`;
+    }
+    case "ctx": {
+      const list =
+        step.context && step.context.length > 0
+          ? ` — ${step.context.join(", ")} here —`
+          : "";
+      return `${lead} It starts from a clean slate and sees only the inputs it is handed${list} so the chatter of earlier steps never leaks in.`;
+    }
+    case "tools": {
       if (step.tools && step.tools.allow.length > 0) {
         const allow = step.tools.allow.join(", ");
-        scope.push(
-          step.tools.blocked ? `uses ${allow} (${step.tools.blocked} blocked)` : `uses ${allow}`,
-        );
+        const blocked = step.tools.blocked
+          ? `, with a hard wall on the ${step.tools.blocked} it is not`
+          : "";
+        return `${lead} Its powers are scoped to the job: ${allow}${blocked}.`;
       }
-      if (step.skills && step.skills.length > 0) {
-        scope.push(`pulls in ${step.skills.join(", ")}`);
-      }
-      if (step.model && step.tier !== "none") {
-        scope.push(`on ${step.model}`);
-      }
-      return scope.length > 0 ? `${lead} It ${scope.join(", ")}.` : lead;
+      return `${lead} Each step's tools are scoped to its own job.`;
     }
+    case "skills": {
+      if (step.skills && step.skills.length > 0) {
+        return `${lead} It works from your codified practices instead of improvising, pulling in ${step.skills.join(", ")}.`;
+      }
+      return `${lead} It can pull in named skills so it works from your codified practices.`;
+    }
+    case "branches":
+      return step.branches && step.branches.length > 0
+        ? `${lead} It splits into ${step.branches.length} parallel branches that each explore one slice, then merge into a single brief: ${step.branches.join(", ")}.`
+        : `${lead} It fans out into parallel branches that merge into one brief.`;
+    case "options":
+      return step.options && step.options.length > 0
+        ? `${lead} The flow pauses and hands you the call, then resumes with your pick: ${step.options.join(" · ")}.`
+        : `${lead} The flow pauses here and hands you the decision.`;
+    case "note":
+      return step.note
+        ? `${lead} A note on how it behaves: ${step.note}.`
+        : lead;
+    default:
+      // "whole": the block itself. Describe the relay shape every step runs as.
+      return `${lead} It runs as one block in the sequence: fresh context in, a model on it, a scoped set of tools, and a result the next step can read.`;
   }
 }
 
@@ -685,6 +669,33 @@ const RETURN_STROKE =
 // eye rests in the upper third, and it leaves room below for the next steps
 // to visibly wait out of focus.
 const FOCAL_LINE = 0.38;
+
+// The focus-scroll spring. We never hand the animation to the browser's native
+// `behavior: "smooth"` (silently instant under reduce-motion, aborts on any
+// competing scroll, lands wrong when the document height shifts mid-flight, and
+// gives no handle to cancel). Instead we drive a well-damped spring ourselves
+// and SET the scroll position instantly each frame — deterministic and
+// identical in every browser, with a natural physical settle instead of a fixed
+// curve. Stiffness sets the speed; damping sets how tightly it settles (higher
+// = less overshoot). It's damped just shy of critical, so it lands with a
+// whisper of life and no content-bouncing overshoot. These are the live knobs.
+const SCROLL_SPRING = {
+  type: "spring" as const,
+  stiffness: 130,
+  damping: 22,
+  mass: 1,
+};
+// Any of these keys means the reader took the scroll back; the tween bows out.
+const SCROLL_KEYS = new Set([
+  " ",
+  "Spacebar",
+  "ArrowUp",
+  "ArrowDown",
+  "PageUp",
+  "PageDown",
+  "Home",
+  "End",
+]);
 
 // The depth of field. Full focus holds for DOF_PLATEAU px either side of the
 // plane (roughly half a tile, so a step doesn't shimmer while its center
@@ -774,6 +785,26 @@ function assignRef(ref: Ref<HTMLElement> | undefined, el: HTMLElement | null) {
 }
 
 const emptySubscribe = () => () => {};
+
+// Reactive media-query match via useSyncExternalStore, so a breakpoint change
+// re-renders without a setState-in-effect. SSR snapshot is false, so the server
+// and first paint render the mobile/baseline path and hydration matches.
+function useMediaQuery(query: string): boolean {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (typeof window === "undefined") return () => {};
+      const mql = window.matchMedia(query);
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    },
+    [query],
+  );
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
+}
 
 function toAnchor(el: HTMLElement, origin: DOMRect): Anchor {
   const r = el.getBoundingClientRect();
@@ -1012,8 +1043,8 @@ function ModelBadge({
 }: {
   step: StepSpec;
   hot?: boolean;
-  // Bumped when the power dial re-tiers this step. Keys the badge so the
-  // one-shot flash replays on every move that touches it.
+  // Keys the badge so a one-shot flash can replay when a step re-tiers. Left in
+  // place as a stable no-op now that the flow is always shown as authored.
   pulse?: number;
   // When present, the badge is its own hit target: clicking it surfaces the
   // model's blurb. Absent for markers that aren't a real model.
@@ -1152,7 +1183,7 @@ function DetailRow({
         aria-pressed={selected}
         onMouseDown={(e) => e.preventDefault()}
         onClick={onSelect}
-        className={`flow-elhit flex w-full appearance-none items-start gap-2.5 border-0 bg-transparent text-left ${cls}`}
+        className={`flow-elhit flex w-full appearance-none items-start gap-2.5 rounded-[10px] border-0 bg-transparent text-left ${cls}`}
       >
         {inner}
       </button>
@@ -1224,7 +1255,7 @@ function StepDetail({
     !!step.note && step.shape !== "loop" && step.shape !== "subrun";
   if (!hasContext && !hasTools && !hasSkills && !showNote) return null;
   return (
-    <div className="flow-spec mt-4 flex flex-col gap-2.5 pt-4">
+    <div className="mt-3.5 flex flex-col gap-2.5">
       {hasContext ? (
         <DetailRow
           label="context"
@@ -1292,7 +1323,7 @@ function StepDetail({
           aria-pressed={selectedElement === "note"}
           onMouseDown={(e) => e.preventDefault()}
           onClick={selectEl ? () => selectEl("note") : undefined}
-          className={`flow-elhit inline-flex w-fit appearance-none items-center border-0 bg-transparent text-left font-mono text-[11px] leading-snug ${highlightElement === "note" ? "flow-note-hot" : ""} ${step.kind === "verification" ? "text-foreground/85" : "text-muted-foreground"}`}
+          className={`flow-elhit inline-flex w-fit appearance-none items-center rounded-[9px] border-0 bg-transparent text-left font-mono text-[11px] leading-snug ${highlightElement === "note" ? "flow-note-hot" : ""} ${step.kind === "verification" ? "text-foreground/85" : "text-muted-foreground"}`}
         >
           {step.kind === "verification" ? (
             // The engine's line, not the model's: a gate step's check runs
@@ -1447,14 +1478,10 @@ function StepTile({
           aria-label={`${step.name}: ${step.role}`}
           onMouseDown={holdScroll}
           onClick={() => selectEl?.("whole")}
-          className="flow-elhit flow-step-name inline-flex w-fit appearance-none items-center gap-1.5 border-0 bg-transparent text-[16px] font-semibold leading-[1.15] tracking-[-0.015em]"
+          className="flow-elhit flow-step-name inline-flex w-fit appearance-none items-center gap-1.5 rounded-[10px] border-0 bg-transparent text-[16px] font-semibold leading-[1.15] tracking-[-0.015em]"
         >
           <span className="inline-flex items-center gap-1.5">
-            {isCheckpoint ? <PauseIcon /> : null}
-            {isLoop ? <LoopIcon /> : null}
-            {step.shape === "subrun" ? <SubrunIcon /> : null}
-            {step.kind === "verification" ? <GateIcon /> : null}
-            {step.kind === "compose" ? <ComposeIcon /> : null}
+            <StepGlyph step={step} />
           </span>
           {step.name}
         </button>
@@ -1650,6 +1677,142 @@ function SubrunIcon() {
   );
 }
 
+// Every block carries a head glyph. Control shapes and the two marked plain
+// kinds (deterministic gate, written record) resolve to their own; the
+// remaining plain relay steps get a semantic icon by id; anything unmapped
+// falls back to a neutral node, so no block ever renders bare.
+function StepGlyph({ step }: { step: StepSpec }) {
+  if (step.shape === "checkpoint") return <PauseIcon />;
+  if (step.shape === "loop") return <LoopIcon />;
+  if (step.shape === "subrun") return <SubrunIcon />;
+  if (step.shape === "fanout") return <BranchIcon />;
+  if (step.kind === "verification") return <GateIcon />;
+  if (step.kind === "compose") return <ComposeIcon />;
+  switch (step.id) {
+    case "frame":
+      return <FrameIcon />;
+    case "synthesize":
+      return <SynthesizeIcon />;
+    case "plan":
+      return <PlanIcon />;
+    case "review":
+      return <ReviewIcon />;
+    default:
+      return <StepNodeIcon />;
+  }
+}
+
+// Frame: corner brackets framing the goal — the prompt boxed into a spec.
+function FrameIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ color: "var(--flow-color)" }}
+    >
+      <path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8" />
+      <path d="M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8" />
+      <path d="M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16" />
+      <path d="M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16" />
+    </svg>
+  );
+}
+
+// Synthesize: many findings converging down into one line.
+function SynthesizeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ color: "var(--flow-color)" }}
+    >
+      <path d="M4 5l8 7" />
+      <path d="M20 5l-8 7" />
+      <path d="M12 12v7" />
+    </svg>
+  );
+}
+
+// Plan: a checklist — the spec turned into ordered, checkable work.
+function PlanIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ color: "var(--flow-color)" }}
+    >
+      <path d="M4 6.4l1.5 1.5L8.2 5" />
+      <path d="M11.5 6.5H20" />
+      <path d="M4 12.4l1.5 1.5L8.2 11" />
+      <path d="M11.5 12.5H20" />
+      <path d="M4 18.4l1.5 1.5L8.2 17" />
+      <path d="M11.5 18.5H17" />
+    </svg>
+  );
+}
+
+// Review: a magnifier — a second read looking over the work.
+function ReviewIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ color: "var(--flow-color)" }}
+    >
+      <circle cx="10.5" cy="10.5" r="6" />
+      <path d="M19.5 19.5l-4.8-4.8" />
+    </svg>
+  );
+}
+
+// Neutral fallback: a rounded node standing in for a plain block.
+function StepNodeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ color: "var(--flow-color)" }}
+    >
+      <rect x="5" y="5" width="14" height="14" rx="4" />
+    </svg>
+  );
+}
+
 function FanoutCluster({
   step,
   reduceMotion,
@@ -1753,9 +1916,9 @@ function FanoutCluster({
             aria-label={step.name}
             onMouseDown={holdScroll}
             onClick={() => selectEl?.("whole")}
-            className="flow-elhit flow-step-name inline-flex w-fit appearance-none items-center gap-1.5 border-0 bg-transparent text-[16px] font-semibold leading-[1.15] tracking-[-0.015em]"
+            className="flow-elhit flow-step-name inline-flex w-fit appearance-none items-center gap-1.5 rounded-[10px] border-0 bg-transparent text-[16px] font-semibold leading-[1.15] tracking-[-0.015em]"
           >
-            <BranchIcon />
+            <StepGlyph step={step} />
             {step.name}
           </button>
           <ModelBadge
@@ -1799,7 +1962,7 @@ function FanoutCluster({
           aria-label={`${branches.length} parallel branches`}
           onMouseDown={holdScroll}
           onClick={() => selectEl?.("branches")}
-          className={`flow-elhit relative z-10 mt-4 flex w-full flex-wrap justify-center gap-2 appearance-none border-0 bg-transparent ${highlightElement === "branches" ? "flow-branches-hot" : ""}`}
+          className={`flow-elhit relative z-10 mt-4 flex w-full flex-wrap justify-center gap-2 appearance-none rounded-[12px] border-0 bg-transparent ${highlightElement === "branches" ? "flow-branches-hot" : ""}`}
         >
           {branches.map((label, i) => (
             <span
@@ -2267,18 +2430,88 @@ function FlowDiagram({
   // there is no inner frame. A deselect never scrolls, and a manual scroll
   // never clears the selection (a page scroll is too global a gesture to
   // read as "dismiss").
+  //
+  // The pan is a self-driven spring (see SCROLL_SPRING above): we settle a 0->1
+  // value ourselves and SET the scroll position instantly each frame. The
+  // browser's native "smooth" engine is never involved, so it behaves the same
+  // everywhere, self-corrects if the layout shifts mid-flight, and bows out the
+  // instant the reader takes the scroll back.
+  const scrollAnimRef = useRef<(() => void) | null>(null);
   const applyFocusScroll = useCallback(() => {
     const focusNow = focusRef.current;
     if (!focusNow || typeof window === "undefined") return;
     const el = nodeRefMap.get(focusNow.anchorStepId);
     if (!el) return;
-    const r = el.getBoundingClientRect();
-    const focal = window.innerHeight * FOCAL_LINE;
-    const delta = r.top + r.height / 2 - focal;
+
+    // The absolute page-Y that seats the anchor tile's center on the focal
+    // line, clamped to the document's scrollable range. Recomputed live on
+    // every frame so a reflow (font swap, streamed section) self-corrects
+    // instead of landing us short.
+    const targetFor = () => {
+      const r = el.getBoundingClientRect();
+      const focal = window.innerHeight * FOCAL_LINE;
+      const raw = window.scrollY + r.top + r.height / 2 - focal;
+      const max = Math.max(
+        0,
+        document.documentElement.scrollHeight - window.innerHeight,
+      );
+      return Math.min(Math.max(raw, 0), max);
+    };
+
+    // A fresh pick supersedes any tween still in flight.
+    scrollAnimRef.current?.();
+
+    const startY = window.scrollY;
     // Already at the plane: don't jolt the page over a rounding error.
-    if (Math.abs(delta) < 24) return;
-    window.scrollBy({ top: delta, behavior: reduceMotion ? "auto" : "smooth" });
+    if (Math.abs(targetFor() - startY) < 24) return;
+
+    // Reduced motion: land instantly, no animation engine at all.
+    if (reduceMotion) {
+      window.scrollTo(0, targetFor());
+      return;
+    }
+
+    let controls: AnimationPlaybackControls | null = null;
+    const cleanups: Array<() => void> = [];
+    // end(stop): tear the tween down. stop=true when the reader interrupted it
+    // (kill the animation too); stop=false on natural completion (just detach).
+    const end = (stop: boolean) => {
+      if (stop) controls?.stop();
+      for (const c of cleanups) c();
+      cleanups.length = 0;
+      scrollAnimRef.current = null;
+    };
+    const cancel = () => end(true);
+
+    controls = animate(0, 1, {
+      ...SCROLL_SPRING,
+      onUpdate: (t) => {
+        window.scrollTo(0, startY + (targetFor() - startY) * t);
+      },
+      onComplete: () => end(false),
+    });
+
+    // The reader grabbing the page (wheel, touch, or a scroll key) cancels the
+    // tween at once, so we never fight their input. Programmatic scrollTo fires
+    // only `scroll` (not wheel/touch/keydown), so our own frames never trip it.
+    const onWheel = () => cancel();
+    const onTouch = () => cancel();
+    const onKey = (e: KeyboardEvent) => {
+      if (SCROLL_KEYS.has(e.key)) cancel();
+    };
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("touchstart", onTouch, { passive: true });
+    window.addEventListener("keydown", onKey);
+    cleanups.push(
+      () => window.removeEventListener("wheel", onWheel),
+      () => window.removeEventListener("touchstart", onTouch),
+      () => window.removeEventListener("keydown", onKey),
+    );
+    scrollAnimRef.current = cancel;
   }, [nodeRefMap, reduceMotion]);
+
+  // Stop any in-flight pan if the explorer unmounts mid-tween.
+  useEffect(() => () => scrollAnimRef.current?.(), []);
 
   // A new (or changed) selection scrolls it to the plane. Keyed on focusTick,
   // which bumps ONLY on a fresh selection, never on a reflow or resize, so the
@@ -2330,9 +2563,16 @@ function FlowDiagram({
             const pressed = step.id === selectedElementStepId;
             // Dim/blur folds into the tile's animate target; nothing here
             // changes a tile's box, so the measured connectors stay valid.
-            const tileMotion = dimmed
-              ? withDim(motionProps, variant, reduceMotion)
-              : motionProps;
+            // In depth mode the scroll-driven DOF on the DepthTile wrapper owns
+            // recede/sharpen entirely; layering a static selection blur on top
+            // would pin the selected tile sharp and freeze the rest, so the
+            // scroll could no longer pull a crossing tile into focus. Gate the
+            // dim off when depth is active — the selection reads as the ring
+            // and the blurb, and scrolling always restores scroll-driven focus.
+            const tileMotion =
+              dimmed && !depth
+                ? withDim(motionProps, variant, reduceMotion)
+                : motionProps;
             const pulseTick = dialPulse.ids.has(step.id) ? dialPulse.tick : 0;
             return (
               <DepthTile
@@ -2427,9 +2667,22 @@ function FeatureTabs({
       : layout === "vertical"
         ? "flow-feature-nav"
         : "flex flex-wrap items-center gap-2";
-  const align = layout === "vertical" ? "justify-start text-left" : "items-center";
+  const isVertical = layout === "vertical";
+  const align = isVertical
+    ? "items-center justify-start text-left"
+    : "items-center";
   const renderTab = (f: Feature) => {
     const selected = f.key === active;
+    // In the vertical rail the idle pills sit transparent on the nav panel so
+    // the rail reads as a clean list; the selected pill fills with the flow
+    // color. Leaving idle background unset lets the rail CSS own the resting and
+    // hover fills. The horizontal/segmented variants keep the soft filled pill.
+    const idleBackground = isVertical
+      ? undefined
+      : "color-mix(in oklab, var(--muted) 38%, transparent)";
+    const idleColor = isVertical
+      ? "color-mix(in oklab, var(--foreground) 70%, transparent)"
+      : "var(--muted-foreground)";
     return (
       <button
         key={f.key}
@@ -2438,10 +2691,10 @@ function FeatureTabs({
         onClick={() => onSelect(f.key)}
         className={`flow-feature-tab inline-flex min-h-8 ${align} px-3 py-1 text-[12.5px] font-medium transition-colors`}
         style={{
-          color: selected ? "var(--foreground)" : "var(--muted-foreground)",
+          color: selected ? "var(--foreground)" : idleColor,
           background: selected
             ? "color-mix(in oklab, var(--flow-color) 22%, var(--muted))"
-            : "color-mix(in oklab, var(--muted) 38%, transparent)",
+            : idleBackground,
           boxShadow: selected
             ? "inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 45%, transparent)"
             : "none",
@@ -2451,81 +2704,13 @@ function FeatureTabs({
       </button>
     );
   };
-  // The vertical nav clusters the tabs under group headings. The headings are
-  // direct flex children (not wrappers) because the same markup renders as a
-  // wrapped pill row below lg — there the labels display:none away and the
-  // pills flow flat, so the fallback needs no branching here.
-  if (layout === "vertical") {
-    return (
-      <div role="group" aria-label="Circuit features" className={wrap}>
-        {FEATURE_GROUPS.map((g) => (
-          <Fragment key={g.key}>
-            <span className="flow-feature-group-label px-3 font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground/60">
-              {g.label}
-            </span>
-            {FEATURES.filter((f) => f.group === g.key).map(renderTab)}
-          </Fragment>
-        ))}
-      </div>
-    );
-  }
+  // The vertical nav is a flat, single sequence in diagram order, so reading it
+  // top-to-bottom walks the flow in order instead of jumping around. The
+  // horizontal/segmented variants keep the authored feature order.
+  const items = layout === "vertical" ? SEQUENTIAL_FEATURES : FEATURES;
   return (
     <div role="group" aria-label="Circuit features" className={wrap}>
-      {FEATURES.map(renderTab)}
-    </div>
-  );
-}
-
-// The power dial. One segmented control (styled like the feature tabs) that
-// reallocates every step's model and effort at once. Low / medium / high are the
-// three Power settings the engine actually resolves; medium is the flow as
-// authored. Right-aligned in the header so it reads as a global control, not a
-// per-step one.
-function PowerDial({
-  dial,
-  onChange,
-}: {
-  dial: Dial;
-  onChange: (next: Dial) => void;
-}) {
-  return (
-    <div className="ml-auto flex items-center gap-2">
-      <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/60">
-        power
-      </span>
-      <div
-        role="group"
-        aria-label="Power dial"
-        className="flow-feature-tabs--segmented"
-      >
-        {DIALS.map((d) => {
-          const selected = d === dial;
-          return (
-            <button
-              key={d}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onChange(d)}
-              className="flow-feature-tab inline-flex min-h-8 items-center px-3 py-1 text-[12px] font-medium capitalize transition-colors"
-              style={{
-                // The active state speaks the brand signal, not the flow's
-                // content color: controls are chrome, and the dial section
-                // renders the same control in the same ink. Diagrams keep
-                // their flow colors.
-                color: selected ? "var(--foreground)" : "var(--muted-foreground)",
-                background: selected
-                  ? "color-mix(in oklab, var(--signal) 22%, var(--muted))"
-                  : "color-mix(in oklab, var(--muted) 38%, transparent)",
-                boxShadow: selected
-                  ? "inset 0 0 0 1px color-mix(in oklab, var(--signal) 45%, transparent)"
-                  : "none",
-              }}
-            >
-              {d}
-            </button>
-          );
-        })}
-      </div>
+      {items.map(renderTab)}
     </div>
   );
 }
@@ -2576,6 +2761,15 @@ function FeatureInfo({
   );
 }
 
+// The diagram takes a per-step "just re-tiered" pulse to key its model badge.
+// Nothing re-tiers the flow live anymore, so this is a permanently empty pulse
+// with a stable identity — sharing one frozen object keeps the badge from
+// re-keying on every render.
+const STATIC_PULSE: { ids: Set<string>; tick: number } = {
+  ids: new Set<string>(),
+  tick: 0,
+};
+
 // The tabs are NAMED FEATURES, not flow types. The three variants differ only in
 // how the highlight reads and where the blurb sits — the diagram, the data, and
 // the FLIP/connector engine are shared. The hero renders the default
@@ -2602,63 +2796,10 @@ export function FlowExplorer({
   const reduceMotion = !hydrated || prefersReducedMotion === true;
 
   const flow = FLOWS.find((f) => f.key === TOUR_FLOW_KEY) ?? FLOWS[0];
-  // The Power dial. Medium is the flow as authored; low/high derive a whole-flow
-  // reallocation from it. The memo keeps a stable identity per (flow, dial) so the
-  // diagram only re-measures when the dial actually moves.
-  const [dial, setDial] = useState<Dial>("medium");
-  const dialedFlow = useMemo(() => flowAtDial(flow, dial), [flow, dial]);
-  // The dial's receipt and flash. The pulse diffs the CURRENT dialed flow
-  // against the NEXT one — not against the authored baseline — so turning
-  // back to medium flashes the steps that just changed, same as leaving it.
-  const [dialPulse, setDialPulse] = useState<{
-    ids: Set<string>;
-    tick: number;
-  }>(() => ({ ids: new Set<string>(), tick: 0 }));
-  const handleDial = useCallback(
-    (next: Dial) => {
-      if (next === dial) return;
-      const before = dialedFlow.rows.flat();
-      const after = flowAtDial(flow, next).rows.flat();
-      const ids = new Set<string>();
-      after.forEach((step, i) => {
-        const prev = before[i];
-        if (prev && (prev.model !== step.model || prev.effort !== step.effort)) {
-          ids.add(step.id);
-        }
-      });
-      setDialPulse((p) => ({ ids, tick: p.tick + 1 }));
-      setDial(next);
-    },
-    [dial, dialedFlow, flow],
-  );
-  // One mono line under the dial saying what the setting did. Verbs stay
-  // honest: at low a step may drop effort without changing model (research
-  // stays haiku), so it "goes cheaper" rather than "drops a tier".
-  const dialReceipt = useMemo(() => {
-    if (dial === "medium") return "medium · every step runs as authored";
-    const authored = flow.rows.flat();
-    const dialed = dialedFlow.rows.flat();
-    const moved: string[] = [];
-    const held = new Set<string>();
-    dialed.forEach((step, i) => {
-      const base = authored[i];
-      if (!base || (base.tier ?? "none") === "none") return;
-      if (base.model !== step.model || base.effort !== step.effort) {
-        moved.push(step.name.toLowerCase());
-      } else if (base.tier === "strategic" && base.model) {
-        held.add(base.model);
-      }
-    });
-    const movedPart = moved.length
-      ? `${moved.join(", ")} ${dial === "low" ? "go cheaper" : "step up"}`
-      : "nothing moves";
-    const heldPart = held.size
-      ? ` · judgment holds ${[...held].join("/")}`
-      : "";
-    return `${dial} · ${movedPart}${heldPart}`;
-  }, [dial, flow, dialedFlow]);
-  // Feature focus and blurbs stay keyed off the authored flow — the dial changes
-  // each step's model/effort, never its id — so highlighting still lines up.
+  // The diagram is the flow exactly as authored. There is no live re-tiering,
+  // so the per-step "just re-tiered" flash is permanently empty; we still hand
+  // it to the diagram to keep the badge's keying contract stable.
+  const dialPulse = STATIC_PULSE;
   const focus = resolveSelection(selection, flow);
   const selectedElementStepId =
     selection?.kind === "element" ? selection.stepId : null;
@@ -2692,7 +2833,7 @@ export function FlowExplorer({
   const diagram = (
     <LayoutGroup>
       <FlowDiagram
-        flow={dialedFlow}
+        flow={flow}
         reduceMotion={reduceMotion}
         focus={focus}
         selectedElementStepId={selectedElementStepId}
@@ -2717,36 +2858,102 @@ export function FlowExplorer({
     <FeatureInfo focus={focus} flow={flow} reduceMotion={reduceMotion} />
   );
 
-  // The command token lives on the diagram's terminal node, so the header
-  // doesn't repeat it; it carries the caption, the dial, and the dial's
-  // receipt line. min-h on the receipt reserves its row so switching settings
-  // never shifts the diagram below.
-  const header = (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="text-[12px] text-muted-foreground">
-          an example flow · select a feature to highlight where it lives
-        </span>
-        <PowerDial dial={dial} onChange={handleDial} />
-      </div>
-      <p
-        aria-live="polite"
-        className="flex min-h-[17px] items-center gap-2 font-mono text-[11px] leading-none text-muted-foreground"
-      >
-        <span aria-hidden="true" className="text-signal">
-          ›
-        </span>
-        {dialReceipt}
-      </p>
-    </div>
+  // --- Left-nav choreography (focus variant, desktop, motion-on) -------------
+  // The nav rides in grid column 1. CSS sticky slid the panel ~half a viewport
+  // at the band's top and bottom edges: the old 100dvh box anchored the panel
+  // ~50dvh below its own top, so entering and leaving the sticky window the
+  // panel glided that whole distance. Instead we PIN the panel's midline on the
+  // focal plane with a scroll-linked transform (a constant viewport Y, so
+  // nothing can slide) and FADE it at the band edges so it never covers the
+  // masthead above or the section below. This reuses the depth-of-field's
+  // scrollY + geomTick machinery: measured geometry lives in a ref, and
+  // geomTick forces the transforms to recompute after a resize or font swap
+  // without needing a scroll. Below lg, under reduce-motion, and before
+  // hydration, navActive stays false and the CSS sticky baseline governs — no
+  // regression, no flash (the band is below the fold on first paint anyway).
+  const navShellRef = useRef<HTMLDivElement | null>(null);
+  const navRef = useRef<HTMLDivElement | null>(null);
+  const { scrollY: navScrollY } = useScroll();
+  const navGeomTick = useMotionValue(0);
+  const navGeom = useRef({ naturalTop: 0, bandBottom: 0, half: 120, vh: 0 });
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  // Derived, not stateful: reduce-motion, SSR, and sub-lg all fall back to the
+  // CSS sticky baseline. useSyncExternalStore (inside useMediaQuery) drives the
+  // re-render on a breakpoint change, so there is no setState inside an effect.
+  const navActive = !reduceMotion && variant === "focus" && isDesktop;
+
+  const measureNav = useCallback(() => {
+    const shell = navShellRef.current;
+    const nav = navRef.current;
+    if (!shell || !nav || typeof window === "undefined") return;
+    const rect = shell.getBoundingClientRect();
+    const top = rect.top + window.scrollY;
+    // Measure the visible PANEL (always content-height), not the outer column,
+    // whose baseline height is 100dvh before the driven class lands.
+    const panel = nav.querySelector<HTMLElement>(".flow-feature-nav");
+    const half = (panel ?? nav).getBoundingClientRect().height / 2;
+    navGeom.current = {
+      naturalTop: top,
+      bandBottom: top + rect.height,
+      half,
+      vh: window.innerHeight,
+    };
+    navGeomTick.set(navGeomTick.get() + 1);
+  }, [navGeomTick]);
+
+  useEffect(() => {
+    if (!navActive || typeof window === "undefined") return;
+    measureNav();
+    // The rail's driven height only exists once navActive lands; re-measure a
+    // frame later so `half` reflects the content box, not the 100dvh baseline.
+    const raf = requestAnimationFrame(measureNav);
+    window.addEventListener("resize", measureNav);
+    const ro = new ResizeObserver(() => measureNav());
+    if (navShellRef.current) ro.observe(navShellRef.current);
+    if (navRef.current) ro.observe(navRef.current);
+    document.fonts?.ready.then(measureNav).catch(() => {});
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", measureNav);
+      ro.disconnect();
+    };
+  }, [navActive, measureNav]);
+
+  // Pin: a translateY that holds the panel's midline on FOCAL_LINE for every
+  // scroll position. nav viewport top = naturalTop - y + navY collapses to the
+  // constant (FOCAL_LINE*vh - half), so the panel never moves — it only fades.
+  const navY = useTransform([navScrollY, navGeomTick], ([y]: number[]) => {
+    const g = navGeom.current;
+    return y - g.naturalTop + (g.vh * FOCAL_LINE - g.half);
+  });
+  // Presence: fade in as the band's TOP edge descends to the plane (so the rail
+  // reaches full opacity only once its own top clears the masthead), and fade
+  // out as the band's BOTTOM edge rises to the plane (so it is gone before the
+  // next section arrives). Constant-Y means these ramps read as a pure fade.
+  const navOpacity = useTransform(
+    [navScrollY, navGeomTick],
+    ([y]: number[]) => {
+      const g = navGeom.current;
+      // Unmeasured (first frame after activation): stay hidden so the rail can
+      // only ever fade IN, never flash at an unmeasured position on a mid-page
+      // load. measureNav() bumps geomTick immediately after, revealing it.
+      if (g.vh === 0) return 0;
+      const plane = g.vh * FOCAL_LINE;
+      const bandTop = g.naturalTop - y;
+      const bandBottom = g.bandBottom - y;
+      const enter = (plane + g.vh * 0.5 - bandTop) / (g.vh * 0.5 + g.half);
+      const exit = (bandBottom - (plane + g.half)) / (g.vh * 0.5);
+      return Math.max(0, Math.min(1, Math.min(enter, exit)));
+    },
   );
+  // A faded rail is not a click trap.
+  const navPointer = useTransform(navOpacity, (o) => (o < 0.5 ? "none" : "auto"));
 
   let body: ReactNode;
   if (variant === "glow") {
     // Tabs on the left, blurb in a bordered card on the right; diagram below.
     body = (
       <>
-        {header}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-6">
           <div className="md:flex-1">{tabs}</div>
           <div className="flow-info-card min-h-[5.5rem] md:w-[18rem] md:shrink-0">
@@ -2764,20 +2971,31 @@ export function FlowExplorer({
     // plane's height, so whatever the page scroll brings into focus sits right
     // beside its explanation. Stacks to a single column below lg.
     body = (
-      <>
-        {header}
-        <div className="flow-focus-shell">
-          <div className="flow-focus-nav">{tabs}</div>
-          <div className="flow-focus-info">{info}</div>
-          <div className="flow-focus-diagram min-w-0">{diagram}</div>
-        </div>
-      </>
+      <div className="flow-focus-shell" ref={navShellRef}>
+        <m.div
+          ref={navRef}
+          className="flow-focus-nav"
+          data-nav-driven={navActive ? "1" : undefined}
+          style={
+            navActive
+              ? ({
+                  y: navY,
+                  opacity: navOpacity,
+                  pointerEvents: navPointer,
+                } as MotionStyle)
+              : undefined
+          }
+        >
+          {tabs}
+        </m.div>
+        <div className="flow-focus-info">{info}</div>
+        <div className="flow-focus-diagram min-w-0">{diagram}</div>
+      </div>
     );
   } else {
     // Spotlight (default): tabs, caption blurb, diagram.
     body = (
       <>
-        {header}
         {tabs}
         <div className="min-h-[4.75rem]">{info}</div>
         {diagram}
