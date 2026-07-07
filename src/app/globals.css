@@ -697,6 +697,62 @@
     color-mix(in oklab, var(--destructive) 22%, transparent);
 }
 
+.flow-exit-rail,
+.flow-receipt-grid {
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
+  corner-shape: squircle;
+  background: color-mix(in oklab, var(--background) 36%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--foreground) 6%, transparent);
+}
+
+.flow-exit-chip,
+.flow-receipt-chip {
+  color: color-mix(in oklab, var(--foreground) 72%, transparent);
+  background: color-mix(in oklab, var(--foreground) 7%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--foreground) 8%, transparent);
+}
+
+.flow-exit-rail-hot,
+.flow-receipt-hot {
+  background: color-mix(in oklab, var(--flow-color) 16%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 36%, transparent),
+    0 0 0 3px color-mix(in oklab, var(--flow-color) 10%, transparent);
+}
+
+.flow-exit-rail-hot .flow-exit-chip,
+.flow-receipt-hot .flow-receipt-chip {
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--flow-color) 18%, transparent);
+}
+
+.flow-wire-label {
+  color: color-mix(in oklab, var(--foreground) 52%, transparent);
+}
+
+.flow-wire-label rect {
+  fill: color-mix(in oklab, var(--background) 82%, transparent);
+  stroke: color-mix(in oklab, var(--foreground) 10%, transparent);
+  stroke-width: 1;
+}
+
+.flow-wire-label text {
+  fill: currentColor;
+  font: 500 10px var(--font-mono);
+}
+
+.flow-wire-label-hot {
+  color: var(--foreground);
+}
+
+.flow-wire-label-hot rect {
+  fill: color-mix(in oklab, var(--flow-color) 22%, var(--background));
+  stroke: color-mix(in oklab, var(--flow-color) 46%, transparent);
+}
+
 /* The checkpoint options' leading letter, drawn as a keycap: the decision is
    one keypress the run is waiting on. */
 .flow-option-key {
@@ -893,9 +949,13 @@
      auto-placement puts the blurb in row 1 / col 3, then can't move the cursor
      back to col 2 for the diagram — so the diagram dropped to row 2, leaving a
      tall gap above it. Pinning all three to row 1 keeps them aligned. */
-  .flow-focus-nav {
+  .flow-focus-nav-slot {
     grid-column: 1;
     grid-row: 1;
+  }
+
+  .flow-focus-nav-slot {
+    min-width: 0;
   }
 
   .flow-focus-diagram {
@@ -940,19 +1000,16 @@
     justify-content: center;
   }
 
-  /* JS choreography active (desktop, hydrated, motion allowed): the rail leaves
-     the sticky-centering box and becomes a normal in-flow block at the top of
-     column 1. Framer then pins its midline on the focal plane via translateY
-     and fades it at the band edges (see the nav choreography in
-     flow-explorer.tsx). A constant viewport Y is what kills the edge wobble the
-     sticky box produced; the sticky rule above stays as the pre-hydration,
-     reduce-motion, and no-JS baseline. */
+  /* JS choreography active (desktop, hydrated, motion allowed): the grid slot
+     keeps the left column's width, while the rail itself becomes fixed. Scroll
+     can fade it in and out, but cannot move it. The sticky rule above stays as
+     the pre-hydration, reduce-motion, and no-JS baseline. */
   .flow-focus-nav[data-nav-driven="1"] {
-    position: relative;
-    top: auto;
+    position: fixed;
     height: auto;
     justify-content: flex-start;
-    will-change: transform, opacity;
+    z-index: 5;
+    will-change: opacity;
   }
 
   /* The blurb pins at the depth-of-field focal plane (FOCAL_LINE = 0.38 in

@@ -79,10 +79,17 @@ type StepSpec = {
   context?: string[];
   tools?: { allow: string[]; blocked?: number };
   skills?: string[];
+  // Plain-language artifact handed to the next step. The docs can expose the
+  // raw contract names; the landing page should read as "Brief" and "Result."
+  output?: string;
   // For shape "fanout": the parallel branch labels.
   branches?: string[];
   // For shape "checkpoint": the options surfaced for the operator to pick.
   options?: string[];
+  // For the close step: the honest endings a route can take.
+  exits?: string[];
+  // For the final run folder tile: the concrete things the run leaves behind.
+  artifacts?: string[];
   // For shape "loop": the id of the step this one loops back to.
   loopTo?: string;
   // A short trailing note (e.g. "sub-run -> child flow", "deterministic").
@@ -112,7 +119,7 @@ const FLOWS: ExampleFlow[] = [
     accent: "var(--flow-prototype-accent)",
     prompt: "create a pure CSS mesh gradient generator",
     summary:
-      "From one prompt to a working prototype. You make one decision; the flow carries the research, the plan, the build, and the checks around it.",
+      "From one prompt to a verified prototype choice. The flow frames the work, builds several candidates, checks them, asks for your call, and leaves a run folder behind.",
     rows: [
       [
         {
@@ -122,6 +129,7 @@ const FLOWS: ExampleFlow[] = [
           model: "opus",
           tier: "strategic",
           effort: "high",
+          output: "Brief",
           context: ["prompt", "constraints"],
           tools: { allow: ["read"] },
         },
@@ -135,6 +143,7 @@ const FLOWS: ExampleFlow[] = [
           model: "haiku",
           tier: "execution",
           effort: "low",
+          output: "Research brief",
           branches: [
             "techniques",
             "color math",
@@ -153,6 +162,7 @@ const FLOWS: ExampleFlow[] = [
           model: "opus",
           tier: "strategic",
           effort: "high",
+          output: "Options",
           context: ["research brief"],
           tools: { allow: ["read"] },
         },
@@ -163,40 +173,31 @@ const FLOWS: ExampleFlow[] = [
           model: "opus",
           tier: "strategic",
           effort: "high",
+          output: "Build plan",
           context: ["approaches", "repo map"],
           tools: { allow: ["read"] },
         },
       ],
       [
         {
-          id: "checkpoint",
-          name: "Checkpoint",
-          role: "the flow pauses and hands you the decision, then picks back up",
-          shape: "checkpoint",
-          model: "you decide",
-          tier: "none",
-          options: [
-            "A · layered conic-gradients",
-            "B · blurred radial blobs",
-            "C · SVG filter mesh",
-          ],
-        },
-      ],
-      [
-        {
-          id: "implement",
-          name: "Implement",
-          role: "builds the prototype",
-          shape: "subrun",
+          id: "build-variants",
+          name: "Build variants",
+          role: "fans out into candidate prototypes that can be compared",
+          shape: "fanout",
           model: "sonnet",
           tier: "balanced",
           effort: "medium",
-          note: "sub-run → child build flow",
-          context: ["plan", "target files"],
+          output: "Candidates",
+          note: "candidate build flows",
+          branches: [
+            "CSS gradients",
+            "SVG mesh",
+            "canvas shader",
+          ],
+          context: ["build plan", "target files"],
           tools: { allow: ["edit", "write", "bash"], blocked: 12 },
           skills: [
             "vercel-react-best-practices",
-            "vercel-composition-patterns",
             "tailwind-css-patterns",
             "css-architecture",
           ],
@@ -204,26 +205,44 @@ const FLOWS: ExampleFlow[] = [
       ],
       [
         {
-          id: "verify",
-          name: "Verify",
-          role: "build, lint, and tests: the mechanical gate",
+          id: "verify-candidates",
+          name: "Verify candidates",
+          role: "runs build, lint, and smoke checks on each candidate",
           kind: "verification",
           model: "deterministic",
           tier: "none",
+          output: "Check results",
           note: "no model opinion",
-          context: ["diff", "checks"],
+          context: ["candidates", "checks"],
           tools: { allow: ["bash"] },
         },
         {
           id: "converge",
-          name: "Converge",
-          role: "reworks and re-checks until the gate passes",
+          name: "Repair loop",
+          role: "reworks a failed candidate and checks it again",
           shape: "loop",
-          loopTo: "implement",
+          loopTo: "build-variants",
           model: "sonnet",
           tier: "balanced",
           effort: "medium",
-          note: "loops back until the check passes",
+          output: "Verified candidates",
+          note: "loops back within a cap",
+        },
+      ],
+      [
+        {
+          id: "checkpoint",
+          name: "Choose winner",
+          role: "the flow pauses after checks and asks which candidate to keep",
+          shape: "checkpoint",
+          model: "you decide",
+          tier: "none",
+          output: "Selected candidate",
+          options: [
+            "A · CSS gradients",
+            "B · SVG mesh",
+            "C · canvas shader",
+          ],
         },
       ],
       [
@@ -237,17 +256,31 @@ const FLOWS: ExampleFlow[] = [
           model: "gpt-5",
           tier: "strategic",
           effort: "high",
-          context: ["diff", "intent"],
+          output: "Review notes",
+          context: ["selected candidate", "intent"],
           tools: { allow: ["read"] },
         },
         {
-          id: "record",
-          name: "Record",
-          role: "the durable run folder it all leaves behind",
+          id: "close",
+          name: "Close",
+          role: "ends the run with an honest outcome",
           kind: "compose",
           model: "deterministic",
           tier: "none",
-          note: "trace · reports · evidence",
+          output: "Result",
+          exits: ["Complete", "Stop", "Hand off", "Escalate"],
+        },
+      ],
+      [
+        {
+          id: "receipt",
+          name: "Run folder",
+          role: "keeps the result and the evidence needed to inspect or resume",
+          kind: "compose",
+          model: "deterministic",
+          tier: "none",
+          note: "inspectable record",
+          artifacts: ["trace", "reports", "evidence", "resume state"],
         },
       ],
     ],
@@ -365,7 +398,10 @@ type FeatureElement =
   | "skills"
   | "branches"
   | "options"
-  | "note";
+  | "note"
+  | "handoff"
+  | "exits"
+  | "receipt";
 
 type Feature = {
   key: string;
@@ -377,7 +413,7 @@ type Feature = {
   // What the feature IS to a reader: a guarantee the engine enforces, a scope
   // a step is boxed to, or a structural shape a flow can take. The vertical
   // nav renders these as labeled clusters.
-  group: "guarantees" | "scoping" | "structure";
+  group: "guarantees" | "scoping" | "structure" | "evidence";
 };
 
 // The flow the tour is pinned to. Feature selection never swaps the flow, so the
@@ -393,16 +429,36 @@ const FEATURES: Feature[] = [
     label: "Mechanical check",
     blurb:
       "The engine runs the build, lint, and tests itself. A step cannot close until that check actually passes, so 'done' has to clear a real bar, not just get asserted.",
-    stepIds: ["verify"],
+    stepIds: ["verify-candidates"],
     element: "whole",
+    group: "guarantees",
+  },
+  {
+    key: "typed-handoffs",
+    label: "Typed handoffs",
+    blurb:
+      "Each step passes a typed artifact to the next one. Not a loose transcript: Frame writes a brief, Plan reads that brief and writes a build plan, Verify writes check results, and Close turns the run into a result.",
+    stepIds: [
+      "frame",
+      "research",
+      "synthesize",
+      "plan",
+      "build-variants",
+      "verify-candidates",
+      "converge",
+      "checkpoint",
+      "review",
+      "close",
+    ],
+    element: "handoff",
     group: "guarantees",
   },
   {
     key: "converge-loop",
     label: "Loops until it passes",
     blurb:
-      "If the check fails, the flow loops back, reworks, and re-checks. It keeps going until the gate passes, within a bounded number of tries.",
-    stepIds: ["converge", "verify"],
+      "If a candidate fails a check, the flow loops back, reworks it, and re-checks. It keeps going until the gate passes, within a bounded number of tries.",
+    stepIds: ["converge", "verify-candidates"],
     element: "whole",
     group: "guarantees",
   },
@@ -410,9 +466,18 @@ const FEATURES: Feature[] = [
     key: "checkpoint",
     label: "Checkpoint",
     blurb:
-      "The run can pause and hand you a decision, then pick back up with your choice. You make the call the flow shouldn't make for you.",
+      "The run can pause after the candidates are checked and hand you the decision. You choose which verified candidate to keep, then the flow picks back up.",
     stepIds: ["checkpoint"],
     element: "options",
+    group: "guarantees",
+  },
+  {
+    key: "clear-exits",
+    label: "Clear exits",
+    blurb:
+      "A run does not have to pretend it succeeded. It can complete, stop, hand off, or escalate, and that ending is recorded.",
+    stepIds: ["close"],
+    element: "exits",
     group: "guarantees",
   },
   {
@@ -420,7 +485,14 @@ const FEATURES: Feature[] = [
     label: "Fresh context",
     blurb:
       "Each step starts from a clean slate and sees only the inputs it declares, not the full running transcript. Later steps don't get polluted by the chatter of earlier ones.",
-    stepIds: ["frame", "synthesize", "plan", "implement", "verify", "review"],
+    stepIds: [
+      "frame",
+      "synthesize",
+      "plan",
+      "build-variants",
+      "verify-candidates",
+      "review",
+    ],
     element: "ctx",
     group: "scoping",
   },
@@ -429,7 +501,7 @@ const FEATURES: Feature[] = [
     label: "Tool scope",
     blurb:
       "The step that writes code can be walled to just its editor tools (a hard wall on Claude Code); the research and review steps stay read-only by role.",
-    stepIds: ["implement"],
+    stepIds: ["build-variants"],
     element: "tools",
     group: "scoping",
   },
@@ -443,7 +515,7 @@ const FEATURES: Feature[] = [
       "research",
       "synthesize",
       "plan",
-      "implement",
+      "build-variants",
       "converge",
       "review",
     ],
@@ -451,22 +523,31 @@ const FEATURES: Feature[] = [
     group: "scoping",
   },
   {
-    key: "fan-out",
-    label: "Fan-out",
+    key: "tournament",
+    label: "Tournament",
     blurb:
-      "One step can fan out into parallel scouts that each explore a slice, then merge into a single brief. The badge counts the real branches.",
-    stepIds: ["research"],
+      "The flow can build several candidates in parallel, verify them, and then ask which one to keep. The choice happens after evidence exists, not before.",
+    stepIds: ["build-variants", "verify-candidates", "checkpoint"],
     element: "branches",
     group: "structure",
   },
   {
     key: "subrun",
-    label: "Subrun",
+    label: "Child flows",
     blurb:
-      "A step can expand into its own run with its own steps. The build here hands off to a child flow instead of trying to do everything in one step.",
-    stepIds: ["implement"],
+      "A branch can be a child flow with its own steps and evidence. The parent waits for those results instead of trying to do every candidate in one long step.",
+    stepIds: ["build-variants"],
     element: "note",
     group: "structure",
+  },
+  {
+    key: "run-receipt",
+    label: "Run receipt",
+    blurb:
+      "The run leaves a folder you can inspect later: trace, typed reports, evidence, and resume state. Circuit does not just end with a chat answer.",
+    stepIds: ["receipt"],
+    element: "receipt",
+    group: "evidence",
   },
 ];
 
@@ -584,6 +665,18 @@ function stepBlurb(step: StepSpec, element: FeatureElement): string {
       return step.note
         ? `${lead} A note on how it behaves: ${step.note}.`
         : lead;
+    case "handoff":
+      return step.output
+        ? `${lead} It writes a typed artifact called ${step.output}, which the next step reads instead of a loose transcript.`
+        : `${lead} Each step writes a typed artifact the next step can read.`;
+    case "exits":
+      return step.exits && step.exits.length > 0
+        ? `${lead} This step can end as ${step.exits.join(", ")}. The result records which path the run took.`
+        : `${lead} A run can complete, stop, hand off, or escalate instead of forcing a happy ending.`;
+    case "receipt":
+      return step.artifacts && step.artifacts.length > 0
+        ? `${lead} The run folder keeps ${step.artifacts.join(", ")} so the result can be inspected or resumed later.`
+        : `${lead} The run folder keeps the trace, reports, evidence, and resume state.`;
     default:
       // "whole": the block itself. Describe the relay shape every step runs as.
       return `${lead} It runs as one block in the sequence: fresh context in, a model on it, a scoped set of tools, and a result the next step can read.`;
@@ -669,6 +762,10 @@ const RETURN_STROKE =
 // eye rests in the upper third, and it leaves room below for the next steps
 // to visibly wait out of focus.
 const FOCAL_LINE = 0.38;
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
 
 // The focus-scroll spring. We never hand the animation to the browser's native
 // `behavior: "smooth"` (silently instant under reduce-motion, aborts on any
@@ -770,6 +867,9 @@ type Segment = {
   tail: { x: number; y: number };
   // "return" is the loop's back edge; absent means a sequential wire.
   kind?: "return";
+  // The artifact this wire carries, in plain language.
+  label?: string;
+  labelPoint?: { x: number; y: number };
   // The step ids the wire connects, so the depth layer can grade the wire by
   // its endpoints' focus.
   from: string;
@@ -838,6 +938,7 @@ function connectorSegment(
       d: `M ${x1} ${y1} C ${x1 + k} ${y1}, ${x2 - k} ${y2}, ${x2} ${y2}`,
       head: { x: x2, y: y2, dir: "right" },
       tail: { x: x1, y: y1 },
+      labelPoint: { x: (x1 + x2) / 2, y: y1 - 8 },
     };
   }
   const x1 = a.cx;
@@ -849,6 +950,7 @@ function connectorSegment(
       d: `M ${x1} ${y1} L ${x2} ${y2}`,
       head: { x: x2, y: y2, dir: "down" },
       tail: { x: x1, y: y1 },
+      labelPoint: { x: x1 + 8, y: (y1 + y2) / 2 },
     };
   }
   const midY = (a.bottom + b.top) / 2;
@@ -866,7 +968,12 @@ function connectorSegment(
     ` L ${x2 - dir * r} ${midY}` +
     ` Q ${x2} ${midY} ${x2} ${midY + r}` +
     ` L ${x2} ${y2}`;
-  return { d, head: { x: x2, y: y2, dir: "down" }, tail: { x: x1, y: y1 } };
+  return {
+    d,
+    head: { x: x2, y: y2, dir: "down" },
+    tail: { x: x1, y: y1 },
+    labelPoint: { x: (x1 + x2) / 2, y: midY - 8 },
+  };
 }
 
 // The loop's return edge, from the loop tile back to the step it reworks.
@@ -1237,6 +1344,8 @@ function StepDetail({
   const hasContext = step.context && step.context.length > 0;
   const hasTools = step.tools && step.tools.allow.length > 0;
   const hasSkills = step.skills && step.skills.length > 0;
+  const hasExits = step.exits && step.exits.length > 0;
+  const hasArtifacts = step.artifacts && step.artifacts.length > 0;
   // When a context/tools/skills element is active (from a tab or a direct
   // click), ring the matching row and quiet the siblings. The other elements
   // light up elsewhere in the tile.
@@ -1253,7 +1362,16 @@ function StepDetail({
   // head, so it must not repeat for them.
   const showNote =
     !!step.note && step.shape !== "loop" && step.shape !== "subrun";
-  if (!hasContext && !hasTools && !hasSkills && !showNote) return null;
+  if (
+    !hasContext &&
+    !hasTools &&
+    !hasSkills &&
+    !hasExits &&
+    !hasArtifacts &&
+    !showNote
+  ) {
+    return null;
+  }
   return (
     <div className="mt-3.5 flex flex-col gap-2.5">
       {hasContext ? (
@@ -1316,6 +1434,42 @@ function StepDetail({
             </span>
           ) : null}
         </DetailRow>
+      ) : null}
+      {hasExits ? (
+        <button
+          type="button"
+          aria-pressed={selectedElement === "exits"}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={selectEl ? () => selectEl("exits") : undefined}
+          className={`flow-elhit flow-exit-rail flex w-full appearance-none flex-wrap gap-1.5 border-0 bg-transparent text-left ${highlightElement === "exits" ? "flow-exit-rail-hot" : ""}`}
+        >
+          {step.exits!.map((exit) => (
+            <span
+              key={exit}
+              className="flow-exit-chip rounded-md px-1.5 py-[2px] font-mono text-[11px] leading-tight"
+            >
+              {exit}
+            </span>
+          ))}
+        </button>
+      ) : null}
+      {hasArtifacts ? (
+        <button
+          type="button"
+          aria-pressed={selectedElement === "receipt"}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={selectEl ? () => selectEl("receipt") : undefined}
+          className={`flow-elhit flow-receipt-grid grid w-full appearance-none grid-cols-2 gap-1.5 border-0 bg-transparent text-left ${highlightElement === "receipt" ? "flow-receipt-hot" : ""}`}
+        >
+          {step.artifacts!.map((artifact) => (
+            <span
+              key={artifact}
+              className="flow-receipt-chip rounded-md px-1.5 py-[3px] font-mono text-[11px] leading-tight"
+            >
+              {artifact}
+            </span>
+          ))}
+        </button>
       ) : null}
       {showNote ? (
         <button
@@ -1976,6 +2130,14 @@ function FanoutCluster({
             </span>
           ))}
         </button>
+        <div className="relative z-20">
+          <StepDetail
+            step={step}
+            highlightElement={highlightElement}
+            selectEl={selectEl}
+            selectedElement={selectedElement}
+          />
+        </div>
         <span aria-hidden="true" className="flow-veil" />
       </div>
     </m.div>
@@ -2131,11 +2293,13 @@ function WireSegment({
   seg,
   index,
   reduceMotion,
+  handoffHot,
 }: {
   dof: DepthField;
   seg: Segment;
   index: number;
   reduceMotion: boolean;
+  handoffHot: boolean;
 }) {
   const wireFocus = useTransform(
     [dof.scrollY, dof.geomTick],
@@ -2211,6 +2375,33 @@ function WireSegment({
               : { delay: index * 0.05 + 0.32, duration: 0.2 }
           }
         />
+        {seg.label && seg.labelPoint ? (
+          <m.g
+            className={`flow-wire-label ${handoffHot ? "flow-wire-label-hot" : ""}`}
+            initial={reduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : { delay: index * 0.05 + 0.18, duration: 0.2 }
+            }
+          >
+            <rect
+              x={seg.labelPoint.x - Math.max(28, seg.label.length * 3.2)}
+              y={seg.labelPoint.y - 9}
+              width={Math.max(56, seg.label.length * 6.4)}
+              height={18}
+              rx={6}
+            />
+            <text
+              x={seg.labelPoint.x}
+              y={seg.labelPoint.y + 3.5}
+              textAnchor="middle"
+            >
+              {seg.label}
+            </text>
+          </m.g>
+        ) : null}
       </m.g>
     </m.g>
   );
@@ -2316,6 +2507,7 @@ function FlowDiagram({
         id: `${flow.key}:${seq[i].id}->${seq[i + 1].id}`,
         from: seq[i].id,
         to: seq[i + 1].id,
+        label: seq[i].output,
         ...seg,
       });
     }
@@ -2523,6 +2715,7 @@ function FlowDiagram({
 
   const orderedLabels = flow.rows.flat().map((s) => s.name).join(", then ");
   const ariaLabel = `${flow.name} flow. It starts from the prompt: "${flow.prompt}". Then it runs in order: ${orderedLabels}. Each step shows the scope it runs with.`;
+  const handoffHot = focus?.element === "handoff";
 
   const canvas = (
     <div ref={containerRef} className="flow-diagram-canvas relative">
@@ -2542,6 +2735,7 @@ function FlowDiagram({
               seg={seg}
               index={i}
               reduceMotion={reduceMotion}
+              handoffHot={handoffHot}
             />
           ))}
         </AnimatePresence>
@@ -2862,20 +3056,23 @@ export function FlowExplorer({
   // The nav rides in grid column 1. CSS sticky slid the panel ~half a viewport
   // at the band's top and bottom edges: the old 100dvh box anchored the panel
   // ~50dvh below its own top, so entering and leaving the sticky window the
-  // panel glided that whole distance. Instead we PIN the panel's midline on the
-  // focal plane with a scroll-linked transform (a constant viewport Y, so
-  // nothing can slide) and FADE it at the band edges so it never covers the
-  // masthead above or the section below. This reuses the depth-of-field's
-  // scrollY + geomTick machinery: measured geometry lives in a ref, and
-  // geomTick forces the transforms to recompute after a resize or font swap
-  // without needing a scroll. Below lg, under reduce-motion, and before
-  // hydration, navActive stays false and the CSS sticky baseline governs — no
-  // regression, no flash (the band is below the fold on first paint anyway).
+  // panel glided that whole distance. A scroll-linked transform still left
+  // room for small frame-to-frame judder, so the hydrated desktop rail is now
+  // truly fixed: scroll only controls opacity, never position. Below lg, under
+  // reduce-motion, and before hydration, navActive stays false and the CSS
+  // sticky baseline governs.
   const navShellRef = useRef<HTMLDivElement | null>(null);
+  const navSlotRef = useRef<HTMLDivElement | null>(null);
   const navRef = useRef<HTMLDivElement | null>(null);
   const { scrollY: navScrollY } = useScroll();
   const navGeomTick = useMotionValue(0);
   const navGeom = useRef({ naturalTop: 0, bandBottom: 0, half: 120, vh: 0 });
+  const [navFixedBox, setNavFixedBox] = useState({
+    top: 0,
+    left: 0,
+    width: 0,
+    ready: false,
+  });
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   // Derived, not stateful: reduce-motion, SSR, and sub-lg all fall back to the
   // CSS sticky baseline. useSyncExternalStore (inside useMediaQuery) drives the
@@ -2884,20 +3081,40 @@ export function FlowExplorer({
 
   const measureNav = useCallback(() => {
     const shell = navShellRef.current;
+    const slot = navSlotRef.current;
     const nav = navRef.current;
-    if (!shell || !nav || typeof window === "undefined") return;
+    if (!shell || !slot || !nav || typeof window === "undefined") return;
     const rect = shell.getBoundingClientRect();
+    const slotRect = slot.getBoundingClientRect();
     const top = rect.top + window.scrollY;
     // Measure the visible PANEL (always content-height), not the outer column,
     // whose baseline height is 100dvh before the driven class lands.
     const panel = nav.querySelector<HTMLElement>(".flow-feature-nav");
     const half = (panel ?? nav).getBoundingClientRect().height / 2;
+    const snap = (value: number) => {
+      const dpr = window.devicePixelRatio || 1;
+      return Math.round(value * dpr) / dpr;
+    };
     navGeom.current = {
       naturalTop: top,
       bandBottom: top + rect.height,
       half,
       vh: window.innerHeight,
     };
+    const next = {
+      top: snap(window.innerHeight * FOCAL_LINE - half),
+      left: snap(slotRect.left),
+      width: snap(slotRect.width),
+      ready: true,
+    };
+    setNavFixedBox((prev) =>
+      prev.ready === next.ready &&
+      prev.top === next.top &&
+      prev.left === next.left &&
+      prev.width === next.width
+        ? prev
+        : next,
+    );
     navGeomTick.set(navGeomTick.get() + 1);
   }, [navGeomTick]);
 
@@ -2919,17 +3136,10 @@ export function FlowExplorer({
     };
   }, [navActive, measureNav]);
 
-  // Pin: a translateY that holds the panel's midline on FOCAL_LINE for every
-  // scroll position. nav viewport top = naturalTop - y + navY collapses to the
-  // constant (FOCAL_LINE*vh - half), so the panel never moves — it only fades.
-  const navY = useTransform([navScrollY, navGeomTick], ([y]: number[]) => {
-    const g = navGeom.current;
-    return y - g.naturalTop + (g.vh * FOCAL_LINE - g.half);
-  });
-  // Presence: fade in as the band's TOP edge descends to the plane (so the rail
-  // reaches full opacity only once its own top clears the masthead), and fade
-  // out as the band's BOTTOM edge rises to the plane (so it is gone before the
-  // next section arrives). Constant-Y means these ramps read as a pure fade.
+  // Presence: the rail can only show while the explorer band covers the screen
+  // slice where the rail is pinned. That keeps the fixed-y behavior, but stops
+  // the rail from floating over the masthead at the top of the page or the next
+  // section at the bottom.
   const navOpacity = useTransform(
     [navScrollY, navGeomTick],
     ([y]: number[]) => {
@@ -2941,9 +3151,19 @@ export function FlowExplorer({
       const plane = g.vh * FOCAL_LINE;
       const bandTop = g.naturalTop - y;
       const bandBottom = g.bandBottom - y;
-      const enter = (plane + g.vh * 0.5 - bandTop) / (g.vh * 0.5 + g.half);
-      const exit = (bandBottom - (plane + g.half)) / (g.vh * 0.5);
-      return Math.max(0, Math.min(1, Math.min(enter, exit)));
+      const railTop = Math.max(0, plane - g.half);
+      const enterFade = Math.max(52, g.vh * 0.0675);
+      const exitFade = Math.max(120, g.vh * 0.22);
+      // The first feature can focus before the shell top reaches the rail's
+      // exact top, so give the fade a short lead. It still stays hidden on the
+      // masthead because the explorer is far below the viewport there.
+      const enterLead = Math.max(64, g.vh * 0.085);
+      // Keep the rail available through the final tile. Fade only once the
+      // explorer bottom is close to the fixed rail's top, not its full height.
+      const exitTail = Math.max(48, g.vh * 0.065);
+      const enter = (railTop + enterLead - bandTop) / enterFade;
+      const exit = (bandBottom - (railTop + exitTail)) / exitFade;
+      return clamp01(Math.min(enter, exit));
     },
   );
   // A faded rail is not a click trap.
@@ -2972,22 +3192,26 @@ export function FlowExplorer({
     // beside its explanation. Stacks to a single column below lg.
     body = (
       <div className="flow-focus-shell" ref={navShellRef}>
-        <m.div
-          ref={navRef}
-          className="flow-focus-nav"
-          data-nav-driven={navActive ? "1" : undefined}
-          style={
-            navActive
-              ? ({
-                  y: navY,
-                  opacity: navOpacity,
-                  pointerEvents: navPointer,
-                } as MotionStyle)
-              : undefined
-          }
-        >
-          {tabs}
-        </m.div>
+        <div className="flow-focus-nav-slot" ref={navSlotRef}>
+          <m.div
+            ref={navRef}
+            className="flow-focus-nav"
+            data-nav-driven={navActive ? "1" : undefined}
+            style={
+              navActive
+                ? ({
+                    top: navFixedBox.top,
+                    left: navFixedBox.left,
+                    width: navFixedBox.width,
+                    opacity: navFixedBox.ready ? navOpacity : 0,
+                    pointerEvents: navPointer,
+                  } as MotionStyle)
+                : undefined
+            }
+          >
+            {tabs}
+          </m.div>
+        </div>
         <div className="flow-focus-info">{info}</div>
         <div className="flow-focus-diagram min-w-0">{diagram}</div>
       </div>
