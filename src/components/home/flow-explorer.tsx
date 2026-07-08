@@ -59,7 +59,21 @@ type Effort = "minimal" | "low" | "medium" | "high" | "max" | "none";
 // The shape a step takes in the diagram. Most are plain steps; a few are the
 // control structures that make the flow interesting. "prompt" is the synthetic
 // first node — the operator's prompt, drawn as a terminal bar — not a real step.
-type Shape = "step" | "fanout" | "checkpoint" | "subrun" | "loop" | "prompt";
+// "receipt" is the matching terminal output at the end of the flow.
+type Shape =
+  | "step"
+  | "fanout"
+  | "checkpoint"
+  | "subrun"
+  | "loop"
+  | "prompt"
+  | "receipt";
+
+type ReceiptRow = {
+  label: string;
+  value: string;
+  lit?: boolean;
+};
 
 type StepSpec = {
   // Unique within the flow. Used as the FLIP layoutId and the connector key.
@@ -88,8 +102,10 @@ type StepSpec = {
   options?: string[];
   // For the close step: the honest endings a route can take.
   exits?: string[];
-  // For the final run folder tile: the concrete things the run leaves behind.
+  // For artifact-chip tiles: the concrete things the run leaves behind.
   artifacts?: string[];
+  // For the final receipt tile: the terminal output Circuit prints on close.
+  receiptRows?: ReceiptRow[];
   // For shape "loop": the id of the step this one loops back to.
   loopTo?: string;
   // A short trailing note (e.g. "sub-run -> child flow", "deterministic").
@@ -274,13 +290,21 @@ const FLOWS: ExampleFlow[] = [
       [
         {
           id: "receipt",
-          name: "Run folder",
-          role: "keeps the result and the evidence needed to inspect or resume",
+          name: "Receipt",
+          role: "prints the run receipt automatically when the flow closes",
+          shape: "receipt",
           kind: "compose",
           model: "deterministic",
           tier: "none",
-          note: "inspectable record",
-          artifacts: ["trace", "reports", "evidence", "resume state"],
+          receiptRows: [
+            { label: "selected", value: "B · SVG mesh" },
+            { label: "checks", value: "passed", lit: true },
+            { label: "review", value: "accepted", lit: true },
+            {
+              label: "record",
+              value: ".circuit/runs/prototype-react/result.json",
+            },
+          ],
         },
       ],
     ],
@@ -544,7 +568,7 @@ const FEATURES: Feature[] = [
     key: "run-receipt",
     label: "Run receipt",
     blurb:
-      "The run leaves a folder you can inspect later: trace, typed reports, evidence, and resume state. Circuit does not just end with a chat answer.",
+      "Circuit prints the receipt automatically at the end: outcome, selected path, checks, review, and the record. It does not just end with a chat answer.",
     stepIds: ["receipt"],
     element: "receipt",
     group: "evidence",
@@ -674,9 +698,9 @@ function stepBlurb(step: StepSpec, element: FeatureElement): string {
         ? `${lead} This step can end as ${step.exits.join(", ")}. The result records which path the run took.`
         : `${lead} A run can complete, stop, hand off, or escalate instead of forcing a happy ending.`;
     case "receipt":
-      return step.artifacts && step.artifacts.length > 0
-        ? `${lead} The run folder keeps ${step.artifacts.join(", ")} so the result can be inspected or resumed later.`
-        : `${lead} The run folder keeps the trace, reports, evidence, and resume state.`;
+      return step.receiptRows && step.receiptRows.length > 0
+        ? `${lead} Circuit prints this receipt without you asking for another command. The record points to the run folder for inspection or resume.`
+        : `${lead} Circuit prints a receipt automatically, then leaves the run record behind.`;
     default:
       // "whole": the block itself. Describe the relay shape every step runs as.
       return `${lead} It runs as one block in the sequence: fresh context in, a model on it, a scoped set of tools, and a result the next step can read.`;
@@ -1553,17 +1577,136 @@ function PromptTile({
           <span />
           <span />
         </span>
-        <span className="flow-prompt-cmd font-mono">/circuit:run</span>
       </div>
-      <div className="flow-prompt-line font-mono">
-        <span className="flow-prompt-caret flow-neon" aria-hidden="true">
-          ❯
-        </span>
-        <span className="flow-prompt-text">{step.role}</span>
-        <span className="flow-prompt-cursor" aria-hidden="true" />
-      </div>
+      <TerminalOutput
+        lines={[
+          [
+            { text: "$ ", color: "dim" },
+            { text: "/circuit:run " },
+            { text: step.role },
+          ],
+          [{ text: "CIRCUIT", color: "bright" }],
+          [
+            { text: "⎿ ", color: "dim" },
+            { text: "flow", color: "cyan" },
+            { text: ` ${step.output}` },
+          ],
+          [
+            { text: "⎿ ", color: "dim" },
+            { text: "depth", color: "cyan" },
+            { text: " medium" },
+          ],
+          [
+            { text: "⎿ ", color: "dim" },
+            { text: step.note ?? "" },
+          ],
+        ]}
+      />
       <span aria-hidden="true" className="flow-veil" />
     </m.div>
+  );
+}
+
+function ReceiptTile({
+  step,
+  motionProps,
+  registerNode,
+  targeted,
+  highlightElement,
+  variant,
+  selectEl,
+  selectedElement = null,
+  disableLayout = false,
+}: {
+  step: StepSpec;
+  motionProps: MotionProps;
+  registerNode: (id: string) => (el: HTMLElement | null) => void;
+  targeted?: boolean;
+  highlightElement?: FeatureElement | null;
+  variant: TourVariant;
+  selectEl?: (element: FeatureElement) => void;
+  selectedElement?: FeatureElement | null;
+  disableLayout?: boolean;
+}) {
+  const nodeRef = registerNode(step.id);
+  const rows = step.receiptRows ?? [];
+  const hot = highlightElement === "receipt";
+  return (
+    <m.div
+      ref={nodeRef}
+      {...layoutProps(disableLayout, step.id)}
+      {...motionProps}
+      data-shape="receipt"
+      className="flow-receipt-terminal relative"
+    >
+      {targeted && highlightElement === "whole" ? (
+        <span
+          aria-hidden="true"
+          className={`flow-tile-ring flow-tile-ring--${variant}`}
+        />
+      ) : null}
+      <div className="flow-prompt-bar">
+        <span className="flow-prompt-dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+      </div>
+      <button
+        type="button"
+        aria-pressed={selectedElement === "receipt"}
+        aria-label={`${step.name}: ${step.role}`}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => selectEl?.("receipt")}
+        className={`flow-elhit flow-terminal-button w-full appearance-none border-0 bg-transparent text-left ${hot ? "flow-terminal-hot" : ""}`}
+      >
+        <TerminalOutput
+          lines={[
+            [
+              { text: "⎿ ", color: "dim" },
+              { text: "Complete.", color: "green" },
+            ],
+            ...rows.map((row) => [
+              { text: "   ⎿ ", color: "dim" as const },
+              { text: row.label.padEnd(10), color: "cyan" as const },
+              { text: row.value, color: row.lit ? ("green" as const) : undefined },
+            ]),
+          ]}
+        />
+      </button>
+      <span aria-hidden="true" className="flow-veil" />
+    </m.div>
+  );
+}
+
+type AnsiColor = "bright" | "cyan" | "dim" | "green";
+
+type TerminalLine = {
+  text: string;
+  color?: AnsiColor;
+}[];
+
+function TerminalOutput({ lines }: { lines: TerminalLine[] }) {
+  return (
+    <span className="flow-terminal-output font-mono">
+      {lines.map((line, lineIndex) => (
+        <span
+          // The terminal transcript is static example output; line order is the
+          // stable identity.
+          key={lineIndex}
+          className="flow-terminal-line"
+        >
+          {line.map((part, partIndex) => (
+            <span
+              key={`${lineIndex}-${partIndex}`}
+              className={part.color ? `ansi-${part.color}` : undefined}
+            >
+              {part.text}
+            </span>
+          ))}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -2181,13 +2324,27 @@ type PlacedStep = { step: StepSpec; gridStyle: CSSProperties };
 // there's one source of truth. This sequence drives the connectors, placement,
 // and the aria order alike.
 function flowRows(flow: ExampleFlow): StepRow[] {
+  const firstStep = flow.rows[0]?.[0]?.name ?? "first step";
   const promptStep: StepSpec = {
     id: "prompt",
     name: "Prompt",
     role: flow.prompt,
     shape: "prompt",
+    output: flowTerminalName(flow),
+    note: `Running ${firstStep}...`,
   };
   return [[promptStep], ...flow.rows];
+}
+
+function flowTerminalName(flow: ExampleFlow): string {
+  switch (flow.key) {
+    case "prototype-react":
+      return "prototype";
+    case "fix-flaky":
+      return "fix";
+    default:
+      return flow.name.toLowerCase();
+  }
 }
 
 function placeRows(rows: StepRow[], depth = false): PlacedStep[] {
@@ -2203,7 +2360,7 @@ function placeRows(rows: StepRow[], depth = false): PlacedStep[] {
   }
   let entryPlaced = false;
   return rows.flat().map((step) => {
-    if (step.shape === "prompt") {
+    if (step.shape === "prompt" || step.shape === "receipt") {
       // The terminal sits on the full-width row but caps its own width (CSS) and
       // centers, so it reads as a contained window rather than a full-bleed bar.
       return { step, gridStyle: { gridColumn: "1 / -1", justifySelf: "center" } };
@@ -2780,6 +2937,18 @@ function FlowDiagram({
                     step={step}
                     motionProps={tileMotion}
                     registerNode={registerNode}
+                    disableLayout={depth}
+                  />
+                ) : step.shape === "receipt" ? (
+                  <ReceiptTile
+                    step={step}
+                    motionProps={tileMotion}
+                    registerNode={registerNode}
+                    targeted={targeted}
+                    highlightElement={element}
+                    variant={variant}
+                    selectEl={(el) => onSelectElement(step.id, el)}
+                    selectedElement={pressed ? (focus?.element ?? null) : null}
                     disableLayout={depth}
                   />
                 ) : step.shape === "fanout" ? (

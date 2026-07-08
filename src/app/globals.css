@@ -1038,11 +1038,10 @@
 
 /* ---- Prompt node (terminal bar) ------------------------------------------- */
 
-/* The diagram's first node: the prompt the run started from, drawn as a small
-   terminal window. A title bar (dots + the command) sits above one input line
-   (a caret, the prompt text, a blinking block cursor). It is intentionally
-   denser than a step tile — it carries no model/tools/skills, just the input. */
-.flow-prompt-node {
+/* The diagram's terminal nodes: the prompt the run starts from, and the receipt
+   Circuit prints when the run closes. */
+.flow-prompt-node,
+.flow-receipt-terminal {
   display: flex;
   flex-direction: column;
   /* The diagram sits directly on the darkest page background, so the terminal is
@@ -1088,61 +1087,47 @@
   background: color-mix(in oklab, var(--foreground) 22%, transparent);
 }
 
-.flow-prompt-cmd {
-  font-size: 10.5px;
-  letter-spacing: 0.02em;
-  color: color-mix(in oklab, var(--foreground) 45%, transparent);
-}
-
-.flow-prompt-line {
-  display: flex;
-  /* center, not baseline: the block cursor is a fixed-height box, so a baseline
-     line would float it above the text. Caret, text, and cursor are all 13px, so
-     centering reads clean on the single-line prompt. */
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.72rem 0.85rem 0.8rem;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.flow-prompt-caret {
-  flex: none;
-  font-weight: 600;
-  color: var(--flow-color);
-}
-
-.flow-prompt-text {
-  color: color-mix(in oklab, var(--foreground) 92%, transparent);
+.flow-terminal-output {
+  display: block;
+  padding: 0.72rem 0.85rem 0.85rem;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #d6d6d6;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-/* A block cursor that blinks at the end of the prompt line. Decorative, so it is
-   aria-hidden in the markup; the blink is pure CSS and stops under
-   prefers-reduced-motion. */
-.flow-prompt-cursor {
-  flex: none;
-  width: 0.5rem;
-  height: 1.05em;
-  background: var(--flow-color);
-  animation: flow-cursor-blink 1.05s steps(1, end) infinite;
+.flow-terminal-line {
+  display: block;
+  min-height: 1.55em;
 }
 
-@keyframes flow-cursor-blink {
-  0%,
-  49% {
-    opacity: 1;
-  }
-  50%,
-  100% {
-    opacity: 0;
-  }
+.flow-terminal-button {
+  display: block;
+  padding: 0;
+  color: inherit;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .flow-prompt-cursor {
-    animation: none;
-  }
+.flow-terminal-hot {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 36%, transparent),
+    0 0 0 3px color-mix(in oklab, var(--flow-color) 10%, transparent);
+}
+
+.ansi-bright {
+  color: #f2f2f2;
+}
+
+.ansi-cyan {
+  color: #57c7ff;
+}
+
+.ansi-dim {
+  color: #858b94;
+}
+
+.ansi-green {
+  color: #5af78e;
 }
 
 /* Per-element hit target. Each configuration atom on a tile — the name, the
