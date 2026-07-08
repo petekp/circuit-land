@@ -13,6 +13,19 @@ import {
   type Ref,
 } from "react";
 import {
+  BookOpenCheck,
+  Braces,
+  FileOutput,
+  ListChecks,
+  LockKeyhole,
+  PackageCheck,
+  ReceiptText,
+  Route,
+  Sparkles,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
+import {
   AnimatePresence,
   LazyMotion,
   LayoutGroup,
@@ -1277,14 +1290,32 @@ function ModelBadge({
   );
 }
 
+type DetailTone =
+  | "context"
+  | "tool"
+  | "skill"
+  | "handoff"
+  | "exits"
+  | "receipt"
+  | "note";
+
+type DetailElement = Extract<
+  FeatureElement,
+  "ctx" | "tools" | "skills" | "handoff" | "exits" | "receipt" | "note"
+>;
+
 function DetailRow({
   label,
+  icon: Icon,
+  tone,
   children,
   state,
   onSelect,
   selected = false,
 }: {
   label: string;
+  icon: LucideIcon;
+  tone: DetailTone;
   children: ReactNode;
   state?: "hot" | "cool" | null;
   // When present the whole row is a hit target: clicking it surfaces that
@@ -1296,13 +1327,16 @@ function DetailRow({
     state === "hot" ? "flow-row-hot" : state === "cool" ? "flow-row-cool" : "";
   const inner = (
     <>
-      <span className="w-14 shrink-0 pt-[2px] text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
-        {label}
+      <span className="flow-detail-head">
+        <span className="flow-detail-mark" aria-hidden="true">
+          <Icon size={12} strokeWidth={2.2} />
+        </span>
+        <span className="flow-detail-label">{label}</span>
       </span>
       {/* min-w-0: without it this wrapper's min-width:auto tracks the widest
           chip, the row overflows the tile, and the chips' own max-w-full cap
           (and truncation) never engages. Same gotcha .flow-grid-item pins. */}
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+      <div className="flow-detail-body">
         {children}
       </div>
     </>
@@ -1314,13 +1348,19 @@ function DetailRow({
         aria-pressed={selected}
         onMouseDown={(e) => e.preventDefault()}
         onClick={onSelect}
-        className={`flow-elhit flex w-full appearance-none items-start gap-2.5 rounded-[10px] border-0 bg-transparent text-left ${cls}`}
+        className={`flow-elhit flow-detail-row flow-detail-row--${tone} flex w-full appearance-none items-start gap-2.5 border-0 text-left ${cls}`}
       >
         {inner}
       </button>
     );
   }
-  return <div className={`flex items-start gap-2.5 ${cls}`}>{inner}</div>;
+  return (
+    <div
+      className={`flow-detail-row flow-detail-row--${tone} flex items-start gap-2.5 ${cls}`}
+    >
+      {inner}
+    </div>
+  );
 }
 
 // A tile lists at most this many skill chips; the rest fold into a "+N"
@@ -1340,7 +1380,14 @@ function Chip({
   variant,
 }: {
   children: string;
-  variant: "tool" | "skill" | "context";
+  variant:
+    | "tool"
+    | "skill"
+    | "context"
+    | "handoff"
+    | "exit"
+    | "receipt"
+    | "note";
 }) {
   return (
     <span
@@ -1368,6 +1415,7 @@ function StepDetail({
   const hasContext = step.context && step.context.length > 0;
   const hasTools = step.tools && step.tools.allow.length > 0;
   const hasSkills = step.skills && step.skills.length > 0;
+  const hasOutput = !!step.output;
   const hasExits = step.exits && step.exits.length > 0;
   const hasArtifacts = step.artifacts && step.artifacts.length > 0;
   // When a context/tools/skills element is active (from a tab or a direct
@@ -1376,10 +1424,14 @@ function StepDetail({
   const rowFeature =
     highlightElement === "ctx" ||
     highlightElement === "tools" ||
-    highlightElement === "skills"
+    highlightElement === "skills" ||
+    highlightElement === "handoff" ||
+    highlightElement === "exits" ||
+    highlightElement === "receipt" ||
+    highlightElement === "note"
       ? highlightElement
       : null;
-  const rowState = (el: "ctx" | "tools" | "skills"): "hot" | "cool" | null =>
+  const rowState = (el: DetailElement): "hot" | "cool" | null =>
     rowFeature === null ? null : rowFeature === el ? "hot" : "cool";
   // Plain steps surface their note here (e.g. Verify's "no model opinion",
   // Record's trail). Subrun and loop steps render their own note up in the tile
@@ -1390,6 +1442,7 @@ function StepDetail({
     !hasContext &&
     !hasTools &&
     !hasSkills &&
+    !hasOutput &&
     !hasExits &&
     !hasArtifacts &&
     !showNote
@@ -1400,7 +1453,9 @@ function StepDetail({
     <div className="mt-3.5 flex flex-col gap-2.5">
       {hasContext ? (
         <DetailRow
-          label="context"
+          label="inputs"
+          icon={Braces}
+          tone="context"
           state={rowState("ctx")}
           onSelect={selectEl ? () => selectEl("ctx") : undefined}
           selected={selectedElement === "ctx"}
@@ -1417,6 +1472,8 @@ function StepDetail({
       {hasTools ? (
         <DetailRow
           label="tools"
+          icon={Wrench}
+          tone="tool"
           state={rowState("tools")}
           onSelect={selectEl ? () => selectEl("tools") : undefined}
           selected={selectedElement === "tools"}
@@ -1431,7 +1488,7 @@ function StepDetail({
             // count read as a deliberate wall, the one place a second meaning
             // (denied) earns its own tint.
             <span className="flow-walled inline-flex items-center gap-1 rounded-md px-1.5 py-[2px] font-mono text-[11px] leading-tight">
-              <LockIcon />
+              <LockKeyhole aria-hidden="true" size={9} strokeWidth={2.5} />
               {step.tools!.blocked} blocked
             </span>
           ) : null}
@@ -1440,6 +1497,8 @@ function StepDetail({
       {hasSkills ? (
         <DetailRow
           label="skills"
+          icon={BookOpenCheck}
+          tone="skill"
           state={rowState("skills")}
           onSelect={selectEl ? () => selectEl("skills") : undefined}
           selected={selectedElement === "skills"}
@@ -1459,81 +1518,63 @@ function StepDetail({
           ) : null}
         </DetailRow>
       ) : null}
+      {hasOutput ? (
+        <DetailRow
+          label="writes"
+          icon={FileOutput}
+          tone="handoff"
+          state={rowState("handoff")}
+          onSelect={selectEl ? () => selectEl("handoff") : undefined}
+          selected={selectedElement === "handoff"}
+        >
+          <Chip variant="handoff">{step.output!}</Chip>
+        </DetailRow>
+      ) : null}
       {hasExits ? (
-        <button
-          type="button"
-          aria-pressed={selectedElement === "exits"}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={selectEl ? () => selectEl("exits") : undefined}
-          className={`flow-elhit flow-exit-rail flex w-full appearance-none flex-wrap gap-1.5 border-0 bg-transparent text-left ${highlightElement === "exits" ? "flow-exit-rail-hot" : ""}`}
+        <DetailRow
+          label="exits"
+          icon={Route}
+          tone="exits"
+          state={rowState("exits")}
+          onSelect={selectEl ? () => selectEl("exits") : undefined}
+          selected={selectedElement === "exits"}
         >
           {step.exits!.map((exit) => (
-            <span
-              key={exit}
-              className="flow-exit-chip rounded-md px-1.5 py-[2px] font-mono text-[11px] leading-tight"
-            >
+            <Chip key={exit} variant="exit">
               {exit}
-            </span>
+            </Chip>
           ))}
-        </button>
+        </DetailRow>
       ) : null}
       {hasArtifacts ? (
-        <button
-          type="button"
-          aria-pressed={selectedElement === "receipt"}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={selectEl ? () => selectEl("receipt") : undefined}
-          className={`flow-elhit flow-receipt-grid grid w-full appearance-none grid-cols-2 gap-1.5 border-0 bg-transparent text-left ${highlightElement === "receipt" ? "flow-receipt-hot" : ""}`}
+        <DetailRow
+          label="record"
+          icon={ReceiptText}
+          tone="receipt"
+          state={rowState("receipt")}
+          onSelect={selectEl ? () => selectEl("receipt") : undefined}
+          selected={selectedElement === "receipt"}
         >
           {step.artifacts!.map((artifact) => (
-            <span
-              key={artifact}
-              className="flow-receipt-chip rounded-md px-1.5 py-[3px] font-mono text-[11px] leading-tight"
-            >
+            <Chip key={artifact} variant="receipt">
               {artifact}
-            </span>
+            </Chip>
           ))}
-        </button>
+        </DetailRow>
       ) : null}
       {showNote ? (
-        <button
-          type="button"
-          aria-pressed={selectedElement === "note"}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={selectEl ? () => selectEl("note") : undefined}
-          className={`flow-elhit inline-flex w-fit appearance-none items-center rounded-[9px] border-0 bg-transparent text-left font-mono text-[11px] leading-snug ${highlightElement === "note" ? "flow-note-hot" : ""} ${step.kind === "verification" ? "text-foreground/85" : "text-muted-foreground"}`}
+        <DetailRow
+          label="note"
+          icon={step.kind === "verification" ? PackageCheck : Sparkles}
+          tone="note"
+          state={rowState("note")}
+          onSelect={selectEl ? () => selectEl("note") : undefined}
+          selected={selectedElement === "note"}
         >
-          {step.kind === "verification" ? (
-            // The engine's line, not the model's: a gate step's check runs
-            // deterministically, so it reads in the run-output register with
-            // the signal caret.
-            <span aria-hidden="true" className="flow-neon mr-1.5 text-signal">
-              ›
-            </span>
-          ) : null}
-          {step.note}
-        </button>
+          <Chip variant="note">{step.note!}</Chip>
+        </DetailRow>
       ) : null}
     </div>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="9"
-      height="9"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </svg>
   );
 }
 
@@ -1630,7 +1671,6 @@ function ReceiptTile({
 }) {
   const nodeRef = registerNode(step.id);
   const rows = step.receiptRows ?? [];
-  const hot = highlightElement === "receipt";
   return (
     <m.div
       ref={nodeRef}
@@ -1658,7 +1698,7 @@ function ReceiptTile({
         aria-label={`${step.name}: ${step.role}`}
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => selectEl?.("receipt")}
-        className={`flow-elhit flow-terminal-button w-full appearance-none border-0 bg-transparent text-left ${hot ? "flow-terminal-hot" : ""}`}
+        className="flow-elhit flow-terminal-button w-full appearance-none border-0 bg-transparent text-left"
       >
         <TerminalOutput
           lines={[
@@ -1814,6 +1854,10 @@ function StepTile({
           onClick={() => selectEl?.("options")}
           className={`flow-elhit flow-scope-well mt-4 flex w-full appearance-none flex-col gap-2 border-0 text-left ${highlightElement === "options" ? "flow-options-hot" : ""}`}
         >
+          <span className="flow-options-heading">
+            <ListChecks aria-hidden="true" size={12} strokeWidth={2.2} />
+            choices
+          </span>
           {step.options.map((o) => {
             // Options are authored "A · label"; the leading letter renders as
             // a keycap so the row reads as a decision waiting on one keypress.

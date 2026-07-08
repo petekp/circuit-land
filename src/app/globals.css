@@ -664,27 +664,249 @@
    instead of a box nested in a box. The checkpoint's decision panel keeps the
    well above; a spec sheet reads, a decision waits. */
 
+.flow-detail-row {
+  --flow-detail-color: var(--flow-color);
+  position: relative;
+  min-width: 0;
+  padding: 0.4rem 0.48rem;
+  border-radius: 12px;
+  corner-shape: squircle;
+  color: color-mix(in oklab, var(--foreground) 78%, transparent);
+  background: color-mix(in oklab, var(--background) 24%, transparent);
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.04),
+    inset 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent);
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    opacity 200ms ease,
+    outline-color 200ms ease;
+}
+
+.flow-detail-row::before {
+  content: "";
+  position: absolute;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  left: 1rem;
+  width: 1px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--flow-detail-color) 52%, transparent),
+    color-mix(in oklab, var(--foreground) 10%, transparent)
+  );
+  opacity: 0.42;
+}
+
+.flow-detail-row.flow-row-hot {
+  background: color-mix(in oklab, var(--flow-detail-color) 12%, var(--background));
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.08),
+    inset 0 0 0 1px color-mix(in oklab, var(--flow-detail-color) 34%, transparent),
+    0 0 0 3px color-mix(in oklab, var(--flow-detail-color) 10%, transparent);
+}
+
+.flow-detail-head {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  width: 4.85rem;
+  flex: none;
+  align-items: center;
+  gap: 0.4rem;
+  padding-top: 1px;
+}
+
+.flow-detail-mark {
+  display: inline-flex;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  color: color-mix(in oklab, var(--flow-detail-color) 88%, var(--foreground));
+  background: color-mix(in oklab, var(--flow-detail-color) 14%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--flow-detail-color) 30%, transparent);
+}
+
+.flow-detail-label {
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in oklab, var(--foreground) 52%, transparent);
+}
+
+.flow-detail-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.4rem;
+}
+
+.flow-detail-row--context {
+  --flow-detail-color: oklch(0.76 0.135 225);
+}
+
+.flow-detail-row--tool {
+  --flow-detail-color: oklch(0.78 0.16 153);
+}
+
+.flow-detail-row--skill {
+  --flow-detail-color: oklch(0.76 0.145 297);
+}
+
+.flow-detail-row--handoff {
+  --flow-detail-color: oklch(0.82 0.145 82);
+}
+
+.flow-detail-row--exits {
+  --flow-detail-color: oklch(0.72 0.15 28);
+}
+
+.flow-detail-row--receipt {
+  --flow-detail-color: oklch(0.76 0.125 190);
+}
+
+.flow-detail-row--note {
+  --flow-detail-color: oklch(0.82 0.15 120);
+}
+
 /* Scope tokens, one ladder read by weight, not hue (the model badge carries the
    tile's color). Three grants, three weights: a tool is a power the step was
    GRANTED, so it reads solid and present; a skill is knowledge it REFERENCES, a
    quiet outline; context is what it was GIVEN, the lightest — a faint filled
    token so the inputs read as tokens like the rest, not loose middot text. */
+.flow-chip {
+  --flow-chip-color: var(--foreground);
+  position: relative;
+  gap: 0.32rem;
+  min-height: 1.23rem;
+  border-radius: 7px;
+}
+
+.flow-chip::before {
+  content: "";
+  width: 0.34rem;
+  height: 0.34rem;
+  flex: none;
+  border-radius: 999px;
+  background: var(--flow-chip-color);
+  opacity: 0.58;
+}
+
 .flow-chip--tool {
-  color: color-mix(in oklab, var(--foreground) 92%, transparent);
-  background: color-mix(in oklab, var(--foreground) 11%, transparent);
+  --flow-chip-color: oklch(0.78 0.16 153);
+  color: color-mix(in oklab, var(--flow-chip-color) 32%, var(--foreground));
+  background: color-mix(in oklab, var(--flow-chip-color) 13%, var(--foreground) 4%);
   box-shadow: inset 0 0 0 1px
-    color-mix(in oklab, var(--foreground) 6%, transparent);
+    color-mix(in oklab, var(--flow-chip-color) 24%, transparent);
+}
+
+.flow-chip--tool::before {
+  width: 0.48rem;
+  height: 0.18rem;
+  border-radius: 999px;
+  opacity: 0.78;
 }
 
 .flow-chip--skill {
-  color: color-mix(in oklab, var(--foreground) 60%, transparent);
+  --flow-chip-color: oklch(0.76 0.145 297);
+  color: color-mix(in oklab, var(--flow-chip-color) 30%, var(--foreground));
+  background: color-mix(in oklab, var(--flow-chip-color) 8%, transparent);
   box-shadow: inset 0 0 0 1px
-    color-mix(in oklab, var(--foreground) 15%, transparent);
+    color-mix(in oklab, var(--flow-chip-color) 22%, transparent);
+}
+
+.flow-chip--skill::before {
+  border-radius: 3px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px currentColor;
+  opacity: 0.7;
 }
 
 .flow-chip--context {
-  color: color-mix(in oklab, var(--foreground) 56%, transparent);
-  background: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --flow-chip-color: oklch(0.76 0.135 225);
+  color: color-mix(in oklab, var(--flow-chip-color) 26%, var(--foreground));
+  background: color-mix(in oklab, var(--flow-chip-color) 7%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--flow-chip-color) 13%, transparent);
+}
+
+.flow-chip--context::before {
+  width: 0.3rem;
+  height: 0.3rem;
+  opacity: 0.44;
+}
+
+.flow-chip--handoff {
+  --flow-chip-color: oklch(0.82 0.145 82);
+  color: color-mix(in oklab, var(--flow-chip-color) 34%, var(--foreground));
+  background: color-mix(in oklab, var(--flow-chip-color) 14%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--flow-chip-color) 28%, transparent);
+}
+
+.flow-chip--handoff::before {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 3px;
+  opacity: 0.72;
+}
+
+.flow-chip--exit {
+  --flow-chip-color: oklch(0.72 0.15 28);
+  color: color-mix(in oklab, var(--flow-chip-color) 28%, var(--foreground));
+  background: color-mix(in oklab, var(--flow-chip-color) 9%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--flow-chip-color) 18%, transparent);
+}
+
+.flow-chip--receipt {
+  --flow-chip-color: oklch(0.76 0.125 190);
+  color: color-mix(in oklab, var(--flow-chip-color) 30%, var(--foreground));
+  background: color-mix(in oklab, var(--flow-chip-color) 9%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--flow-chip-color) 19%, transparent);
+}
+
+.flow-chip--exit::before {
+  width: 0.42rem;
+  height: 0.2rem;
+  border-radius: 999px;
+}
+
+.flow-chip--receipt::before {
+  width: 0.38rem;
+  height: 0.48rem;
+  border-radius: 2px;
+  background:
+    linear-gradient(currentColor 0 0) 50% 34% / 60% 1px no-repeat,
+    linear-gradient(currentColor 0 0) 50% 62% / 60% 1px no-repeat;
+  opacity: 0.7;
+}
+
+.flow-chip--note {
+  --flow-chip-color: oklch(0.82 0.15 120);
+  color: color-mix(in oklab, var(--flow-chip-color) 34%, var(--foreground));
+  background: color-mix(in oklab, var(--flow-chip-color) 9%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--flow-chip-color) 19%, transparent);
+}
+
+.flow-chip--note::before {
+  width: 0.2rem;
+  height: 0.2rem;
+  box-shadow:
+    0.18rem 0 0 currentColor,
+    0.09rem 0.17rem 0 currentColor;
+  opacity: 0.62;
 }
 
 /* The wall: how many tools the step is denied. A boundary it runs inside, not
@@ -695,38 +917,6 @@
   background: color-mix(in oklab, var(--destructive) 9%, transparent);
   box-shadow: inset 0 0 0 1px
     color-mix(in oklab, var(--destructive) 22%, transparent);
-}
-
-.flow-exit-rail,
-.flow-receipt-grid {
-  padding: 0.45rem 0.5rem;
-  border-radius: 10px;
-  corner-shape: squircle;
-  background: color-mix(in oklab, var(--background) 36%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in oklab, var(--foreground) 6%, transparent);
-}
-
-.flow-exit-chip,
-.flow-receipt-chip {
-  color: color-mix(in oklab, var(--foreground) 72%, transparent);
-  background: color-mix(in oklab, var(--foreground) 7%, transparent);
-  box-shadow: inset 0 0 0 1px
-    color-mix(in oklab, var(--foreground) 8%, transparent);
-}
-
-.flow-exit-rail-hot,
-.flow-receipt-hot {
-  background: color-mix(in oklab, var(--flow-color) 16%, transparent);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 36%, transparent),
-    0 0 0 3px color-mix(in oklab, var(--flow-color) 10%, transparent);
-}
-
-.flow-exit-rail-hot .flow-exit-chip,
-.flow-receipt-hot .flow-receipt-chip {
-  color: var(--foreground);
-  background: color-mix(in oklab, var(--flow-color) 18%, transparent);
 }
 
 .flow-wire-label {
@@ -755,6 +945,21 @@
 
 /* The checkpoint options' leading letter, drawn as a keycap: the decision is
    one keypress the run is waiting on. */
+.flow-options-heading {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 8px;
+  padding: 0.1rem 0.25rem 0.2rem;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in oklab, var(--flow-color) 86%, var(--foreground));
+}
+
 .flow-option-key {
   display: inline-flex;
   align-items: center;
@@ -1106,12 +1311,6 @@
   display: block;
   padding: 0;
   color: inherit;
-}
-
-.flow-terminal-hot {
-  box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--flow-color) 36%, transparent),
-    0 0 0 3px color-mix(in oklab, var(--flow-color) 10%, transparent);
 }
 
 .ansi-bright {
