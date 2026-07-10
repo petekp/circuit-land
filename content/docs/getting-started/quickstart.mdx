@@ -37,12 +37,13 @@ answer.
 
 ## From the CLI
 
-The equivalent runs through the CLI from a checkout (see
-[Installation](/docs/getting-started/installation#cli)). Name the flow and pass
-the task as `--goal`:
+The CLI is the engine underneath the command above; running it directly just
+skips the step where the agent picks the flow for you. See
+[Installation](/docs/getting-started/installation#cli) to install it. Name
+the flow and pass the task as `--goal`:
 
 ```bash
-./bin/circuit run fix --goal 'login fails when the email has a plus sign'
+circuit run fix --goal 'login fails when the email has a plus sign'
 ```
 
 The CLI requires an explicit flow name. It never guesses a flow from your
@@ -60,12 +61,12 @@ to a cheaper model while the steps that decide direction keep theirs. See
 
 ## See the plan before you spend anything
 
-From a checkout, the experimental `preview` command shows what a flow would
-do before anything runs: which connector, model, and effort each step gets,
-at every power setting, without spawning a worker.
+The experimental `preview` command shows what a flow would do before
+anything runs: which connector, model, and effort each step gets, at every
+power setting, without spawning a worker.
 
 ```bash
-./bin/circuit preview build --matrix
+circuit preview build --matrix
 ```
 
 It costs nothing to run. When the readout looks right, run the real task.

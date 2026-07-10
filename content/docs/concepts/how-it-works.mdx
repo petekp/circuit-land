@@ -1,15 +1,96 @@
 ---
 title: How Circuit works
-description: Flows, stages, routes, the run folder, and why every step is a micro-harness.
+description: The evidence gate, the honesty machinery, per-role model allocation, and the run folder that proves what happened.
 ---
 
-A flow is a repeatable work pattern. You author it as a schematic, and Circuit
-compiles it to the runtime graph a run follows.
+Circuit is a CLI engine that runs typed developer flows. The Claude Code and
+Codex plugins are the bridge that teaches a host agent to drive that CLI, and
+today they are also the fastest way to install Circuit and start a run.
+Everything below is true of the engine itself, whichever way you reach it.
 
-## Stages and steps
+## Encode your process
 
-A flow is organized into stages: Frame, Analyze, Plan, Act, Verify, Review, and
-Close. Each stage holds steps, and each step is one use of a block.
+You already have a way you want agent work done: a habit, a checklist, the
+review you always run before calling something finished. Right now you carry
+that process yourself, one instruction at a time, in chat. Chat is where a
+process gets figured out. A flow is where it goes to run.
+
+A flow encodes that process once, as a sequence of typed steps, so you stop
+being the runtime that remembers the order, holds the state, and nudges the
+agent through it every single time you delegate the same kind of work.
+
+## The evidence gate
+
+A CLAUDE.md instruction, or a skill, is a request the model can honor or
+quietly skip. A Circuit step is different: it cannot advance, and a flow
+cannot close, without the evidence its checks require. The check runs in the
+engine, not in the model, so a worker cannot talk its way past it by
+asserting the work is done.
+
+Concretely, in the Fix flow: the run will not move from diagnosis to action
+until the diagnosis report is well formed and accepted, and it cannot close
+as fixed without the verification and regression-rerun output actually
+present. Saying "verified" is not enough; the output has to exist and pass.
+
+This is not a claim that the work is correct, only that the required proof
+exists and parses. Judging whether the work itself is sound is what the
+independent reviewer step is for.
+
+## The honesty machinery
+
+A flow can also be shaped as a loop: a span of steps that re-enters, pass
+after pass, until a reviewer step proposes the goal is met and the engine's
+own evidence agrees. The engine reads only the proposal's met-or-not claim,
+never its reasoning, and checks that claim against the pass's own
+verification result before it believes it.
+
+An append-only honesty ledger backs this. If a step overclaims, or exhausts
+its retries without a clean check, the run does not pretend otherwise: it
+records an open latch and moves on. The run cannot close as succeeded while
+any latch is open; it closes honestly as stopped instead, and names what did
+not clear. Running out of iterations, budget, or progress reports as not
+done, never as done, and the CLI's exit code mirrors that closed outcome, so
+a script checking only the exit code still gets an honest answer.
+
+This loop is proven inside the engine today by internal flows built to
+exercise it; no flow in the public catalog opts into it yet. See
+[The until loop](/docs/concepts/until-loop) for the full mechanism and its
+honest limits.
+
+## One dial, per-role model allocation
+
+Circuit decides model and effort per step, not once for the whole run. Turn
+one dial and the engine allocates: steps that decide direction keep the
+strong model, steps that execute run on a cheaper one, and a flow can even
+pin one step to a different connector entirely. Research stays on the strong
+tier at every dial position, because the reading that steers a run is the
+wrong place to save.
+
+You do not have to take that on faith.
+[`circuit preview`](/docs/cli/preview) prints the connector, model, and
+effort every step would get, at every dial position, without spawning a
+single worker. After a real run, the summary shows what each role actually
+spent.
+
+## The run folder
+
+Every run writes a run folder: the ordered trace of what happened, the typed
+report each step produced, the supporting evidence, and the state needed to
+resume. It is built so someone who was not watching the run can open the
+folder afterward and trust what it says, instead of reconstructing what
+happened from a chat log. See [Evidence and runs](/docs/concepts/evidence-and-runs)
+for what is inside it.
+
+## The mechanics
+
+The sections above are what a flow is for. This section is how one is put
+together, for when you are authoring a flow or reading a trace.
+
+### Stages and steps
+
+A flow is organized into stages: Frame, Analyze, Plan, Act, Verify, Review,
+and Close. Each stage holds steps, and each step is one use of a block: a
+reusable kind of work that can appear in a schematic.
 
 <Mermaid
   label="Circuit's canonical stage order"
@@ -28,35 +109,25 @@ A step has a kind that decides what it does:
 - **Fanout**: run branches and join their outputs.
 - **Sub-run**: run a child flow.
 
-## Every step is a micro-harness
-
-A harness is the machinery around a model: the context it sees, the tools it
-can reach, the instructions it starts from, the condition that counts as done.
-Most agent tools build one harness per session and stretch it across
-everything a task contains.
-
-Circuit builds one per step. A relay step assembles a fresh worker: model and
-effort resolved from its role and the [power dial](/docs/flows/modes#power), a
-tool scope, the skills it needs, and only the inputs its contract declares.
+A relay step assembles a fresh worker for that step alone: a model and
+effort resolved from its role and the [power dial](/docs/flows/modes#power),
+a tool scope, the skills it needs, and only the inputs its contract declares.
 The worker writes its typed output and is gone, so nothing it accumulated
-leaks into the next step.
+leaks into the next step. That is the direct answer to a long session's
+context rot: later steps are not carrying the chatter of earlier ones.
 
-The kinds that carry no model are harness machinery promoted into the graph.
-A verification step is an exit check. A checkpoint is a stop condition. The
-engine enforces both, where a single long session leaves them to the model's
-discretion.
-
-## Typed inputs and outputs
+### Typed inputs and outputs
 
 Every block declares a typed input and a typed output. Each one is a named,
 versioned contract: `flow.brief@v1`, `plan.strategy@v1`, `change.evidence@v1`.
-A step is one use of a block, so it carries that contract: it reads inputs of the
-shapes it names and writes one typed output, a
+A step is one use of a block, so it carries that contract: it reads inputs of
+the shapes it names and writes one typed output, a
 [report](/docs/concepts/evidence-and-runs).
 
-A step's output is itself a contract, so it becomes the input a later step reads.
-Those contracts are how a flow wires together. A step is placed only where the
-inputs it names are already produced upstream.
+A step's output is itself a contract, so it becomes the input a later step
+reads. Those contracts are how a flow wires together, and they are what gives
+the evidence gate above something concrete to check: a step is placed only
+where the inputs it names are already produced upstream.
 
 <Mermaid
   label="Each step's typed output is the next step's typed input"
@@ -71,16 +142,12 @@ flowchart LR
 `}
 />
 
-So context is not skipped or lost between steps, and a step never hands forward a
-result the next step cannot read. Each output is a known shape: you and the next
-step read structure, not loose prose.
+### Routes
 
-## Routes
-
-Steps connect through routes: named outcome paths that decide what happens next.
-A route either points to the next step or to a terminal target. The terminal
-targets are `@complete`, `@stop`, `@handoff`, and `@escalate`, and each closes
-the run with the matching outcome.
+Steps connect through routes: named outcome paths that decide what happens
+next. A route either points to the next step or to a terminal target. The
+terminal targets are `@complete`, `@stop`, `@handoff`, and `@escalate`, and
+each closes the run with the matching outcome.
 
 <Mermaid
   label="A step's route points to the next step or a terminal target"
@@ -94,16 +161,12 @@ flowchart LR
 `}
 />
 
-## The run folder
-
-A run is one execution of a flow. It records a trace, the reports its steps
-write, and the supporting evidence in its run folder, along with the state needed
-to resume.
-
 ## Related
 
 - [How flows compose](/docs/concepts/how-flows-compose)
 - [Evidence and runs](/docs/concepts/evidence-and-runs)
+- [The until loop](/docs/concepts/until-loop)
 - [Checkpoints](/docs/concepts/checkpoints)
+- [Depth, power, and modes](/docs/flows/modes)
 - [Flows](/docs/flows/overview)
 - [Connectors](/docs/configuration/connectors)

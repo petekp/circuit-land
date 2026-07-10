@@ -3,11 +3,13 @@ title: Introduction
 description: Encode how you want agent work done into repeatable flows for Claude Code and Codex.
 ---
 
-Circuit is the process your coding agent follows: flows that fit the task,
-checkpoints where your judgment matters, and a written record of every run.
-Great engineers lean on a process they trust rather than raw talent. Circuit
-gives coding agents the same. Use it as a plugin in Claude Code or Codex, or
-from a repo checkout as a local CLI.
+Circuit is a CLI engine that runs the process your coding agent follows:
+flows that fit the task, checkpoints where your judgment matters, and a
+written record of every run. Great engineers lean on a process they trust
+rather than raw talent. Circuit gives coding agents the same. The Claude
+Code and Codex plugins are the bridge that teaches a host agent to drive
+that CLI, and today they are also the fastest way to install Circuit and
+start a run.
 
 ## The idea in one line
 
@@ -33,5 +35,5 @@ evidence forward, and stops for your call at the points that matter.
   one fits.
 - [Depth, power, and modes](/docs/flows/modes) covers the two dials: how much
   care a run takes and how much model it gets.
-- [How it works](/docs/concepts/how-it-works) covers stages, steps, routes, and
-  the run folder.
+- [How it works](/docs/concepts/how-it-works) covers the evidence gate, the
+  honesty machinery, per-role model allocation, and the run folder.

@@ -3,9 +3,10 @@ title: Installation
 description: Install Circuit in Claude Code, Codex, or as a CLI.
 ---
 
-Circuit runs three ways: as a Claude Code plugin, as a Codex plugin, or from
-the repo checkout as a local `circuit` CLI. Pick the one that matches how you
-work.
+Circuit is a CLI engine. The Claude Code and Codex plugins are the bridge
+that teaches a host agent to drive that CLI, and today they are also how
+most people install Circuit and start a run. Pick the path that matches how
+you work.
 
 ## Requirements
 
@@ -38,17 +39,28 @@ codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.9
 
 ## CLI
 
-Build the `circuit` command from a checkout:
+Install the CLI engine directly from npm:
+
+```bash
+npm install -g @petekp/circuit
+circuit doctor
+```
+
+Circuit routes work through connector CLIs (`claude` by default), so a
+signed-in Claude Code install is a prerequisite. `circuit doctor` checks your
+connectors before a run spends anything on a broken one.
+
+Run a task with `circuit run <flow> --goal '<your task>'`. The CLI requires
+an explicit flow name: `build`, `fix`, `explore`, `review`, `prototype`, or
+`pursue`.
+
+Working from a repo checkout instead:
 
 ```bash
 npm install
 npm run build
-./bin/circuit
+./bin/circuit run <flow> --goal '<your task>'
 ```
-
-Run a task with `./bin/circuit run <flow> --goal '<your task>'`. The CLI
-requires an explicit flow name: `build`, `fix`, `explore`, `review`,
-`prototype`, or `pursue`. The CLI currently builds from a checkout.
 
 ## Optional: Codex as a worker
 
