@@ -17,7 +17,7 @@ type InstallTarget = {
 // string-checked across the site by scripts/check-content.mjs. This literal is
 // one of the copies that check counts, so keep it matching the constant.
 const codexInstallCommand =
-  "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.9";
+  "codex plugin marketplace add petekp/circuit --ref circuit--v0.1.0-alpha.10";
 
 const installTargets: InstallTarget[] = [
   {
