@@ -10,8 +10,16 @@ The terms Circuit uses, in the order you meet them. See
 
 - **Flow**: a named kind of work Circuit can run, such as Build, Fix, Explore, or Review.
 - **Schematic**: the authored definition of a flow.
-- **Block**: a reusable kind of work that can appear in a schematic.
+- **Block**: a reusable kind of work that can appear in a schematic, declaring
+  a typed input contract, a typed output contract, and checks. The same block
+  appears across flows, such as a grounding read or an independent review. See
+  [Blocks](/docs/concepts/blocks).
 - **Contract**: the typed input or output a block declares, named and versioned, such as `plan.strategy@v1`.
+- **Micro-harness**: the small, purpose-built harness Circuit assembles around
+  a single step: a role, a model and effort resolved from that role and the
+  power dial, a tool scope, injected skills, and only the inputs its contract
+  declares. Built fresh for that step alone, then discarded. See
+  [The micro-harness](/docs/concepts/micro-harness).
 - **Stage**: a grouped part of a flow, such as Frame, Analyze, Plan, Act, Verify, Review, or Close.
 - **Step**: one executable use of a block inside a schematic or compiled flow.
 - **Route**: a named outcome path from one step to the next.

@@ -1,38 +1,82 @@
 ---
 title: Skills
-description: Bind local skills to flow slots and configure skill hooks.
+description: Wire a local skill to a trigger and Circuit injects it automatically.
 ---
 
-A skill is a discoverable capability with trigger metadata. A skill slot is a placeholder a flow author declares; you bind it to one of your local skills. Skill hooks inject skills at lifecycle points during a run.
-
-## Where it lives
-
-Skills are configured under two top-level keys in the config file: `skills` for slot bindings and `skill_hooks` for lifecycle injection. Both parse strictly: unknown keys are rejected.
-
-## Bindings
-
-Bind a slot to a skill under `skills.bindings`, keyed by slot id:
+Say you have a favorite local skill, `react-review`, that checks React components
+for hook misuse and prop-drilling before you call a change done. You want it to
+show up automatically whenever a worker touches a `.tsx` file, in any flow, without
+editing every flow that might touch React code. One config block does that:
 
 ```yaml
-skills:
-  bindings:
-    review-checklist: my-review-skill
+skill_hooks:
+  policy:
+    after:edit-files:.tsx:
+      skills: [react-review]
 ```
 
-Both the slot id and skill id are kebab-case slugs. The skill id must resolve to a local skill.
+From then on, whichever flow you run, whenever a worker's edits touch a `.tsx`
+file, Circuit injects `react-review` into the matching implementer step. You
+never have to remember to ask for it.
 
-### Local skill discovery
+## Worked example: react-review in a Build run
 
-Local skills are discovered from two roots, in order:
+Take a [Build](/docs/flows/build) run adding a new component. Build's Act stage
+is the implementer step: it relays the actual code change to a worker. Once that
+worker's edits touch a `.tsx` file, the `after:edit-files:.tsx` hook fires and
+Circuit queues `react-review` for injection into the implementer step's next
+turn, no flow edit required.
 
-1. `~/.agents/skills/<id>/SKILL.md`
-2. `~/.claude/skills/<id>/SKILL.md`
+The run summary records the moment it fires. Look for a **Skill hooks** heading
+with a line like:
 
-The first root with a matching `<id>/SKILL.md` wins. Only flat ids are discovered; namespaced plugin skills are not. If a bound skill id is not found in either root, the run fails with the searched paths.
+```text
+Skill hooks
+  after:edit-files:.tsx -> react-review (auto)
+```
 
-## Skill hooks
+That line is your confirmation the skill actually ran, not just that it was
+configured.
 
-Skill hooks fire at lifecycle points and inject the skills you assign into the next implementer (write) relay step. Configure them under `skill_hooks`, which has two keys:
+## Two ways a skill reaches a step
+
+The example above uses an event trigger. Circuit also has a second, simpler
+mechanism for a skill you want loaded every time, not just when a trigger
+fires. They compose: use one, the other, or both.
+
+### Always loaded for a flow
+
+Set `circuits.<flow>.selection.skills` to load a skill on every step of one
+flow, no trigger needed:
+
+```yaml
+circuits:
+  build:
+    selection:
+      skills:
+        mode: append
+        skills: [react-review]
+```
+
+This is a [selection override](/docs/configuration/selection#skills): `mode`
+is `inherit`, `replace`, `append`, or `remove`, and it applies at whichever
+layer you set it (project-wide under `defaults.selection`, or scoped to one
+flow, stage, or step). `react-review` set this way loads on every Build run
+whether or not any `.tsx` file changes. See
+[Selection](/docs/configuration/selection) for the full layer model.
+
+### Triggered by an event
+
+Set `skill_hooks` to load a skill only when something specific happens during
+a run, such as an edit to a given file type or a failed verification. This is
+the mechanism the worked example above uses. It costs nothing on runs where
+the trigger never fires.
+
+## Skill hooks reference
+
+Skill hooks fire at lifecycle points and inject the skills you assign into the
+next implementer (write) relay step. Configure them under `skill_hooks`, which
+has two keys:
 
 | Key | What it controls |
 | --- | --- |
@@ -46,7 +90,7 @@ Each entry maps a hook name to a rule:
 | Field | Value | Default |
 | --- | --- | --- |
 | `mode` | `auto` injects the listed skills; `mute` records the event and injects nothing. | `auto` |
-| `skills` | Skill ids to inject. Required for `auto`; forbidden for `mute`. | — |
+| `skills` | Skill ids to inject. Required for `auto`; forbidden for `mute`. | n/a |
 | `strict` | When a listed skill is unavailable, record a decision packet and inject nothing for that event. The run still proceeds. | `false` |
 
 ```yaml
@@ -54,6 +98,8 @@ skill_hooks:
   policy:
     before:edit-files:
       skills: [coding-standards]
+    after:edit-files:.tsx:
+      skills: [react-review]
     after:edit-files:
       mode: mute
     after:verification-failed:
@@ -74,7 +120,38 @@ The hooks the runtime dispatches:
 | `after:verification-failed` | When a verification check fails. |
 | `after:evidence-gap` | When a required claim is still unproven after verification. |
 
-The `before:edit-files` and `after:edit-files` hooks also take an extension suffix, so `after:edit-files:.tsx` matches only edits to `.tsx` files.
+`before:edit-files` and `after:edit-files` also take an extension suffix, so
+`after:edit-files:.tsx` matches only edits to `.tsx` files, as in the worked
+example above.
+
+## Skill slots
+
+Separately from both mechanisms above, a flow author can declare a **skill
+slot**: a named placeholder in the flow itself that you bind to one of your
+local skills. Bind a slot under `skills.bindings`, keyed by slot id:
+
+```yaml
+skills:
+  bindings:
+    review-checklist: my-review-skill
+```
+
+Both the slot id and skill id are kebab-case slugs. The skill id must resolve
+to a local skill. A slot only exists if the flow you're running declared it;
+`circuits.<flow>.selection.skills` and `skill_hooks`, by contrast, work with
+any flow whether or not it declared a slot.
+
+## Local skill discovery
+
+Local skills are discovered from two roots, in order:
+
+1. `~/.agents/skills/<id>/SKILL.md`
+2. `~/.claude/skills/<id>/SKILL.md`
+
+The first root with a matching `<id>/SKILL.md` wins. Only flat ids are
+discovered; namespaced plugin skills are not. If a bound skill id, or a skill
+id listed in a selection override or a hook policy, is not found in either
+root, the run fails with the searched paths.
 
 ## Related
 

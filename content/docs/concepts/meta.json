@@ -3,6 +3,8 @@
   "pages": [
     "how-it-works",
     "how-flows-compose",
+    "blocks",
+    "micro-harness",
     "checkpoints",
     "evidence-and-runs",
     "until-loop",

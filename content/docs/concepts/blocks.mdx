@@ -1,0 +1,74 @@
+---
+title: Blocks
+description: The reusable unit of work a flow composes, each with a typed contract and checks.
+---
+
+A flow is not one long instruction. It is a sequence of steps, and each step
+is one use of a **block**: a reusable kind of work that can appear in more
+than one schematic. Build has a Build plan; Fix has a Fix plan; but the kind
+of work behind "read the codebase before you plan" or "get an independent
+review before you close" is the same block, reused.
+
+A block declares three things, and every step built from it inherits them:
+
+- **A typed input contract**: the named, versioned shapes it reads, such as
+  `flow.brief@v1` or `plan.strategy@v1`.
+- **A typed output contract**: the named, versioned [report](/docs/concepts/evidence-and-runs)
+  it writes, such as `diagnosis.result@v1` or `change.evidence@v1`.
+- **Checks**: the [acceptance criteria](/docs/concepts/evidence-and-runs) and
+  verification that gate whether the step's result is good enough to advance.
+
+Because the contract is the block's, not the flow's, a flow author places a
+block only where the inputs it declares are already available upstream. That
+placement rule is what makes a schematic checkable before a single worker
+runs.
+
+## Three concrete blocks
+
+Rather than describe blocks in the abstract, here are three that recur across
+[Build](/docs/flows/build) and [Fix](/docs/flows/fix).
+
+### Grounding read
+
+Build's Analyze stage and Fix's Analyze stage are both a read-only relay: a
+worker reads the real codebase so the plan that follows is grounded in what
+the code actually does, not just in the brief. It takes the framed brief as
+input and writes back an analysis: what it found, and, in Build's case, the
+change's proposed limits. Nothing it reads is allowed to write; the block's
+tool scope is read-only.
+
+### Implement
+
+Build's Act stage and Fix's Act stage are both an implement block: a relay
+step that reads the plan and turns it into an actual change. This is the one
+block above that needs a writable [connector](/docs/configuration/connectors),
+because everything else in a flow can run read-only. It writes the change as
+evidence: the files touched and why.
+
+### Independent review
+
+Build's Review stage and Fix's Review stage are both a review block: a
+separate worker looks at the change with fresh eyes, no memory of the
+implementer's reasoning, and writes a verdict. In Build it also checks the
+change against the limits Analyze proposed; in Fix it audits the fix at
+medium depth and above. Same block, same contract shape, different flow.
+
+## Why the same block, twice
+
+A block is the unit that gets reused, not the flow. Build and Fix solve
+different problems, but "read before you plan" and "review before you close"
+are the same kind of work either way. Writing that kind of work once, as a
+block with a fixed contract, is what lets both flows share it instead of each
+carrying its own copy.
+
+Each block's step also runs inside its own [micro-harness](/docs/concepts/micro-harness):
+a fresh, purpose-built worker scoped to that step alone, not a shared session
+carried across the whole run.
+
+## Related
+
+- [Micro-harness](/docs/concepts/micro-harness)
+- [How it works](/docs/concepts/how-it-works)
+- [Evidence and runs](/docs/concepts/evidence-and-runs)
+- [Build](/docs/flows/build)
+- [Fix](/docs/flows/fix)

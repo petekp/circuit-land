@@ -10,12 +10,46 @@ Checkpoints are rare. A flow only declares one where human judgment materially
 improves the outcome: choosing a UI variant, approving a risky direction, or
 settling an ambiguous goal scope. The rest of a run advances on its own checks.
 
+A checkpoint pause is not just a CLI prompt asking you to type a word back.
+Before it waits, Circuit writes a structured summary of the decision: the
+evidence gathered so far, the choices on offer, and which one it recommends.
+That summary lands in the run folder alongside everything else the run has
+produced, so the decision is something you can read, not just answer blind.
+
+## What Circuit hands you
+
+When a run reaches a checkpoint, it writes an operator summary into the
+[run folder](/docs/concepts/evidence-and-runs), in three forms:
+
+- `reports/operator-summary.md`, a terminal-friendly summary: a headline, an
+  assessment of where the run stands, the key points behind that assessment,
+  and the next action available to you.
+- `reports/operator-summary.json`, the same content structured for a script or
+  a UI to render: a headline, an assessment, key points, caveats, a receipt
+  (depth, power, worker runs, checks evaluated), and links to the underlying
+  reports.
+- `reports/operator-summary.html`, a richer rendered page covering the same
+  content, meant to be opened rather than piped through a terminal.
+
+The checkpoint's own request sits at
+`reports/checkpoints/<step-id>-request.json`: the allowed choices and the
+declared safe default, if the flow has one. A decision packet describing the
+same choice, its resume target, and links to the evidence behind it sits
+under `reports/decision-packets/`. Once you answer, Circuit writes the
+response next to the request, at
+`reports/checkpoints/<step-id>-response.json`.
+
+None of this is a substitute for reading the actual reports a run produced.
+The operator summary is a front door into them: it tells you what changed,
+what still needs a check, and where the underlying evidence lives, so you are
+not left re-deriving the state of the run from the trace by hand.
+
 ## How it works
 
-When a checkpoint pauses, the run stops in a `waiting_checkpoint` state. The run
-folder records the checkpoint request: the context to review and the allowed
-choices. Some checkpoints also declare a safe default: the choice Circuit takes
-when no operator answers.
+When a checkpoint pauses, the run stops in a `waiting_checkpoint` state. The
+run folder records the checkpoint request: the context to review and the
+allowed choices. Some checkpoints also declare a safe default: the choice
+Circuit takes when no operator answers.
 
 A checkpoint pauses for an operator at high depth and in tournament runs. At
 low and medium depth, it auto-resolves with its declared safe default instead
@@ -43,6 +77,38 @@ circuit resume --run-folder <path> --checkpoint-choice <choice>
 Resume reloads the saved flow from the run folder and re-enters the run with
 your selection. The choice must be one the checkpoint allowed, or resume is
 rejected.
+
+## Walkthrough: the tournament checkpoint
+
+The clearest case for a structured decision, not a bare prompt, is a
+tournament. [Prototype](/docs/flows/prototype) run with `--tournament` fans
+out one implementer per configured model variant. Each variant writes its own
+artifact under its own root, Circuit verifies each one, and a reviewer ranks
+them before the run reaches its checkpoint.
+
+That checkpoint does not just ask "keep it?" the way a single-variant
+Prototype run does. It asks which verified variant to keep, and the operator
+summary is what makes that a real choice instead of a guess: the key points
+carry what each variant is and how it fared under verification and review,
+and the recommendation names the one Circuit ranked highest. You read that
+summary, weigh the variants against each other, and resume with the id of the
+one you want:
+
+```bash
+circuit resume --run-folder <path> --checkpoint-choice <variant-choice>
+```
+
+The same holds for [Explore](/docs/flows/explore)'s decision tournament: it
+drafts candidate options, builds a case for each in parallel, stress-tests
+them, and pauses with a case summary for every option that survived. The
+operator summary is where those cases live side by side, so choosing which
+one to close with is a comparison, not a cold read.
+
+Exactly which fields the operator summary carries for a given checkpoint can
+vary with the flow and the decision, since a flow author writes what a
+checkpoint asks for. What is stable is the shape: a summary in the run
+folder, evidence behind it you can trace back to real reports, and a set of
+named choices you resume with.
 
 ## By flow
 

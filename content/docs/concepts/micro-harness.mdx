@@ -1,0 +1,65 @@
+---
+title: The micro-harness
+description: The small, purpose-built harness Circuit assembles around a single step, then discards.
+---
+
+A **micro-harness** is the small, purpose-built harness Circuit assembles
+around a single step, and only that step. It is not a chat session that
+carries on across the run; it is built fresh, used once, and gone. Every
+[relay step](/docs/concepts/how-it-works#stages-and-steps) in a Circuit run
+gets one.
+
+A micro-harness is made of five pieces:
+
+- **A role**: `researcher`, `implementer`, or `reviewer`, the responsibility
+  this step exists to fill.
+- **A model and effort**, resolved from that role and the
+  [power dial](/docs/flows/modes#power). Research stays on the strong tier at
+  every dial position; implementation and review move with the dial.
+- **A tool scope**: what the worker is allowed to touch. A read-only
+  [connector](/docs/configuration/connectors) can fill `researcher` or
+  `reviewer`; only a writable one can fill `implementer`, because that role is
+  the one role that changes files.
+- **Injected [skills](/docs/configuration/skills)**: whatever the flow's
+  always-loaded selection and any fired skill hooks add for this step, and
+  nothing else.
+- **Only the inputs its [contract](/docs/concepts/blocks) declares**: the
+  step reads the typed reports upstream steps produced, not the whole run's
+  history.
+
+The step runs, writes its one typed output, and the harness is discarded. A
+**mechanical check**, the step's acceptance criteria or a verification
+command, decides whether that output is good enough for the run to advance,
+the same gate described in [Evidence and runs](/docs/concepts/evidence-and-runs).
+
+## Why not one long session
+
+The obvious alternative is a single chat that carries the whole run: frame,
+then plan, then implement, then review, all in one context. That session
+accumulates every prior turn's chatter, including the parts that turned out
+to be wrong, abandoned, or irrelevant to the step running right now. A
+reviewer sharing the implementer's session does not review with fresh eyes;
+it inherits the implementer's assumptions along with its mistakes.
+
+A micro-harness is the direct answer to that. Each step gets exactly the
+inputs its contract names and nothing accumulated from earlier steps leaks
+in. The reviewer that checks a change has never seen the implementer defend
+its own reasoning. Later steps are not carrying the weight of earlier ones,
+which is what keeps a long run from degrading into context rot as it goes.
+
+## What the trace records
+
+Every step runs inside the run's [trace](/docs/concepts/evidence-and-runs):
+the ordered record of what happened, including step entry, the relay request
+sent to the worker, and the typed report the step wrote back. Reading the
+trace after a run, you can see which role ran, what it was given, and what it
+produced, without having to reconstruct any of it from a chat log.
+
+## Related
+
+- [Blocks](/docs/concepts/blocks)
+- [How it works](/docs/concepts/how-it-works)
+- [Evidence and runs](/docs/concepts/evidence-and-runs)
+- [Skills](/docs/configuration/skills)
+- [Depth, power, and modes](/docs/flows/modes)
+- [Connectors](/docs/configuration/connectors)

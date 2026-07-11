@@ -109,12 +109,14 @@ A step has a kind that decides what it does:
 - **Fanout**: run branches and join their outputs.
 - **Sub-run**: run a child flow.
 
-A relay step assembles a fresh worker for that step alone: a model and
+A relay step assembles a fresh worker for that step alone: a
+[micro-harness](/docs/concepts/micro-harness) built from a model and
 effort resolved from its role and the [power dial](/docs/flows/modes#power),
-a tool scope, the skills it needs, and only the inputs its contract declares.
-The worker writes its typed output and is gone, so nothing it accumulated
-leaks into the next step. That is the direct answer to a long session's
-context rot: later steps are not carrying the chatter of earlier ones.
+a tool scope, the [skills](/docs/configuration/skills) it needs, and only the
+inputs its contract declares. The worker writes its typed output and is gone,
+so nothing it accumulated leaks into the next step. That is the direct
+answer to a long session's context rot: later steps are not carrying the
+chatter of earlier ones.
 
 ### Typed inputs and outputs
 
