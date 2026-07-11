@@ -1,45 +1,29 @@
 ---
-title: Depth, power, and modes
-description: Tune thoroughness, model power, tournaments, and autonomy.
+title: Power, process, and modes
+description: Tune model power, process thoroughness, tournaments, and autonomy.
 ---
 
-Two dials and two modes tune a run. You set them as flags on
+One dial and two modes tune a run. You set them as flags on
 [run](/docs/cli/run); the flow rejects anything it does not support, before
 the run starts.
 
-## Depth
-
-Depth is the process dial: how much thoroughness and care a flow spends.
-
-```bash
-circuit run build --goal "..." --depth high
-```
-
-| Value | Description |
-| --- | --- |
-| `low` | Less care. For Fix, also drops the independent review stage. |
-| `medium` | The default. |
-| `high` | More care. Checkpoints pause for you instead of auto-resolving. |
-
-Build, Explore, and Fix support all three values. Prototype supports `medium`
-and `high`. Review and Pursue run at `medium` only.
-
 ## Power
 
-Power is the model dial: how much model each worker run gets. It never names
-models. Per-connector tier tables translate the dial into a concrete model or
-reasoning effort at selection time.
+Power is the one taught dial: how much model each worker run gets. It never
+names models, and per-connector tier tables translate the dial into a
+concrete model or reasoning effort at selection time. Power also derives how
+much process thoroughness the run spends, so turning one dial sets both.
 
 ```bash
 circuit run fix --goal "..." --power low
 ```
 
-| Value | What workers get |
-| --- | --- |
-| `auto` | The run picks the tier. The researcher recommends one, the engine clamps it to your `power_auto` bounds, and the receipt reports the resolution: `power low (auto)`. |
-| `low` | Research on the big tier, implementation on the small tier, review on the middle tier. |
-| `medium` | The default. Research on the big tier, implementation and review on the middle tier. |
-| `high` | Everything on the big tier. |
+| Value | What workers get | Derived process |
+| --- | --- | --- |
+| `auto` | The run picks the tier. The researcher recommends one, the engine clamps it to your `power_auto` bounds, and the receipt reports the resolution: `power low (auto)`. | `medium`, while the run picks its own model tier |
+| `low` | Research on the big tier, implementation on the small tier, review on the middle tier. | `low` |
+| `medium` | The default. Research on the big tier, implementation and review on the middle tier. | `medium` |
+| `high` | Everything on the big tier. | `high` |
 
 Research stays on the big tier at every dial position: the reading that
 steers the run is the wrong place to save. A worker retry automatically runs
@@ -58,19 +42,46 @@ when the dial is `auto`. The end-of-run receipt line reports the dial position
 and any escalations, so a cheap run that had to escalate is visible, not
 silent.
 
+## Process
+
+Process is the thoroughness value a run spends: how much care a flow takes.
+Power derives it, so you rarely set it directly. `low`, `medium`, and `high`
+map straight across from the power dial, and `auto` derives a medium process
+while the run picks its own model tier.
+
+| Value | Description |
+| --- | --- |
+| `low` | Less care. For Fix, also drops the independent review stage. |
+| `medium` | The default. |
+| `high` | More care. Checkpoints pause for you instead of auto-resolving. |
+
+The derived process clamps silently to what each flow supports. Build,
+Explore, and Fix run the full ladder. Prototype floors at medium. Review and
+Pursue always run medium, regardless of the power dial.
+
+### Overriding the derivation
+
+`--process <low|medium|high>` is an advanced flag that explicitly overrides
+the process power derives, for the rare case where model strength and process
+thoroughness should split: a cheap model working through a high-care process,
+or a strong model on a quick pass.
+
+```bash
+circuit run build --goal "..." --power low --process high
+```
+
 ## Tournament
 
 Tournament fans out multiple candidates and selects one. Supported by Explore
 and Prototype.
 
 ```bash
-circuit run explore --goal "..." --tournament --tournament-n 3
+circuit run explore --goal "..." --tournament 3
 ```
 
 | Flag | Description | Default |
 | --- | --- | --- |
-| `--tournament` | Fan out candidates and select one. | off |
-| `--tournament-n <2\|3\|4>` | How many candidates to fan out. Requires `--tournament`. | `3` |
+| `--tournament [2\|3\|4]` | Fan out candidates and select one. Optional candidate count. | off (`3` when set) |
 
 ## Autonomous
 
@@ -81,11 +92,12 @@ run does not complete. Supported by Build, Fix, Explore, Prototype, and Pursue.
 circuit run fix --goal "..." --autonomous
 ```
 
-## Compiled depth
+## Compiled process
 
 A run records one compiled thoroughness value. Tournament and autonomous each
-resolve to their own compiled depth; otherwise it is the depth dial. A flow
-falls back to its defaults when you pass nothing.
+resolve to their own compiled process; otherwise it is the process power
+derives, or the `--process` override when you set one. A flow falls back to
+its defaults when you pass nothing.
 
 ## Related
 

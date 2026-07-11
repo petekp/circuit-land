@@ -30,13 +30,13 @@ flowchart LR
 - **Act.** Applies one focused change.
 - **Verify.** Runs the proof, computes the change-set against the baseline, and
   reruns the regression command to confirm it now passes.
-- **Review.** Independent audit of the change at medium depth and above.
+- **Review.** Independent audit of the change at medium process and above.
 - **Close.** Emits the result. It can only report `fixed` when verification
   passed, the regression was proved and now clears, and the change-set matches
   the declared files.
 
-`low` depth drops the review pass; `medium` and `high` keep it. Fix has no
-checkpoints. See [Depth, power, and modes](/docs/flows/modes).
+`low` process drops the review pass; `medium` and `high` keep it. Fix has no
+checkpoints. See [Power, process, and modes](/docs/flows/modes).
 
 ## Example
 

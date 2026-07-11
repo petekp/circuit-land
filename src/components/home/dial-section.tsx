@@ -70,18 +70,19 @@ export function DialSection() {
         </h2>
         <p className="text-[15px] leading-relaxed text-muted-foreground">
           Model choice moves out of your head and into the process. Steps
-          declare roles, one dial prices those roles, and the split is visible
-          before a single token is spent.
+          declare archetypes, one dial prices those archetypes, and the split
+          is visible before a single token is spent.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
         <div className="flex max-w-xl flex-col gap-5 text-[14px] leading-relaxed text-muted-foreground">
           <p>
-            Every step in a flow declares a role. The researcher reads the code
-            and sets direction. The implementer makes the edits. The reviewer
-            judges the result. Circuit resolves each step&apos;s model and
-            effort from its role and the dial at the moment the step runs.
+            Every step in a flow declares an archetype. The researcher reads
+            the code and sets direction. The implementer makes the edits. The
+            reviewer judges the result. Circuit resolves each step&apos;s
+            model and effort from its archetype and the dial at the moment
+            the step runs.
           </p>
           <p>
             The allocation is deliberately lopsided. Turn the dial down and the
@@ -97,11 +98,11 @@ export function DialSection() {
           </p>
           <p>
             After the run, the receipt reports the dial position and what each
-            role spent.
+            archetype spent.
           </p>
           <div className="mt-1 flex flex-col gap-2">
             <DocsLink href="/docs/flows/modes#power">
-              Power and depth, in detail
+              Power and process, in detail
             </DocsLink>
             <DocsLink href="/docs/configuration/selection">
               How selection resolves, layer by layer

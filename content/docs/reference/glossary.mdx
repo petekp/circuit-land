@@ -24,7 +24,7 @@ The terms Circuit uses, in the order you meet them. See
 - **Step**: one executable use of a block inside a schematic or compiled flow.
 - **Route**: a named outcome path from one step to the next.
 - **Run**: one execution of a flow.
-- **Mode**: a named flow entry option, often paired with a depth.
+- **Mode**: a named flow entry option, often paired with a process.
 
 ## Checks and evidence
 
@@ -42,17 +42,18 @@ The terms Circuit uses, in the order you meet them. See
 
 ## Dials
 
-- **Depth**: the process dial: how much thoroughness and care a run spends. Set with `--depth`: `low`, `medium`, or `high`.
-- **Power**: the model dial: how much model each worker run gets. Set with `--power`: `auto`, `low`, `medium`, or `high`. With `auto`, the run's researcher recommends a tier, clamped to the `power_auto` bounds in config. Never names models; per-connector tier tables translate it at selection time.
-- **Compiled depth**: the single thoroughness value a run records after Circuit combines the depth dial with mode flags such as tournament or autonomous.
+- **Power**: the one taught dial: how much model each worker run gets. Set with `--power`: `auto`, `low`, `medium`, or `high`. With `auto`, the run's researcher recommends a tier, clamped to the `power_auto` bounds in config. Never names models; per-connector tier tables translate it at selection time. Power also derives the run's process: `low`, `medium`, and `high` map straight across, and `auto` derives a medium process while the run picks its own model tier.
+- **Process**: how much thoroughness and care a run spends. Power derives it by default; the advanced `--process` flag explicitly overrides that derivation, for the rare case where model strength and process thoroughness should split. Values are `low`, `medium`, or `high`, silently clamped to what each flow supports.
+- **Compiled process**: the single thoroughness value a run records after Circuit combines the derived or overridden process with mode flags such as tournament or autonomous.
 - **Effort**: provider-level reasoning allocation. Not the power dial.
-- **Receipt**: the end-of-run line reporting depth, power, worker runs, escalations, and check results. An `auto` power dial reports its resolution here, such as `power low (auto)`.
+- **Receipt**: the end-of-run line reporting process, power, worker runs, escalations, and check results. An `auto` power dial reports its resolution here, such as `power low (auto)`.
 
 ## Relay
 
 - **Relay**: a handoff from Circuit to another worker or host.
 - **Connector**: a backend or host that can run relayed work.
 - **Role**: the worker responsibility for a relay, such as researcher, implementer, or reviewer.
+- **Archetype**: the role-shaped slot in a flow that a model fills. The power dial decides which model fills each archetype.
 
 ## Step kinds
 

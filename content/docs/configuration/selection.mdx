@@ -78,7 +78,8 @@ at parse time instead of silently dropping your override.
 ## Selection and the power dial
 
 The [power dial](/docs/flows/modes#power) fills `model` and `effort` only when
-no layer set them. An explicit `model` or `effort` in any selection override
+no layer set them: it is what decides which model fills each step's
+archetype. An explicit `model` or `effort` in any selection override
 wins over the dial. Set the dial itself with `--power` on a run or
 `defaults.power` in config; both accept `auto`, `low`, `medium`, or `high`.
 With `auto`, the run's researcher recommends a tier, the engine clamps it to
@@ -89,4 +90,4 @@ the `power_auto` bounds, and the receipt reports the resolution, such as
 ## Related
 
 - [Skills](/docs/configuration/skills)
-- [Depth, power, and modes](/docs/flows/modes)
+- [Power, process, and modes](/docs/flows/modes)

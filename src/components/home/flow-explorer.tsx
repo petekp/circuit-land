@@ -1634,7 +1634,7 @@ function PromptTile({
           ],
           [
             { text: "⎿ ", color: "dim" },
-            { text: "depth", color: "cyan" },
+            { text: "process", color: "cyan" },
             { text: " medium" },
           ],
           [

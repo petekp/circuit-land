@@ -47,7 +47,7 @@ relays a comparison to a reviewer, and ranks them. This needs
 ## Checkpoints
 
 After the artifact is verified, a checkpoint decides what happens to the
-prototype. At high depth or in a tournament run, Circuit pauses for your call;
+prototype. At high process or in a tournament run, Circuit pauses for your call;
 otherwise it auto-resolves to the safe default, Keep Prototype (see
 [Checkpoints](/docs/concepts/checkpoints)). The choices:
 
@@ -71,7 +71,7 @@ circuit run prototype --goal 'sketch a custom flow builder UI'
 Fan out across variant models:
 
 ```bash
-circuit run prototype --goal 'compare command palette layouts' --tournament --tournament-n 3
+circuit run prototype --goal 'compare command palette layouts' --tournament 3
 ```
 
 Configure `circuits.prototype.variant_models` first, or the run exits without

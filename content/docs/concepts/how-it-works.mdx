@@ -1,6 +1,6 @@
 ---
 title: How Circuit works
-description: The evidence gate, the honesty machinery, per-role model allocation, and the run folder that proves what happened.
+description: The evidence gate, the honesty machinery, per-archetype model allocation, and the run folder that proves what happened.
 ---
 
 Circuit is a workflow engine that runs typed developer flows. The Claude
@@ -58,19 +58,20 @@ exercise it; no flow in the public catalog opts into it yet. See
 [The until loop](/docs/concepts/until-loop) for the full mechanism and its
 honest limits.
 
-## One dial, per-role model allocation
+## One dial, per-archetype model allocation
 
-Circuit decides model and effort per step, not once for the whole run. Turn
-one dial and the engine allocates: steps that decide direction keep the
-strong model, steps that execute run on a cheaper one, and a flow can even
-pin one step to a different connector entirely. Research stays on the strong
-tier at every dial position, because the reading that steers a run is the
-wrong place to save.
+Circuit decides model and effort per step, not once for the whole run. Each
+step fills an archetype, researcher, implementer, or reviewer, and turning
+one dial decides which model fills it: archetypes that decide direction keep
+the strong model, archetypes that execute run on a cheaper one, and a flow
+can even pin one step to a different connector entirely. Research stays on
+the strong tier at every dial position, because the reading that steers a run
+is the wrong place to save.
 
 You do not have to take that on faith.
 [`circuit preview`](/docs/cli/preview) prints the connector, model, and
 effort every step would get, at every dial position, without spawning a
-single worker. After a real run, the summary shows what each role actually
+single worker. After a real run, the summary shows what each archetype actually
 spent.
 
 ## The run folder
@@ -112,7 +113,7 @@ A step has a kind that decides what it does:
 
 A relay step assembles a fresh worker for that step alone: a
 [micro-harness](/docs/concepts/micro-harness) built from a model and
-effort resolved from its role and the [power dial](/docs/flows/modes#power),
+effort resolved from its archetype and the [power dial](/docs/flows/modes#power),
 a tool scope, the [skills](/docs/configuration/skills) it needs, and only the
 inputs its contract declares. The worker writes its typed output and is gone,
 so nothing it accumulated leaks into the next step. That is the direct
@@ -170,6 +171,6 @@ flowchart LR
 - [Evidence and runs](/docs/concepts/evidence-and-runs)
 - [The until loop](/docs/concepts/until-loop)
 - [Checkpoints](/docs/concepts/checkpoints)
-- [Depth, power, and modes](/docs/flows/modes)
+- [Power, process, and modes](/docs/flows/modes)
 - [Flows](/docs/flows/overview)
 - [Connectors](/docs/configuration/connectors)
