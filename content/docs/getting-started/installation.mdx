@@ -47,8 +47,10 @@ circuit doctor
 ```
 
 Circuit routes work through connector CLIs (`claude` by default), so a
-signed-in Claude Code install is a prerequisite. `circuit doctor` checks your
-connectors before a run spends anything on a broken one.
+signed-in Claude Code install is a prerequisite. `circuit doctor` confirms
+the connectors your runs actually route through are ready before a run
+spends anything on a broken one; connector CLIs you never route to are
+listed as optional and never fail the check.
 
 Run a task with `circuit run <flow> --goal '<your task>'`. The CLI requires
 an explicit flow name: `build`, `fix`, `explore`, `review`, or `prototype`.
