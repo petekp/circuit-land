@@ -1103,6 +1103,23 @@
   margin-inline: calc(50% - 50vw);
 }
 
+/* The well the focus explorer sits in. The circuit-field canvas runs fixed
+   behind the whole page; letting it shine through the explorer put two
+   competing visualizations in the same frame. The well is a near-opaque
+   panel — a whisper of the field still reads through (~8%) so the surface
+   stays alive, but the diagram owns its own contrast again. No overflow
+   clipping here: the focus layout's nav and info columns are sticky, and an
+   overflow on any ancestor would quietly unpin them. No backdrop-filter
+   either — blurring a live WebGL layer every frame is a compositor tax. */
+.flow-focus-well {
+  border-radius: 28px;
+  corner-shape: squircle;
+  background: color-mix(in oklab, var(--brand-panel-deep) 92%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--foreground) 7%, transparent),
+    0 24px 80px -32px rgb(0 0 0 / 0.55);
+}
+
 .flow-focus-shell {
   display: flex;
   flex-direction: column;
