@@ -31,7 +31,7 @@ export function Hero() {
             </span>
           </div>
           <p className="pl-px text-[11px] leading-none text-muted-foreground">
-            a CLI engine, driven from Claude Code and Codex
+            a workflow engine, driven from Claude Code and Codex
           </p>
         </div>
         <div className="flex items-center gap-4 text-muted-foreground">

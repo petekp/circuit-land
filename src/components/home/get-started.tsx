@@ -42,7 +42,7 @@ const installTargets: InstallTarget[] = [
    after uninstall degrades to a no-op, not an error. */
 const agentInstallInstructions = `You're about to install Circuit for me.
 
-What Circuit is: a CLI engine that runs coding tasks through a structured process (frame the task, plan, act, verify, review) and leaves a written record of every run. The Claude Code and Codex plugins are the bridge that let you drive it from here, and today they're also the fastest way to install it. It doesn't replace you; it's the process you follow while doing the work. Docs live at ${siteUrl}/docs. Fetch them if I ask how Circuit works or what it's good for, instead of guessing.
+What Circuit is: a workflow engine that runs coding tasks through a structured process (frame the task, plan, act, verify, review) and leaves a written record of every run. Underneath it is a plain CLI; the Claude Code and Codex plugins are the bridge that let you drive it from here, and today they're also the fastest way to install it. It doesn't replace you; it's the process you follow while doing the work. Docs live at ${siteUrl}/docs. Fetch them if I ask how Circuit works or what it's good for, instead of guessing.
 
 If you are Claude Code, run these shell commands yourself:
 claude plugin marketplace add petekp/circuit
