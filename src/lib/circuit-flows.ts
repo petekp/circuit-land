@@ -11,7 +11,6 @@ export const CIRCUIT_FLOWS = [
   { key: "review", name: "Review" },
   { key: "explore", name: "Explore" },
   { key: "prototype", name: "Prototype" },
-  { key: "pursue", name: "Pursue" },
 ] as const;
 
 export type CircuitFlowKey = (typeof CIRCUIT_FLOWS)[number]["key"];

@@ -74,7 +74,6 @@ type ComposerFlow = {
 const FLOW_MOTIFS = {
   build: ["empty", "empty", "filled", "empty", "filled", "filled", "filled", "filled", "filled"],
   fix: ["empty", "filled", "empty", "filled", "filled", "filled", "empty", "filled", "empty"],
-  pursue: ["empty", "empty", "filled", "empty", "filled", "empty", "filled", "empty", "empty"],
   explore: ["filled", "empty", "filled", "empty", "filled", "empty", "filled", "empty", "filled"],
   review: ["empty", "filled", "empty", "filled", "empty", "filled", "empty", "filled", "empty"],
   prototype: ["filled", "filled", "filled", "filled", "empty", "filled", "filled", "filled", "filled"],
@@ -106,24 +105,6 @@ const FLOWS: ComposerFlow[] = [
       "gather-context",
       "diagnose",
       "act",
-      "run-verification",
-      "review",
-      "close-with-evidence",
-    ],
-  },
-  {
-    key: "pursue",
-    name: "Pursue",
-    color: "var(--flow-pursue)",
-    accent: "var(--flow-pursue-accent)",
-    motif: FLOW_MOTIFS.pursue,
-    summary:
-      "Coordinate several related changes without pretending they run at once.",
-    blocks: [
-      "pursue",
-      "coordinate-pursuits",
-      "plan",
-      "batch",
       "run-verification",
       "review",
       "close-with-evidence",
@@ -409,7 +390,6 @@ type AxisSupport = {
 const AXIS_SUPPORT: Record<Exclude<FlowKey, "custom">, AxisSupport> = {
   build: { depths: ["low", "medium", "high"], tournament: false, autonomous: true },
   fix: { depths: ["low", "medium", "high"], tournament: false, autonomous: true },
-  pursue: { depths: ["medium"], tournament: false, autonomous: true },
   explore: { depths: ["low", "medium", "high"], tournament: true, autonomous: true },
   review: { depths: ["medium"], tournament: false, autonomous: false },
   prototype: { depths: ["medium", "high"], tournament: true, autonomous: true },

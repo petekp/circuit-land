@@ -56,8 +56,8 @@ while the run picks its own model tier.
 | `high` | More care. Checkpoints pause for you instead of auto-resolving. |
 
 The derived process clamps silently to what each flow supports. Build,
-Explore, and Fix run the full ladder. Prototype floors at medium. Review and
-Pursue always run medium, regardless of the power dial.
+Explore, and Fix run the full ladder. Prototype floors at medium. Review
+always runs medium, regardless of the power dial.
 
 ### Overriding the derivation
 
@@ -86,7 +86,7 @@ circuit run explore --goal "..." --tournament 3
 ## Autonomous
 
 Autonomous enables a bounded continuation loop that routes recovery flows when a
-run does not complete. Supported by Build, Fix, Explore, Prototype, and Pursue.
+run does not complete. Supported by Build, Fix, Explore, and Prototype.
 
 ```bash
 circuit run fix --goal "..." --autonomous

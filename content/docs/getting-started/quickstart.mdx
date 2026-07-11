@@ -10,8 +10,8 @@ it stops for your call when the result depends on it.
 
 A real run spawns worker steps that spend model time: a small first task
 typically takes several minutes end to end and costs a few dollars at the
-default dials. Flows that can edit files (Build, Fix, Prototype, Pursue) say
-so before the work starts; Review and Explore never edit code. If you want to
+default dials. Flows that can edit files (Build, Fix, Prototype) say so
+before the work starts; Review and Explore never edit code. If you want to
 see what a run would do before spending anything, jump to
 [preview](#see-the-plan-before-you-spend-anything) below.
 
@@ -22,8 +22,8 @@ In your coding agent, describe the task:
 ```
 
 The agent reads the task and recommends a flow: Build, Fix, Explore, Review,
-Prototype, or Pursue. You do not pick it; Circuit records the selected flow when
-the run starts, then runs it step by step.
+or Prototype. You do not pick it; Circuit records the selected flow when the
+run starts, then runs it step by step.
 
 ## Respond to a checkpoint
 
