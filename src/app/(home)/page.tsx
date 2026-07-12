@@ -10,7 +10,7 @@ import { WhatYouCanRun } from "@/components/home/what-you-can-run";
 import { siteUrl } from "@/lib/site-url";
 
 const siteDescription =
-  "Encode how you want agent work done into repeatable flows for Claude Code and Codex. Circuit routes each step to the right model, and no step can close without the evidence its checks require.";
+  "Encode how you want agent work done into repeatable flows for Claude Code and Codex. Circuit steps can use different model configurations, and no step can close without the evidence its checks require.";
 
 export const metadata: Metadata = {
   title: "Circuit — the process your coding agent follows",
