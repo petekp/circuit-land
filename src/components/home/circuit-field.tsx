@@ -305,18 +305,6 @@ void main(){
 
 const hx = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
 
-function canvasBackground(canvas: HTMLCanvasElement): [number, number, number] {
-  const probe = document.createElement("canvas");
-  probe.width = 1;
-  probe.height = 1;
-  const context = probe.getContext("2d");
-  if (!context) return [22 / 255, 23 / 255, 24 / 255];
-  context.fillStyle = getComputedStyle(canvas).backgroundColor;
-  context.fillRect(0, 0, 1, 1);
-  const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
-  return [r / 255, g / 255, b / 255];
-}
-
 /* Dense 15-tap gaussian — tap spacing stays <= ~1 texel (large radii are
    handled by downsampling first), so the blur smears instead of ghosting. */
 const BLUR_F = `precision mediump float; varying vec2 vUV; uniform sampler2D uTex; uniform vec2 uDir;
@@ -342,7 +330,7 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
   });
   if (!glCtx) return undefined;
   const gl: WebGLRenderingContext = glCtx;
-  const background = canvasBackground(canvas);
+  const background: [number, number, number] = [0, 0, 0];
 
   const compile = (type: number, src: string) => {
     const s = gl.createShader(type)!;
@@ -763,7 +751,7 @@ export function CircuitField() {
   return (
     <>
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
-        <canvas ref={ref} className="h-full w-full bg-background" />
+        <canvas ref={ref} className="h-full w-full bg-black" />
       </div>
       <CircuitFieldTuneGate />
     </>

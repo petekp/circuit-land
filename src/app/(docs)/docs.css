@@ -24,7 +24,7 @@
    layered defaults regardless of source order. */
 :root,
 .dark {
-  --color-fd-background: hsl(220 3% 9%); /* --brand-bg */
+  --color-fd-background: #000; /* --brand-bg */
   --color-fd-foreground: hsl(60 10% 92%); /* --brand-text */
   --color-fd-card: hsl(220 3% 13%); /* --brand-panel */
   --color-fd-card-foreground: hsl(60 10% 92%);

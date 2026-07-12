@@ -8,7 +8,7 @@ import type { ReactElement } from "react";
 // globals.css (see the BRAND THEME block there): ImageResponse can't read
 // CSS vars, so the hex values below mirror --brand-bg and --brand-signal.
 // Re-theming the site means updating these two constants too.
-const BG = "#161718"; // --brand-bg  hsl(220 3% 9%)
+const BG = "#000000"; // --brand-bg
 const INK = "#06eaa9"; // --brand-signal  hsl(163 95% 47%)
 
 const STADIUM_D = "M 23 15 H 41 A 17 17 0 0 1 41 49 H 23 A 17 17 0 0 1 23 15 Z";

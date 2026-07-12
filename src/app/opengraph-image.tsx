@@ -12,7 +12,7 @@ export const alt =
 
 // Brand hex values mirror the BRAND THEME block in globals.css
 // (ImageResponse can't read CSS vars). Re-theming means updating these.
-const BG = "#161718"; // --brand-bg
+const BG = "#000000"; // --brand-bg
 const TEXT = "#edede9"; // --brand-text
 const MUTED = "#9b9da1"; // --brand-muted
 const SIGNAL = "#06eaa9"; // --brand-signal

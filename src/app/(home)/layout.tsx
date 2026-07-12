@@ -70,7 +70,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   // Matches --brand-bg in globals.css so mobile browser chrome blends with
   // the dark page.
-  themeColor: "#161718",
+  themeColor: "#000000",
 };
 
 export default function RootLayout({

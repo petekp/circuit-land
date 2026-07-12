@@ -74,7 +74,7 @@
    diagrams, deliberately not part of the brand theme.
    ========================================================================== */
 :root {
-  --brand-bg: oklch(0.2033 0.002 264.52);
+  --brand-bg: #000;
   --brand-panel: oklch(0.2468 0.0027 264.51); /* cards, raised surfaces */
   --brand-panel-deep: oklch(0.1745 0.002 264.51); /* terminal wells, darker than bg */
   --brand-surface: oklch(0.2987 0.0035 264.51); /* muted fills, hover washes */
