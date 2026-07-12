@@ -511,16 +511,31 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
       const life = Math.min(1, age / 4) * Math.min(1, (L.ttl - age) / 4);
       if (life <= 0) continue;
 
-      // sweep band in plane space
-      const T = L.T / RECIPE.sweepSpeed;
-      const cycle = T + L.gap * RECIPE.gapMult;
-      const ph = (((t + L.phase) % cycle) + cycle) % cycle;
+      // Sweep timing can stay organic and layer-specific, or lock into a
+      // single depth-led cascade. Timing variation blends between the two.
+      const variation = RECIPE.timingVariation;
+      const T =
+        (RECIPE.sweepDuration + (L.T - RECIPE.sweepDuration) * variation) /
+        RECIPE.sweepSpeed;
+      const gap =
+        (RECIPE.sweepGap + (L.gap - RECIPE.sweepGap) * variation) * RECIPE.gapMult;
+      const cycle = T + gap;
+      const depthU = RECIPE.depthOrder === "nearToFar" ? L.z : 1 - L.z;
+      const phase =
+        RECIPE.phaseMode === "depth" ? -depthU * RECIPE.depthStagger : L.phase;
+      const ph = (((t + phase) % cycle) + cycle) % cycle;
       const sweeping = ph <= T;
       if (!sweeping && RECIPE.floor <= 0) continue;
       const y0 = -0.75 * H;
       const y1 = 0.75 * H;
       const u = sweeping ? ph / T : 0;
-      const yc = L.dir > 0 ? y0 + (y1 - y0) * u : y1 - (y1 - y0) * u;
+      const direction =
+        RECIPE.sweepDirection === "mixed"
+          ? L.dir
+          : RECIPE.sweepDirection === "topToBottom"
+            ? 1
+            : -1;
+      const yc = direction > 0 ? y0 + (y1 - y0) * u : y1 - (y1 - y0) * u;
       const sig = RECIPE.band * H;
       const s2 = 2 * sig * sig;
 
@@ -531,8 +546,8 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
       // terminal taper: fade to 0 toward the diagram's own top/bottom extent
       const hh = (L.Ht * (1 + RECIPE.breathe * Math.sin(t * L.bphs + L.bph))) / 2;
       const tEdge = Math.max(1e-3, hh * RECIPE.taper);
-      const alphaAt = (py: number) => {
-        const g = sweeping ? Math.exp(-((py - yc) * (py - yc)) / s2) : 0;
+      const alphaAt = (py: number, flowY: number) => {
+        const g = sweeping ? Math.exp(-((flowY - yc) * (flowY - yc)) / s2) : 0;
         let a = Math.max(RECIPE.floor, g) * life;
         const k = Math.min(1, Math.max(0, (hh - Math.abs(py)) / tEdge));
         a *= k * k * (3 - 2 * k);
@@ -542,21 +557,43 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
       // signed band position for the gradient: +1 at the leading edge of the
       // travelling band, -1 at the trailing edge
       const uSpan = sig * 2.5;
-      const uAt = (py: number) =>
-        !sweeping ? 0 : Math.max(-1, Math.min(1, ((py - yc) / uSpan) * L.dir));
+      const uAt = (flowY: number) =>
+        !sweeping ? 0 : Math.max(-1, Math.min(1, ((flowY - yc) / uSpan) * direction));
 
       // build projected line quads
       const polys = samples(L, t);
       const wHalf = RECIPE.stroke / 2;
       const verts: number[] = [];
       for (const poly of polys) {
+        // Re-parameterize the stroke by arc length. Interpolating between its
+        // endpoint heights makes the pulse traverse bends and horizontal runs
+        // instead of projecting one flat gradient through the whole diagram.
+        const distances = [0];
+        for (let i = 1; i < poly.length; i++) {
+          distances.push(
+            distances[i - 1] +
+              Math.hypot(poly[i][0] - poly[i - 1][0], poly[i][1] - poly[i - 1][1]),
+          );
+        }
+        const pathLength = distances[distances.length - 1] || 1;
+        const startY = poly[0][1];
+        const endY = poly[poly.length - 1][1];
+        const flowYAt = (index: number) => {
+          const pathU = distances[index] / pathLength;
+          const wireY = startY + (endY - startY) * pathU;
+          const planarY = poly[index][1];
+          return planarY + (wireY - planarY) * RECIPE.wireFlow;
+        };
+
         let prev = project(poly[0][0], poly[0][1], L.z);
-        let ga = alphaAt(poly[0][1]);
-        let ua = uAt(poly[0][1]);
+        const firstFlowY = flowYAt(0);
+        let ga = alphaAt(poly[0][1], firstFlowY);
+        let ua = uAt(firstFlowY);
         for (let i = 1; i < poly.length; i++) {
           const cur = project(poly[i][0], poly[i][1], L.z);
-          const gb = alphaAt(poly[i][1]);
-          const ub = uAt(poly[i][1]);
+          const flowY = flowYAt(i);
+          const gb = alphaAt(poly[i][1], flowY);
+          const ub = uAt(flowY);
           if (ga > 0.008 || gb > 0.008) {
             const dx = cur[0] - prev[0];
             const dy = cur[1] - prev[1];

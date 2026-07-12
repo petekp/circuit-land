@@ -1,18 +1,62 @@
 "use client";
 
-import { DialRoot, useDialKit } from "dialkit";
+import { DialRoot, DialStore, useDialKit } from "dialkit";
 import "dialkit/styles.css";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import {
+  CIRCUIT_FIELD_CHOREOGRAPHY_PRESETS,
   CIRCUIT_FIELD_TUNE_EVENT,
+  type CircuitFieldChoreographyPreset,
   circuitFieldParams,
 } from "./circuit-field-params";
+
+const PRESET_OPTIONS: Array<{ label: string; value: string }> = [
+  { label: "Current", value: "current" },
+  { label: "Depth Cascade", value: "depthCascade" },
+];
+
+function applyChoreographyPreset(presetName: CircuitFieldChoreographyPreset) {
+  const panel = DialStore.getPanels().find(({ name }) => name === "Circuit field");
+  if (!panel) return;
+
+  const preset = CIRCUIT_FIELD_CHOREOGRAPHY_PRESETS[presetName];
+  const updates = {
+    "focus.rackSpeed": preset.rackSpeed,
+    "focus.aperture": preset.aperture,
+    "focus.minBlur": preset.minBlur,
+    "layers.lifetime": preset.lifetime,
+    "movement.sweepSpeed": preset.sweepSpeed,
+    "movement.band": preset.band,
+    "movement.gapMult": preset.gapMult,
+    "movement.floor": preset.floor,
+    "movement.timeScale": preset.timeScale,
+    "movement.breathe": preset.breathe,
+    "movement.sweepDirection": preset.sweepDirection,
+    "movement.phaseMode": preset.phaseMode,
+    "movement.depthOrder": preset.depthOrder,
+    "movement.depthStagger": preset.depthStagger,
+    "movement.sweepDuration": preset.sweepDuration,
+    "movement.sweepGap": preset.sweepGap,
+    "movement.timingVariation": preset.timingVariation,
+    "movement.wireFlow": preset.wireFlow,
+    "color.exposure": preset.exposure,
+  };
+
+  for (const [path, value] of Object.entries(updates)) {
+    DialStore.updateValue(panel.id, path, value);
+  }
+}
 
 function CircuitFieldControls() {
   const values = useDialKit(
     "Circuit field",
     {
+      choreography: {
+        type: "select",
+        options: PRESET_OPTIONS,
+        default: "depthCascade",
+      },
       quality: {
         resolution: [circuitFieldParams.resolution, 0.75, 3, 0.25],
       },
@@ -42,6 +86,36 @@ function CircuitFieldControls() {
         lifetime: [circuitFieldParams.lifetime, 4, 40, 0.5],
       },
       movement: {
+        sweepDirection: {
+          type: "select",
+          options: [
+            { label: "Mixed", value: "mixed" },
+            { label: "Top to bottom", value: "topToBottom" },
+            { label: "Bottom to top", value: "bottomToTop" },
+          ],
+          default: circuitFieldParams.sweepDirection,
+        },
+        phaseMode: {
+          type: "select",
+          options: [
+            { label: "Random", value: "random" },
+            { label: "Depth cascade", value: "depth" },
+          ],
+          default: circuitFieldParams.phaseMode,
+        },
+        depthOrder: {
+          type: "select",
+          options: [
+            { label: "Near to far", value: "nearToFar" },
+            { label: "Far to near", value: "farToNear" },
+          ],
+          default: circuitFieldParams.depthOrder,
+        },
+        depthStagger: [circuitFieldParams.depthStagger, 0, 30, 0.25],
+        sweepDuration: [circuitFieldParams.sweepDuration, 1, 20, 0.25],
+        sweepGap: [circuitFieldParams.sweepGap, 0, 30, 0.25],
+        timingVariation: [circuitFieldParams.timingVariation, 0, 1, 0.01],
+        wireFlow: [circuitFieldParams.wireFlow, 0, 1, 0.01],
         sweepSpeed: [circuitFieldParams.sweepSpeed, 0.1, 3, 0.01],
         band: [circuitFieldParams.band, 0.03, 0.6, 0.005],
         gapMult: [circuitFieldParams.gapMult, 0, 2, 0.01],
@@ -65,8 +139,16 @@ function CircuitFieldControls() {
       },
     },
   );
+  const selectedPreset = values.choreography as CircuitFieldChoreographyPreset;
+  const previousPreset = useRef(selectedPreset);
 
   useEffect(() => {
+    if (selectedPreset !== previousPreset.current) {
+      previousPreset.current = selectedPreset;
+      applyChoreographyPreset(selectedPreset);
+      return;
+    }
+
     Object.assign(circuitFieldParams, {
       ...values.camera,
       ...values.focus,
@@ -78,7 +160,7 @@ function CircuitFieldControls() {
       count: Math.round(values.layers.count),
     });
     window.dispatchEvent(new Event(CIRCUIT_FIELD_TUNE_EVENT));
-  }, [values]);
+  }, [selectedPreset, values]);
 
   return null;
 }
