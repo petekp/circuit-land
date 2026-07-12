@@ -46,10 +46,10 @@ npm install -g @petekp/circuit
 circuit doctor
 ```
 
-Circuit routes work through connector CLIs (`claude` by default), so a
+Circuit does the work through connector CLIs (`claude` by default), so a
 signed-in Claude Code install is a prerequisite. `circuit doctor` confirms
-the connectors your runs actually route through are ready before a run
-spends anything on a broken one; connector CLIs you never route to are
+the connectors your runs would actually use are ready before a run
+spends anything on a broken one; connector CLIs no flow chooses are
 listed as optional and never fail the check.
 
 Run a task with `circuit run <flow> --goal '<your task>'`. The CLI requires
