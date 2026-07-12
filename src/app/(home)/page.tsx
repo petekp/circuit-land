@@ -38,8 +38,8 @@ const jsonLd = {
 export default function Home() {
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-10 sm:py-16">
-      {/* Fixed, transparent WebGL background: the diagram field runs behind
-          all content; scroll tilts the camera from -40° to +40°. */}
+      {/* Fixed, opaque WebGL page ground: the diagram field runs behind all
+          content; scroll tilts the camera from -40° to +40°. */}
       <CircuitField />
       <script
         type="application/ld+json"

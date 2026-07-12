@@ -1,63 +1,28 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef } from "react";
+
+import {
+  CIRCUIT_FIELD_TUNE_EVENT,
+  circuitFieldParams as RECIPE,
+} from "./circuit-field-params";
+
+const CircuitFieldTuneGate = dynamic(() => import("./circuit-field-tune-gate"), {
+  ssr: false,
+});
 
 /* CircuitField: the masthead visual as a fixed, full-viewport background.
    Many balanced diagrams (trees, diamonds, hourglasses, lattices, fountains)
    hang in a 3D stack, invisible until a vertical band of energy sweeps
    through them; a slow rack focus drifts the sharp plane through the stack.
-   Ported from the tuning playground with Pete's approved recipe baked in as
-   RECIPE — the playground (not this file) is where new recipes are explored.
+   The approved recipe lives in circuit-field-params; the lazy DialKit tuner
+   mutates those values live in development or when the page has ?tune.
 
-   The canvas is fully transparent: layers accumulate in offscreen buffers and
-   composite to the screen additively with alpha writes masked off, so the
-   browser blends pure light over the page background (premultiplied-alpha
-   compositing with a=0 degenerates to src + dst). The page's own bg color is
-   the only ground. Camera tilt is scroll-interpolated from -40° at the top of
-   the page to +40° at the bottom. */
-
-const RECIPE = {
-  fov: 20,
-  dolly: 1.44,
-  spacing: 1.26,
-  rackSpeed: 0.02,
-  aperture: 9.5,
-  falloff: 3,
-  minBlur: 0,
-  count: 10,
-  scaleMin: 0.75,
-  scaleMax: 1.5,
-  stroke: 2,
-  curviness: 1,
-  taper: 0.26,
-  elbow: 0.88,
-  elbowMid: 0.45,
-  elbowRound: 49,
-  breathe: 0,
-  lifetime: 15,
-  sweepSpeed: 0.98,
-  band: 0.195,
-  gapMult: 0.35,
-  floor: 0,
-  exposure: 0.42,
-  atmosphere: 1,
-  timeScale: 1.24,
-  seedBase: 679207,
-  // band gradient: pink leading edge, blue core, orange trail; per-layer
-  // tint pulls all three stops toward tintC by the layer's warmth
-  bandC0: "#ff2969",
-  bandC1: "#3633ff",
-  bandC2: "#ff7b00",
-  bandMid: 0.26,
-  tintC: "#b1d2c8",
-  tintAmt: 1,
-  tiltFrom: -40,
-  tiltTo: 40,
-  // scroll treatment: the field recedes as the reader descends — extra blur
-  // (px, added to every layer's DoF radius) and a dim toward this floor
-  scrollBlur: 14,
-  scrollDimTo: 0.35,
-};
+   The canvas is the page ground, not a transparent overlay. Keeping its
+   drawing buffer opaque avoids invalid zero-alpha RGB pixels being discarded
+   when production browsers promote it to a composited GPU layer. Camera tilt
+   is scroll-interpolated from -40° to +40°. */
 
 // Must match the playground's *enabled* species pool in order — the seeded
 // species pick indexes into this list, so order changes the composition.
@@ -339,10 +304,18 @@ void main(){
 }`;
 
 const hx = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
-const STOP0 = hx(RECIPE.bandC0);
-const STOP1 = hx(RECIPE.bandC1);
-const STOP2 = hx(RECIPE.bandC2);
-const TINT = hx(RECIPE.tintC);
+
+function canvasBackground(canvas: HTMLCanvasElement): [number, number, number] {
+  const probe = document.createElement("canvas");
+  probe.width = 1;
+  probe.height = 1;
+  const context = probe.getContext("2d");
+  if (!context) return [22 / 255, 23 / 255, 24 / 255];
+  context.fillStyle = getComputedStyle(canvas).backgroundColor;
+  context.fillRect(0, 0, 1, 1);
+  const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+  return [r / 255, g / 255, b / 255];
+}
 
 /* Dense 15-tap gaussian — tap spacing stays <= ~1 texel (large radii are
    handled by downsampling first), so the blur smears instead of ghosting. */
@@ -365,11 +338,11 @@ void main(){ gl_FragColor = vec4(texture2D(uTex, vUV).rgb * uGain, 1.0); }`;
 function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
   const glCtx = canvas.getContext("webgl", {
     antialias: true,
-    alpha: true,
-    premultipliedAlpha: true,
+    alpha: false,
   });
   if (!glCtx) return undefined;
   const gl: WebGLRenderingContext = glCtx;
+  const background = canvasBackground(canvas);
 
   const compile = (type: number, src: string) => {
     const s = gl.createShader(type)!;
@@ -430,7 +403,17 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
   };
 
   let seedBase = RECIPE.seedBase;
+  let layerSignature = "";
   const layerSeed = (i: number) => seedBase + i * 131;
+  const currentLayerSignature = () =>
+    [
+      RECIPE.count,
+      RECIPE.scaleMin,
+      RECIPE.scaleMax,
+      RECIPE.curviness,
+      RECIPE.lifetime,
+      RECIPE.seedBase,
+    ].join(":");
   let layers: Layer[] = [];
   const regenLayers = () => {
     if (!W) return;
@@ -442,12 +425,13 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
       L.born = old[i] ? old[i].born : -Math.random() * L.ttl * 0.7;
       layers.push(L);
     }
+    layerSignature = currentLayerSignature();
   };
 
   const resize = () => {
-    // Background canvas: cap DPR below the playground's 2 — the DoF blur
-    // erases the extra resolution anyway and this halves the fill cost.
-    dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    // Explicit render scale: the tuner can supersample thin lines above the
+    // device's native pixel ratio when clarity matters more than fill cost.
+    dpr = Math.max(0.75, Math.min(3, RECIPE.resolution));
     W = Math.max(320, window.innerWidth);
     H = Math.max(240, window.innerHeight);
     PW = Math.round(W * dpr);
@@ -502,12 +486,17 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
       return [W / 2 + x * s, H / 2 + Y2 * s, zc];
     };
 
-    // transparent ground: the page body's bg is the only background
+    // Opaque page ground. Every blurred diagram layer is added over this.
     gl.viewport(0, 0, PW, PH);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.colorMask(true, true, true, true);
-    gl.clearColor(0, 0, 0, 0);
+    gl.clearColor(background[0], background[1], background[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT);
+
+    const STOP0 = hx(RECIPE.bandC0);
+    const STOP1 = hx(RECIPE.bandC1);
+    const STOP2 = hx(RECIPE.bandC2);
+    const TINT = hx(RECIPE.tintC);
 
     for (let li = 0; li < layers.length; li++) {
       let L = layers[li];
@@ -663,9 +652,7 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
       gl.uniform2f(loc(blurP, "uDir"), 0, step / Lv.h);
       drawQuad(blurP);
 
-      // additive composite to screen with alpha writes masked off: canvas
-      // alpha stays 0, so premultiplied compositing adds our light onto the
-      // page without ever darkening it.
+      // Add the blurred light over the opaque page ground. Alpha stays 1.
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, PW, PH);
       gl.useProgram(compP);
@@ -691,11 +678,19 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
     render(t);
     raf = requestAnimationFrame(frame);
   };
+  const onTune = () => {
+    seedBase = RECIPE.seedBase;
+    if (dpr !== RECIPE.resolution) resize();
+    else if (layerSignature !== currentLayerSignature()) regenLayers();
+    onScroll();
+    if (reduced) render(4);
+  };
 
   resize();
   onScroll();
   window.addEventListener("resize", resize);
   window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener(CIRCUIT_FIELD_TUNE_EVENT, onTune);
   if (reduced) {
     // static: one frame, re-rendered only when scroll/resize moves the camera
     const still = () => render(4);
@@ -707,6 +702,7 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("scroll", still);
       window.removeEventListener("resize", still);
+      window.removeEventListener(CIRCUIT_FIELD_TUNE_EVENT, onTune);
     };
   }
   raf = requestAnimationFrame(frame);
@@ -714,6 +710,7 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
     cancelAnimationFrame(raf);
     window.removeEventListener("resize", resize);
     window.removeEventListener("scroll", onScroll);
+    window.removeEventListener(CIRCUIT_FIELD_TUNE_EVENT, onTune);
   };
 }
 
@@ -727,8 +724,11 @@ export function CircuitField() {
   }, []);
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
-      <canvas ref={ref} className="h-full w-full" />
-    </div>
+    <>
+      <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+        <canvas ref={ref} className="h-full w-full bg-background" />
+      </div>
+      <CircuitFieldTuneGate />
+    </>
   );
 }
