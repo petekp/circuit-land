@@ -43,6 +43,7 @@ type Layer = {
   nEnd: number;
   Wd: number;
   Ht: number;
+  coverageU: number;
   z: number;
   bph: number;
   bphs: number;
@@ -156,7 +157,8 @@ function genLayer(seed: number, W: number, H: number): Layer {
   const rnd = mulberry32(seed);
   const kind = SPECIES[Math.floor(rnd() * SPECIES.length)];
   const b = rnd() < 0.6 ? 2 : 3;
-  const sc = RECIPE.scaleMin + rnd() * Math.max(0, RECIPE.scaleMax - RECIPE.scaleMin);
+  const coverageU = rnd();
+  const sc = RECIPE.scaleMin + coverageU * Math.max(0, RECIPE.scaleMax - RECIPE.scaleMin);
   return {
     seed,
     kind,
@@ -170,6 +172,7 @@ function genLayer(seed: number, W: number, H: number): Layer {
     nEnd: 5 + 2 * Math.floor(rnd() * 3),
     Wd: W * (0.24 + rnd() * 0.3) * sc,
     Ht: H * (0.55 + rnd() * 0.3) * sc,
+    coverageU,
     z: 0,
     bph: rnd() * 7,
     bphs: (rnd() - 0.5) * 0.25,
@@ -260,17 +263,33 @@ function motifPolys(L: Layer): Pt[][] {
   return out;
 }
 
-/* Plane-space sample points, subdivided ~10px for smooth projection. */
-function samples(L: Layer, t: number): Pt[][] {
-  const s = 1 + RECIPE.breathe * Math.sin(t * L.bphs + L.bph);
+type WirePoly = {
+  points: Pt[];
+  pathU: Float32Array;
+  startY: number;
+  endY: number;
+};
+
+type LayerGeometry = {
+  polys: WirePoly[];
+  vertices: Float32Array;
+};
+
+const geometryCache = new WeakMap<Layer, LayerGeometry>();
+
+/* Static plane-space geometry, subdivided ~10px for smooth projection.
+   Breathing is applied as one render-time scale, so the expensive motif,
+   subdivision, and arc-length work can stay cached between frames. */
+function buildLayerGeometry(L: Layer): LayerGeometry {
   const flip = L.inverted ? -1 : 1;
   const polys = motifPolys(L);
-  const out: Pt[][] = [];
+  const out: WirePoly[] = [];
+  let segmentCount = 0;
   for (const poly of polys) {
     const tp: Pt[] = [];
     for (let i = 0; i < poly.length; i++) {
-      const X = poly[i][0] * s;
-      const Y = poly[i][1] * s * flip;
+      const X = poly[i][0];
+      const Y = poly[i][1] * flip;
       if (i > 0) {
         const prev = tp[tp.length - 1];
         const n = Math.max(2, Math.ceil(Math.hypot(X - prev[0], Y - prev[1]) / 10));
@@ -279,9 +298,22 @@ function samples(L: Layer, t: number): Pt[][] {
         }
       } else tp.push([X, Y]);
     }
-    out.push(tp);
+    const distances = new Float32Array(tp.length);
+    for (let i = 1; i < tp.length; i++) {
+      distances[i] =
+        distances[i - 1] + Math.hypot(tp[i][0] - tp[i - 1][0], tp[i][1] - tp[i - 1][1]);
+    }
+    const pathLength = distances[distances.length - 1] || 1;
+    for (let i = 1; i < distances.length; i++) distances[i] /= pathLength;
+    segmentCount += Math.max(0, tp.length - 1);
+    out.push({
+      points: tp,
+      pathU: distances,
+      startY: tp[0][1],
+      endY: tp[tp.length - 1][1],
+    });
   }
-  return out;
+  return { polys: out, vertices: new Float32Array(segmentCount * 24) };
 }
 
 const QUAD_V = `attribute vec2 aPos; varying vec2 vUV;
@@ -295,12 +327,14 @@ uniform vec2 uRes; varying float vA; varying float vU;
 void main(){ vA = aA; vU = aU; vec2 c = aPos/uRes*2.0-1.0; gl_Position = vec4(c.x, -c.y, 0.0, 1.0); }`;
 
 const LINE_F = `precision mediump float; varying float vA; varying float vU;
-uniform vec3 uC0, uC1, uC2; uniform float uMid, uAtten;
+uniform vec3 uC0, uC1, uC2, uBase; uniform float uMid, uAtten, uFloor;
 void main(){
-  vec3 col = vU >= uMid
-    ? mix(uC1, uC0, clamp((vU - uMid) / (1.0 - uMid), 0.0, 1.0))
+  vec3 energy = vU >= uMid
+    ? mix(uC1, uC0, clamp((vU - uMid) / max(1.0 - uMid, 0.0001), 0.0, 1.0))
     : mix(uC1, uC2, clamp((uMid - vU) / (uMid + 1.0), 0.0, 1.0));
-  gl_FragColor = vec4(col * uAtten * vA, 1.0);
+  float floorGain = clamp(uFloor, 0.0, 1.0);
+  vec3 col = uBase * floorGain + energy * vA * (1.0 - floorGain);
+  gl_FragColor = vec4(col * uAtten, 1.0);
 }`;
 
 const hx = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
@@ -349,6 +383,31 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
   const blurP = prog(QUAD_V, BLUR_F);
   const compP = prog(QUAD_V, COMP_F);
   const loc = (p: WebGLProgram, n: string) => gl.getUniformLocation(p, n);
+  const lineAttrs = {
+    pos: gl.getAttribLocation(lineP, "aPos"),
+    alpha: gl.getAttribLocation(lineP, "aA"),
+    gradient: gl.getAttribLocation(lineP, "aU"),
+  };
+  const lineUniforms = {
+    res: loc(lineP, "uRes"),
+    c0: loc(lineP, "uC0"),
+    c1: loc(lineP, "uC1"),
+    c2: loc(lineP, "uC2"),
+    base: loc(lineP, "uBase"),
+    mid: loc(lineP, "uMid"),
+    atten: loc(lineP, "uAtten"),
+    floor: loc(lineP, "uFloor"),
+  };
+  const blurAttrs = { pos: gl.getAttribLocation(blurP, "aPos") };
+  const blurUniforms = {
+    texture: loc(blurP, "uTex"),
+    direction: loc(blurP, "uDir"),
+  };
+  const compAttrs = { pos: gl.getAttribLocation(compP, "aPos") };
+  const compUniforms = {
+    texture: loc(compP, "uTex"),
+    gain: loc(compP, "uGain"),
+  };
 
   const quadB = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, quadB);
@@ -361,7 +420,7 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
 
   const drawQuad = (p: WebGLProgram) => {
     gl.bindBuffer(gl.ARRAY_BUFFER, quadB);
-    const a = gl.getAttribLocation(p, "aPos");
+    const a = p === blurP ? blurAttrs.pos : compAttrs.pos;
     gl.enableVertexAttribArray(a);
     gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -375,6 +434,7 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
     PH = 0,
     dpr = 1;
   let levels: Level[] | null = null;
+  let lineTarget: FBO | null = null;
 
   const makeFBO = (w: number, h: number): FBO => {
     const tex = gl.createTexture()!;
@@ -399,6 +459,9 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
       RECIPE.scaleMin,
       RECIPE.scaleMax,
       RECIPE.curviness,
+      RECIPE.elbow,
+      RECIPE.elbowMid,
+      RECIPE.elbowRound,
       RECIPE.lifetime,
       RECIPE.seedBase,
     ].join(":");
@@ -426,6 +489,10 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
     PH = Math.round(H * dpr);
     canvas.width = PW;
     canvas.height = PH;
+    if (lineTarget) {
+      gl.deleteFramebuffer(lineTarget.fb);
+      gl.deleteTexture(lineTarget.tex);
+    }
     if (levels) {
       for (const lv of levels) {
         for (const f of [lv.A, lv.B]) {
@@ -440,6 +507,7 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
       const h = Math.max(2, Math.round(PH / f));
       return { w, h, A: makeFBO(w, h), B: makeFBO(w, h) };
     });
+    lineTarget = makeFBO(PW, PH);
     regenLayers();
   };
 
@@ -455,7 +523,7 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
   };
 
   function render(t: number) {
-    if (!levels) return;
+    if (!levels || !lineTarget) return;
     const focus = 0.5 + 0.5 * Math.sin(t * RECIPE.rackSpeed * Math.PI * 2);
 
     // camera
@@ -485,126 +553,245 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
     const STOP1 = hx(RECIPE.bandC1);
     const STOP2 = hx(RECIPE.bandC2);
     const TINT = hx(RECIPE.tintC);
+    const dim = 1 - (1 - RECIPE.scrollDimTo) * scrollU;
+    const batchBlur = RECIPE.batchBlur;
+    const groupCount = Math.max(1, Math.min(4, Math.round(RECIPE.blurGroups)));
+    const groupLevels =
+      groupCount === 1
+        ? [1]
+        : groupCount === 2
+          ? [0, 3]
+          : groupCount === 3
+            ? [0, 1, 3]
+            : [0, 1, 2, 3];
+    const batchStats = levels.map(() => ({ count: 0, radius: 0 }));
+    const chooseGroup = (naturalLevel: number) =>
+      groupLevels.reduce((best, level) =>
+        Math.abs(level - naturalLevel) < Math.abs(best - naturalLevel) ? level : best,
+      );
+
+    const blurAtLevel = (source: WebGLTexture, level: number, radius: number) => {
+      if (radius <= 0.01) return source;
+      const target = levels![level];
+      const step = radius / Math.pow(2, level) / 7;
+      gl.useProgram(blurP);
+      gl.uniform1i(blurUniforms.texture, 0);
+      gl.viewport(0, 0, target.w, target.h);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, target.B.fb);
+      gl.bindTexture(gl.TEXTURE_2D, source);
+      gl.uniform2f(blurUniforms.direction, step / target.w, 0);
+      drawQuad(blurP);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, target.A.fb);
+      gl.bindTexture(gl.TEXTURE_2D, target.B.tex);
+      gl.uniform2f(blurUniforms.direction, 0, step / target.h);
+      drawQuad(blurP);
+      return target.A.tex;
+    };
+
+    const compositeToScreen = (texture: WebGLTexture, gain: number) => {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, PW, PH);
+      gl.useProgram(compP);
+      gl.enable(gl.BLEND);
+      gl.blendEquation(gl.FUNC_ADD);
+      gl.blendFunc(gl.ONE, gl.ONE);
+      gl.colorMask(true, true, true, false);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.uniform1i(compUniforms.texture, 0);
+      gl.uniform1f(compUniforms.gain, gain);
+      drawQuad(compP);
+      gl.colorMask(true, true, true, true);
+      gl.disable(gl.BLEND);
+    };
+
+    if (batchBlur) {
+      gl.disable(gl.BLEND);
+      gl.clearColor(0, 0, 0, 1);
+      for (const level of groupLevels) {
+        const target = levels[level];
+        gl.bindFramebuffer(gl.FRAMEBUFFER, target.A.fb);
+        gl.viewport(0, 0, target.w, target.h);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+      }
+    }
 
     for (let li = 0; li < layers.length; li++) {
-      let L = layers[li];
+      const L = layers[li];
       const age = t - L.born;
-      if (age > L.ttl) {
-        seedBase = (seedBase + 977) | 0;
-        L = layers[li] = genLayer(layerSeed(li) + Math.floor(age * 31), W, H);
-        L.z = RECIPE.count === 1 ? 0.5 : li / (RECIPE.count - 1);
-        L.born = t;
-        continue;
-      }
-      const life = Math.min(1, age / 4) * Math.min(1, (L.ttl - age) / 4);
-      if (life <= 0) continue;
 
       // Sweep timing can stay organic and layer-specific, or lock into a
       // single depth-led cascade. Timing variation blends between the two.
       const variation = RECIPE.timingVariation;
-      const T =
+      const pathDuration =
         (RECIPE.sweepDuration + (L.T - RECIPE.sweepDuration) * variation) /
         RECIPE.sweepSpeed;
+      const bandWidth = Math.max(1e-4, RECIPE.band);
+      const edgePadding = bandWidth * Math.max(0, RECIPE.edgePadding);
+      const activeDuration = pathDuration * (1 + edgePadding * 2);
       const gap =
         (RECIPE.sweepGap + (L.gap - RECIPE.sweepGap) * variation) * RECIPE.gapMult;
-      const cycle = T + gap;
+      const cycle = activeDuration + gap;
       const depthU = RECIPE.depthOrder === "nearToFar" ? L.z : 1 - L.z;
       const phase =
         RECIPE.phaseMode === "depth" ? -depthU * RECIPE.depthStagger : L.phase;
       const ph = (((t + phase) % cycle) + cycle) % cycle;
-      const sweeping = ph <= T;
+      const sweeping = ph <= activeDuration;
+
+      // A pattern may change only while it is fully dark between sweeps.
+      // Keeping the old timing values prevents its replacement from jumping
+      // into the middle of a different cycle on the next frame.
+      if (age > L.ttl && !sweeping && RECIPE.floor <= 0) {
+        seedBase = (seedBase + 977) | 0;
+        const next = genLayer(layerSeed(li) + Math.floor(age * 31), W, H);
+        next.z = RECIPE.count === 1 ? 0.5 : li / (RECIPE.count - 1);
+        next.born = t;
+        next.T = L.T;
+        next.gap = L.gap;
+        next.phase = L.phase;
+        layers[li] = next;
+        continue;
+      }
       if (!sweeping && RECIPE.floor <= 0) continue;
-      const y0 = -0.75 * H;
-      const y1 = 0.75 * H;
-      const u = sweeping ? ph / T : 0;
       const direction =
         RECIPE.sweepDirection === "mixed"
           ? L.dir
           : RECIPE.sweepDirection === "topToBottom"
             ? 1
             : -1;
-      const yc = direction > 0 ? y0 + (y1 - y0) * u : y1 - (y1 - y0) * u;
-      const sig = RECIPE.band * H;
-      const s2 = 2 * sig * sig;
+      // sweepProgress is measured in each wire's own normalized path length.
+      // It begins and ends well outside [0, 1], so disabling the sweep never
+      // cuts through a still-visible gradient tail.
+      const sweepProgress = sweeping ? ph / pathDuration - edgePadding : 0;
+      const s2 = 2 * bandWidth * bandWidth;
 
       // normalized depth of this layer for DoF (post-rotation, at plane center)
       const zc = project(0, 0, L.z)[2];
       const depthN = Math.max(0, Math.min(1, (zc - (D - zRange * 0.75)) / (zRange * 1.5)));
+      const d = Math.min(1, Math.abs(depthN - focus) * 1.6);
+      const radius =
+        (RECIPE.minBlur +
+          RECIPE.aperture * Math.pow(d, RECIPE.falloff) +
+          RECIPE.scrollBlur * scrollU) *
+        dpr;
+      let naturalLevel = 0;
+      while (
+        naturalLevel < levels.length - 1 &&
+        radius / Math.pow(2, naturalLevel) > 7
+      ) {
+        naturalLevel++;
+      }
+      const targetLevel = batchBlur ? chooseGroup(naturalLevel) : naturalLevel;
+      const layerGain = RECIPE.exposure * (0.85 + 0.5 * d) * dim;
 
-      // terminal taper: fade to 0 toward the diagram's own top/bottom extent
-      const hh = (L.Ht * (1 + RECIPE.breathe * Math.sin(t * L.bphs + L.bph))) / 2;
-      const tEdge = Math.max(1e-3, hh * RECIPE.taper);
-      const alphaAt = (py: number, flowY: number) => {
-        const g = sweeping ? Math.exp(-((flowY - yc) * (flowY - yc)) / s2) : 0;
-        let a = Math.max(RECIPE.floor, g) * life;
-        const k = Math.min(1, Math.max(0, (hh - Math.abs(py)) / tEdge));
-        a *= k * k * (3 - 2 * k);
-        return a;
+      const scale = 1 + RECIPE.breathe * Math.sin(t * L.bphs + L.bph);
+      const hh = (L.Ht * scale) / 2;
+      // Convert the generated plane size into a predictable on-screen height.
+      // At full compensation, depth still drives focus and blur, but it no
+      // longer makes distant layers tiny or pushes their centers off-screen.
+      const coverageLow = Math.min(RECIPE.coverageMin, RECIPE.coverageMax);
+      const coverageHigh = Math.max(RECIPE.coverageMin, RECIPE.coverageMax);
+      const targetCoverage = coverageLow + (coverageHigh - coverageLow) * L.coverageU;
+      const projectedTop = project(0, -hh, L.z);
+      const projectedBottom = project(0, hh, L.z);
+      const projectedCenterY = (projectedTop[1] + projectedBottom[1]) / 2;
+      const projectedHeight = Math.max(1, Math.abs(projectedBottom[1] - projectedTop[1]));
+      const compensation = Math.max(0, Math.min(1, RECIPE.depthSizeCompensation));
+      const correctedScale = (targetCoverage * H) / projectedHeight;
+      const coverageScale = 1 + (correctedScale - 1) * compensation;
+      const coverageCenterY = projectedCenterY + (H / 2 - projectedCenterY) * compensation;
+      const projectLayer = (x: number, y: number): [number, number, number] => {
+        const point = project(x, y, L.z);
+        return [
+          W / 2 + (point[0] - W / 2) * coverageScale,
+          coverageCenterY + (point[1] - projectedCenterY) * coverageScale,
+          point[2],
+        ];
       };
+      const alphaAt = (progress: number) => {
+        const delta = progress - sweepProgress;
+        return sweeping ? Math.exp(-(delta * delta) / s2) : 0;
+      };
+      const gradientSpan = bandWidth * 2.5;
+      const uAt = (progress: number) =>
+        !sweeping
+          ? 0
+          : Math.max(-1, Math.min(1, (progress - sweepProgress) / gradientSpan));
 
-      // signed band position for the gradient: +1 at the leading edge of the
-      // travelling band, -1 at the trailing edge
-      const uSpan = sig * 2.5;
-      const uAt = (flowY: number) =>
-        !sweeping ? 0 : Math.max(-1, Math.min(1, ((flowY - yc) / uSpan) * direction));
-
-      // build projected line quads
-      const polys = samples(L, t);
+      let geometry = RECIPE.cacheGeometry ? geometryCache.get(L) : undefined;
+      if (!geometry) {
+        geometry = buildLayerGeometry(L);
+        if (RECIPE.cacheGeometry) geometryCache.set(L, geometry);
+      }
+      const vertices = geometry.vertices;
+      let vertexFloatCount = 0;
+      const put = (x: number, y: number, alpha: number, gradient: number) => {
+        vertices[vertexFloatCount++] = x;
+        vertices[vertexFloatCount++] = y;
+        vertices[vertexFloatCount++] = alpha;
+        vertices[vertexFloatCount++] = gradient;
+      };
       const wHalf = RECIPE.stroke / 2;
-      const verts: number[] = [];
-      for (const poly of polys) {
-        // Re-parameterize the stroke by arc length. Interpolating between its
-        // endpoint heights makes the pulse traverse bends and horizontal runs
-        // instead of projecting one flat gradient through the whole diagram.
-        const distances = [0];
-        for (let i = 1; i < poly.length; i++) {
-          distances.push(
-            distances[i - 1] +
-              Math.hypot(poly[i][0] - poly[i - 1][0], poly[i][1] - poly[i - 1][1]),
+      for (const wire of geometry.polys) {
+        const { points, pathU } = wire;
+        const layerProgressAtY = (y: number) =>
+          Math.max(
+            0,
+            Math.min(1, direction > 0 ? y / L.Ht + 0.5 : 0.5 - y / L.Ht),
           );
-        }
-        const pathLength = distances[distances.length - 1] || 1;
-        const startY = poly[0][1];
-        const endY = poly[poly.length - 1][1];
-        const flowYAt = (index: number) => {
-          const pathU = distances[index] / pathLength;
-          const wireY = startY + (endY - startY) * pathU;
-          const planarY = poly[index][1];
-          return planarY + (wireY - planarY) * RECIPE.wireFlow;
+        const wireStartProgress = layerProgressAtY(wire.startY);
+        const wireEndProgress = layerProgressAtY(wire.endY);
+        const progressAt = (index: number) => {
+          const planarY = points[index][1] * scale;
+          const planarProgress = Math.max(
+            0,
+            Math.min(1, direction > 0 ? (planarY + hh) / (2 * hh) : (hh - planarY) / (2 * hh)),
+          );
+          // Every wire uses the layer's shared top-to-bottom timeline. Arc
+          // length only controls how energy moves between that wire's two
+          // global positions; it never restarts a row at zero.
+          const pathProgress =
+            wireStartProgress + (wireEndProgress - wireStartProgress) * pathU[index];
+          return planarProgress + (pathProgress - planarProgress) * RECIPE.wireFlow;
         };
-
-        let prev = project(poly[0][0], poly[0][1], L.z);
-        const firstFlowY = flowYAt(0);
-        let ga = alphaAt(poly[0][1], firstFlowY);
-        let ua = uAt(firstFlowY);
-        for (let i = 1; i < poly.length; i++) {
-          const cur = project(poly[i][0], poly[i][1], L.z);
-          const flowY = flowYAt(i);
-          const gb = alphaAt(poly[i][1], flowY);
-          const ub = uAt(flowY);
-          if (ga > 0.008 || gb > 0.008) {
+        const widthAt = (index: number) =>
+          wHalf * Math.max(0.05, 1 - RECIPE.taper * Math.abs(pathU[index] * 2 - 1));
+        let prev = projectLayer(points[0][0] * scale, points[0][1] * scale);
+        const progressA = progressAt(0);
+        let ga = alphaAt(progressA);
+        let ua = uAt(progressA);
+        let wa = widthAt(0);
+        for (let i = 1; i < points.length; i++) {
+          const py = points[i][1] * scale;
+          const cur = projectLayer(points[i][0] * scale, py);
+          const progressB = progressAt(i);
+          const gb = alphaAt(progressB);
+          const ub = uAt(progressB);
+          const wb = widthAt(i);
+          if (RECIPE.floor > 0 || ga > 0.00001 || gb > 0.00001) {
             const dx = cur[0] - prev[0];
             const dy = cur[1] - prev[1];
             const len = Math.hypot(dx, dy) || 1;
-            const nx = (-dy / len) * wHalf;
-            const ny = (dx / len) * wHalf;
-            verts.push(
-              prev[0] + nx, prev[1] + ny, ga, ua, prev[0] - nx, prev[1] - ny, ga, ua,
-              cur[0] + nx, cur[1] + ny, gb, ub, prev[0] - nx, prev[1] - ny, ga, ua,
-              cur[0] + nx, cur[1] + ny, gb, ub, cur[0] - nx, cur[1] - ny, gb, ub,
-            );
+            const nx = -dy / len;
+            const ny = dx / len;
+            put(prev[0] + nx * wa, prev[1] + ny * wa, ga, ua);
+            put(prev[0] - nx * wa, prev[1] - ny * wa, ga, ua);
+            put(cur[0] + nx * wb, cur[1] + ny * wb, gb, ub);
+            put(prev[0] - nx * wa, prev[1] - ny * wa, ga, ua);
+            put(cur[0] + nx * wb, cur[1] + ny * wb, gb, ub);
+            put(cur[0] - nx * wb, cur[1] - ny * wb, gb, ub);
           }
           prev = cur;
           ga = gb;
           ua = ub;
+          wa = wb;
         }
       }
-      if (!verts.length) continue;
+      if (!vertexFloatCount) continue;
 
-      // pass 1: layer lines → full-res level (opaque black ground; the
-      // transparency trick only applies at the final on-screen composite)
+      // Render one layer into a full-resolution scratch target. MAX blending
+      // still removes seams within that layer before any optional batching.
       gl.viewport(0, 0, PW, PH);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, levels[0].A.fb);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, lineTarget.fb);
       gl.clearColor(0, 0, 0, 1);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.useProgram(lineP);
@@ -612,83 +799,93 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
       gl.blendFunc(gl.ONE, gl.ONE);
       if (minmax) gl.blendEquation(minmax.MAX_EXT);
       gl.bindBuffer(gl.ARRAY_BUFFER, lineB);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.DYNAMIC_DRAW);
-      const aP = gl.getAttribLocation(lineP, "aPos");
-      const aA = gl.getAttribLocation(lineP, "aA");
-      const aU = gl.getAttribLocation(lineP, "aU");
-      gl.enableVertexAttribArray(aP);
-      gl.vertexAttribPointer(aP, 2, gl.FLOAT, false, 16, 0);
-      gl.enableVertexAttribArray(aA);
-      gl.vertexAttribPointer(aA, 1, gl.FLOAT, false, 16, 8);
-      gl.enableVertexAttribArray(aU);
-      gl.vertexAttribPointer(aU, 1, gl.FLOAT, false, 16, 12);
-      gl.uniform2f(loc(lineP, "uRes"), W, H);
-      // gradient stops, each pulled toward the layer tint by warmth
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        vertices.subarray(0, vertexFloatCount),
+        gl.DYNAMIC_DRAW,
+      );
+      gl.enableVertexAttribArray(lineAttrs.pos);
+      gl.vertexAttribPointer(lineAttrs.pos, 2, gl.FLOAT, false, 16, 0);
+      gl.enableVertexAttribArray(lineAttrs.alpha);
+      gl.vertexAttribPointer(lineAttrs.alpha, 1, gl.FLOAT, false, 16, 8);
+      gl.enableVertexAttribArray(lineAttrs.gradient);
+      gl.vertexAttribPointer(lineAttrs.gradient, 1, gl.FLOAT, false, 16, 12);
+      gl.uniform2f(lineUniforms.res, W, H);
       const tintT = L.warmth * RECIPE.tintAmt;
-      const stop = (c: number[]) => c.map((v, i) => v + (TINT[i] - v) * tintT);
-      gl.uniform3fv(loc(lineP, "uC0"), stop(STOP0));
-      gl.uniform3fv(loc(lineP, "uC1"), stop(STOP1));
-      gl.uniform3fv(loc(lineP, "uC2"), stop(STOP2));
-      gl.uniform1f(loc(lineP, "uMid"), RECIPE.bandMid);
-      gl.uniform1f(loc(lineP, "uAtten"), 1 - RECIPE.atmosphere * depthN);
-      gl.drawArrays(gl.TRIANGLES, 0, verts.length / 4);
-      gl.disableVertexAttribArray(aA);
-      gl.disableVertexAttribArray(aU);
+      const setStop = (location: WebGLUniformLocation | null, color: number[]) =>
+        gl.uniform3f(
+          location,
+          color[0] + (TINT[0] - color[0]) * tintT,
+          color[1] + (TINT[1] - color[1]) * tintT,
+          color[2] + (TINT[2] - color[2]) * tintT,
+        );
+      // The faint wire bed stays on one stable stop color per layer. The
+      // brighter energy pulse retains the complete moving three-stop gradient.
+      const layerStop = [STOP0, STOP1, STOP2][li % 3];
+      setStop(lineUniforms.c0, STOP0);
+      setStop(lineUniforms.c1, STOP1);
+      setStop(lineUniforms.c2, STOP2);
+      setStop(lineUniforms.base, layerStop);
+      gl.uniform1f(lineUniforms.mid, RECIPE.bandMid);
+      gl.uniform1f(lineUniforms.atten, 1 - RECIPE.atmosphere * depthN);
+      gl.uniform1f(lineUniforms.floor, RECIPE.floor);
+      gl.drawArrays(gl.TRIANGLES, 0, vertexFloatCount / 4);
+      gl.disableVertexAttribArray(lineAttrs.pos);
+      gl.disableVertexAttribArray(lineAttrs.alpha);
+      gl.disableVertexAttribArray(lineAttrs.gradient);
       if (minmax) gl.blendEquation(gl.FUNC_ADD);
-
-      // focal-plane DoF with slow rack: blur by distance from the focus
-      // plane, plus a flat scroll-driven defocus across every layer
-      const d = Math.min(1, Math.abs(depthN - focus) * 1.6);
-      const radius =
-        (RECIPE.minBlur +
-          RECIPE.aperture * Math.pow(d, RECIPE.falloff) +
-          RECIPE.scrollBlur * scrollU) *
-        dpr;
-
-      // pick the pyramid level where tap spacing stays <= ~1 texel
-      let lv = 0;
-      while (lv < levels.length - 1 && radius / Math.pow(2, lv) > 7) lv++;
-      gl.activeTexture(gl.TEXTURE0);
       gl.disable(gl.BLEND);
+      gl.activeTexture(gl.TEXTURE0);
 
-      // downsample chain (each halving is smooth via linear filtering)
-      gl.useProgram(compP);
-      gl.uniform1i(loc(compP, "uTex"), 0);
-      gl.uniform1f(loc(compP, "uGain"), 1);
-      for (let i = 1; i <= lv; i++) {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, levels[i].A.fb);
-        gl.viewport(0, 0, levels[i].w, levels[i].h);
-        gl.bindTexture(gl.TEXTURE_2D, levels[i - 1].A.tex);
+      if (batchBlur) {
+        // Add the finished layer into a quantized depth bucket. The bucket is
+        // blurred once after all its layers arrive, replacing N blur chains
+        // with at most `blurGroups` chains.
+        const target = levels[targetLevel];
+        gl.bindFramebuffer(gl.FRAMEBUFFER, target.A.fb);
+        gl.viewport(0, 0, target.w, target.h);
+        gl.useProgram(compP);
+        gl.enable(gl.BLEND);
+        gl.blendEquation(gl.FUNC_ADD);
+        gl.blendFunc(gl.ONE, gl.ONE);
+        gl.bindTexture(gl.TEXTURE_2D, lineTarget.tex);
+        gl.uniform1i(compUniforms.texture, 0);
+        gl.uniform1f(compUniforms.gain, layerGain);
         drawQuad(compP);
+        gl.disable(gl.BLEND);
+        batchStats[targetLevel].count++;
+        batchStats[targetLevel].radius += radius;
+        continue;
       }
 
-      // separable gaussian at the chosen level
-      const Lv = levels[lv];
-      const step = radius / Math.pow(2, lv) / 7;
-      gl.useProgram(blurP);
-      gl.uniform1i(loc(blurP, "uTex"), 0);
-      gl.viewport(0, 0, Lv.w, Lv.h);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, Lv.B.fb);
-      gl.bindTexture(gl.TEXTURE_2D, Lv.A.tex);
-      gl.uniform2f(loc(blurP, "uDir"), step / Lv.w, 0);
-      drawQuad(blurP);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, Lv.A.fb);
-      gl.bindTexture(gl.TEXTURE_2D, Lv.B.tex);
-      gl.uniform2f(loc(blurP, "uDir"), 0, step / Lv.h);
-      drawQuad(blurP);
-
-      // Add the blurred light over the opaque page ground. Alpha stays 1.
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.viewport(0, 0, PW, PH);
+      // Exact fallback: preserve the original per-layer downsample, blur, and
+      // composite path when batching is disabled.
       gl.useProgram(compP);
-      gl.enable(gl.BLEND);
-      gl.blendFunc(gl.ONE, gl.ONE);
-      gl.colorMask(true, true, true, false);
-      gl.bindTexture(gl.TEXTURE_2D, Lv.A.tex);
-      const dim = 1 - (1 - RECIPE.scrollDimTo) * scrollU;
-      gl.uniform1f(loc(compP, "uGain"), RECIPE.exposure * (0.85 + 0.5 * d) * dim);
-      drawQuad(compP);
-      gl.colorMask(true, true, true, true);
+      gl.uniform1i(compUniforms.texture, 0);
+      gl.uniform1f(compUniforms.gain, 1);
+      let source = lineTarget.tex;
+      for (let i = 1; i <= targetLevel; i++) {
+        const target = levels[i];
+        gl.bindFramebuffer(gl.FRAMEBUFFER, target.A.fb);
+        gl.viewport(0, 0, target.w, target.h);
+        gl.bindTexture(gl.TEXTURE_2D, source);
+        drawQuad(compP);
+        source = target.A.tex;
+      }
+      compositeToScreen(blurAtLevel(source, targetLevel, radius), layerGain);
+    }
+
+    if (batchBlur) {
+      for (const level of groupLevels) {
+        const stat = batchStats[level];
+        if (!stat.count) continue;
+        const texture = blurAtLevel(
+          levels[level].A.tex,
+          level,
+          stat.radius / stat.count,
+        );
+        compositeToScreen(texture, 1);
+      }
     }
   }
 
@@ -696,12 +893,35 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
   let raf = 0;
   let t = 0;
   let last = performance.now();
+  let lastRendered = 0;
+  let running = false;
   const frame = (now: number) => {
-    const dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
-    t += dt * RECIPE.timeScale;
-    render(t);
+    if (!running) return;
+    const minFrameMs = RECIPE.maxFps > 0 ? 1000 / RECIPE.maxFps : 0;
+    if (!minFrameMs || now - lastRendered >= minFrameMs - 0.5) {
+      const dt = Math.min(0.1, (now - last) / 1000);
+      last = now;
+      lastRendered = now;
+      t += dt * RECIPE.timeScale;
+      render(t);
+    }
     raf = requestAnimationFrame(frame);
+  };
+  const stopLoop = () => {
+    if (!running) return;
+    running = false;
+    cancelAnimationFrame(raf);
+  };
+  const startLoop = () => {
+    if (running || reduced || (RECIPE.pauseWhenHidden && document.hidden)) return;
+    running = true;
+    last = performance.now();
+    lastRendered = 0;
+    raf = requestAnimationFrame(frame);
+  };
+  const syncVisibility = () => {
+    if (RECIPE.pauseWhenHidden && document.hidden) stopLoop();
+    else startLoop();
   };
   const onTune = () => {
     seedBase = RECIPE.seedBase;
@@ -709,6 +929,7 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
     else if (layerSignature !== currentLayerSignature()) regenLayers();
     onScroll();
     if (reduced) render(4);
+    else syncVisibility();
   };
 
   resize();
@@ -716,6 +937,7 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
   window.addEventListener("resize", resize);
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener(CIRCUIT_FIELD_TUNE_EVENT, onTune);
+  document.addEventListener("visibilitychange", syncVisibility);
   if (reduced) {
     // static: one frame, re-rendered only when scroll/resize moves the camera
     const still = () => render(4);
@@ -728,14 +950,16 @@ function startField(canvas: HTMLCanvasElement): (() => void) | undefined {
       window.removeEventListener("scroll", still);
       window.removeEventListener("resize", still);
       window.removeEventListener(CIRCUIT_FIELD_TUNE_EVENT, onTune);
+      document.removeEventListener("visibilitychange", syncVisibility);
     };
   }
-  raf = requestAnimationFrame(frame);
+  startLoop();
   return () => {
-    cancelAnimationFrame(raf);
+    stopLoop();
     window.removeEventListener("resize", resize);
     window.removeEventListener("scroll", onScroll);
     window.removeEventListener(CIRCUIT_FIELD_TUNE_EVENT, onTune);
+    document.removeEventListener("visibilitychange", syncVisibility);
   };
 }
 
